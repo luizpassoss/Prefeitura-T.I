@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Prefeitura T.I</title>
+<link rel="stylesheet" href="global.css">
+<script src="global.js" defer></script>
+
+<!-- SheetJS (XLSX) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- jsPDF AutoTable -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+  <span class="brand-icon">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+      <path d="M2 18h20"></path>
+    </svg>
+  </span>
+  <span class="brand-text">T.I Prefeitura</span>
+</div>
+
+
+    <nav class="nav">
+      <a class="active" onclick="switchTab('inventario')">Inventário</a>
+      <a onclick="switchTab('maquinas')">Máquinas</a>
+        <button class="btn-add-tab" onclick="openCreateTabModal()">
+    + Nova Aba
+  </button>
+    </nav>
+  </aside>
+
+  <!-- TAB CONTENT -->
+  <div class="tab-content">
+
+    <!-- INVENTÁRIO -->
+    <section id="tabInventario" class="tab active">
+      <main class="main">
+        <div class="header">
+          <div>
+            <h1>Inventário de Links e Conexões</h1>
+            <div class="small">Gerencie, filtre, edite e exporte relatórios</div>
+          </div>
+          <div class="controls">
+            <div class="search-wrapper">
+  <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="7" stroke="#7a7a7a" stroke-width="2" fill="none"/>
+    <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="#7a7a7a" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <input id="q" class="search-input" placeholder="Buscar..." oninput="applyFilters()" />
+</div>
+
+
+
+            <button class="btn" onclick="openModal()">+ Novo</button>
+            <button class="btn secondary" onclick="openImportModal('inventario')">
+  <svg class="icon" viewBox="0 0 24 24">
+    <path d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"
+      stroke="currentColor"
+      stroke-width="2"
+      fill="none"/>
+  </svg>
+  Importar Planilha
+</button>
+
+<div class="export-wrapper">
+  <button class="btn export" onclick="toggleExportMenu('inv')">
+    <svg class="icon" viewBox="0 0 24 24">
+      <path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17h16"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"/>
+    </svg>
+    Exportar Relatório
+    
+
+  </button>
+
+  <div id="exportMenuInv" class="export-menu hidden">
+    <button onclick="exportInventario('pdf')">
+      <span class="icon pdf-icon"></span>
+      PDF
+    </button>
+
+    <button onclick="exportInventario('excel')">
+      <span class="icon excel-icon"></span>
+      Excel
+    </button>
+
+    <button onclick="exportInventario('both')">
+      <span class="icon both-icon"></span>
+      PDF + Excel
+    </button>
+    
+  </div>
+</div>
+
+
+
+          </div>
+        </div>
+
+        <div class="pills" id="pillsArea"></div>
+
+        <div class="filters">
+          <select id="filterCategoryInv"
+class="select" onchange="applyFilters()">
+            <option value="All">Todas as categorias</option>
+            <option value="Prefeitura">Prefeitura</option>
+            <option value="Educacao">Educação</option>
+            <option value="Saude">Saúde</option>
+            <option value="Assistência Cultural">Assistência Cultural</option>
+            <option value="Fundacao Cultural">Fundação Cultural</option>
+          </select>
+         
+        </div>
+
+        <div class="table-wrap">
+          <table id="tb">
+            <thead>
+              <tr>
+                <th style="width:32px; text-align:center;">
+  <input type="checkbox" id="chkAllInv">
+</th>
+
+                <th style="width:20%">Link de Internet</th>
+                <th style="width:15%">Velocidade (DL/UL)</th>
+                <th style="width:12%">Telefone</th>
+                <th style="width:16%">Local</th>
+                <th style="width:28%">Endereço</th>
+                <th style="width:9%">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </main>
+    </section>
+
+    <!-- MÁQUINAS -->
+<section id="tabMaquinas" class="tab">
+  <main class="main">
+    <div class="header">
+
+      <div>
+        <h1>Inventário de Máquinas</h1>
+        <div class="small">Gerencie, filtre, edite e exporte relatórios</div>
+      </div>
+
+      <div class="controls">
+
+       <div class="search-wrapper">
+  <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="7" stroke="#7a7a7a" stroke-width="2" fill="none"/>
+    <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="#7a7a7a" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <input id="mq" class="search-input" placeholder="Buscar máquinas..." oninput="applyMachineFilters()" />
+</div>
+
+
+        <button class="btn" onclick="openMachineModal()">+ Novo</button>
+        <button class="btn secondary" onclick="openImportModal('maquinas')">
+  <svg class="icon" viewBox="0 0 24 24">
+    <path d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"
+      stroke="currentColor"
+      stroke-width="2"
+      fill="none"/>
+  </svg>
+  Importar Planilha
+</button>
+
+    <div class="export-wrapper">
+  <button class="btn export" onclick="toggleExportMenu('mq')">
+    <svg class="icon" viewBox="0 0 24 24">
+      <path
+        d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17h16"
+        stroke="currentColor"
+        stroke-width="2"
+        fill="none"
+      />
+    </svg>
+    Exportar Relatório
+  </button>
+
+  <div id="exportMenuMq" class="export-menu hidden">
+    <button onclick="exportMaquinas('pdf')">
+      <span class="icon pdf-icon"></span>
+      PDF
+    </button>
+
+    <button onclick="exportMaquinas('excel')">
+      <span class="icon excel-icon"></span>
+      Excel
+    </button>
+
+    <button onclick="exportMaquinas('both')">
+      <span class="icon both-icon"></span>
+      PDF + Excel
+    </button>
+  </div>
+</div>
+
+
+
+
+      </div>
+
+    </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px">
+  <input type="checkbox" id="chkAllMq">
+</th>
+
+                <th>Nome Máquina</th>
+                <th>Patrimônio</th>
+                <th>Local</th>
+                <th>Status</th>
+                <th>Descrição</th>
+                <th style="width:110px; text-align:center">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="mtbody"></tbody>
+          </table>
+        </div>
+      </main>
+    </section>
+
+  </div>
+
+</div>
+<section id="tabModuloDinamico" class="tab">
+  <main class="main">
+
+    <div class="header">
+      <div>
+        <h1 id="moduloTitulo">Módulo</h1>
+        <div class="small">Tabela personalizada</div>
+      </div>
+
+      <div class="controls">
+       <div class="search-wrapper">
+  <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="7" stroke="#7a7a7a" stroke-width="2" fill="none"/>
+    <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="#7a7a7a" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <input
+    id="moduloSearch"
+    class="search-input"
+    placeholder="Buscar..."
+    oninput="filtrarModulo()"
+  />
+</div>
+
+
+        <button class="btn" onclick="openNovoRegistroModulo()">
+          + Novo
+        </button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="styled-table">
+        <thead id="moduloThead"></thead>
+        <tbody id="moduloTbody"></tbody>
+      </table>
+    </div>
+
+  </main>
+</section>
+
+
+
+<!-- MODAL INVENTÁRIO -->
+<div id="modal" class="modal" onclick="closeModalIfClicked(event)">
+  <div class="card" onclick="event.stopPropagation()">
+    <h2 id="modalTitle">Novo Registro</h2>
+
+    <div class="form-grid">
+
+      <!-- Categoria -->
+      <div>
+        <label>Categoria</label>
+        <select id="inpCategoria">
+          <option value="Prefeitura">Prefeitura</option>
+          <option value="Educação">Educação</option>
+<option value="Saúde">Saúde</option>
+          <option value="Assistência Cultural">Assistência Cultural</option>
+          <option value="Fundação Cultural">Fundação Cultural</option>
+        </select>
+      </div>
+
+      <!-- Link -->
+      <div>
+        <label>Link de Internet</label>
+        <select id="inpLink">
+          <option value="Link Dedicado">Link Dedicado</option>
+          <option value="Interconexão (CONCENTRADOR)">Interconexão (CONCENTRADOR)</option>
+          <option value="Interconexão">Interconexão</option>
+          <option value="Banda Larga">Banda Larga</option>
+          <option value="Outro">Outro</option>
+        </select>
+        <input id="inpLinkOutro" type="text" placeholder="Digite o link" style="display:none;margin-top:6px;">
+      </div>
+
+      <!-- Velocidade -->
+      <div>
+        <label>Velocidade (Download/Upload)</label>
+        <select id="inpVel">
+          <option value="800/800">800/800</option>
+          <option value="1400/1400">1400/1400</option>
+          <option value="400/400">400/400</option>
+          <option value="100/100">100/100</option>
+          <option value="Outro">Outro</option>
+        </select>
+        <input id="inpVelOutro" type="text" placeholder="Digite a velocidade" style="display:none;margin-top:6px;">
+      </div>
+
+      <!-- Telefone -->
+      <div>
+  <label>Telefone</label>
+  <input id="inpTel" type="text" placeholder="(47) 0000-0000" maxlength="15">
+</div>
+
+
+      <!-- Local -->
+      <div style="grid-column:1/3">
+        <label>Local</label>
+        <select id="inpLocal">
+          <option value="Prefeitura Sede">Prefeitura Sede</option>
+          <option value="Multiuso">Multiuso</option>
+          <option value="Sec. de Obras">Sec. de Obras</option>
+          <option value="Sec. de Obras - Diretoria de Balneários">Sec. de Obras - Diretoria de Balneários</option>
+          <option value="Sec. de Administração - Patrimônio">Sec. de Administração - Patrimônio</option>
+          <option value="Sec. Atendimento ao Cidadão - Shopping">Sec. Atendimento ao Cidadão - Shopping</option>
+          <option value="Sec. de Esporte - Ginásio">Sec. de Esporte - Ginásio</option>
+          <option value="Sec. de Esporte - Terminal Walter Gama Lobo">Sec. de Esporte - Terminal Walter Gama Lobo</option>
+          <option value="Sec. Meio Ambiente - CBEA">Sec. Meio Ambiente - CBEA</option>
+          <option value="Sec. de Obras - Cemitério">Sec. de Obras - Cemitério</option>
+          <option value="Sec. de Obras - Gerência Ervino">Sec. de Obras - Gerência Ervino</option>
+          <option value="Sec. de Obras - Gerência Distrito do Saí">Sec. de Obras - Gerência Distrito do Saí</option>
+          <option value="PAV - Ponto de Atendimento Virtual">PAV - Ponto de Atendimento Virtual</option>
+          <option value="NAC - Núcleo de Atendimento ao Cidadão">NAC - Núcleo de Atendimento ao Cidadão</option>
+          <option value="Sec. Pesca - Gerência">Sec. Pesca - Gerência</option>
+          <option value="Sec. Pesca - Viveiro de Mudas">Sec. Pesca - Viveiro de Mudas</option>
+          <option value="Sec. Pesca - Fábrica de Gelo">Sec. Pesca - Fábrica de Gelo</option>
+          <option value="Sec. Pesca - Abrigo Pescador">Sec. Pesca - Abrigo Pescador</option>
+          <option value="Graer - Aeroclube">Graer - Aeroclube</option>
+          <option value="Base PM (Ponte Enseada)">Base PM (Ponte Enseada)</option>
+          <option value="Sec. PM (Vila da Glória)">Sec. PM (Vila da Glória)</option>
+          <option value="Diretoria de TI">Diretoria de TI</option>
+          <option value="OCR PM - BR280">OCR PM - BR280</option>
+          <option value="Container SINE">Container SINE</option>
+          <option value="Outro">Outro</option>
+        </select>
+        <input id="inpLocalOutro" type="text" placeholder="Digite o local" style="display:none;margin-top:6px;">
+      </div>
+
+      <!-- Endereço -->
+      <div style="grid-column:1/3">
+        <label>Endereço</label>
+        <input id="inpEnd" type="text">
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeModal()">Cancelar</button>
+      <button class="btn-salvar" onclick="saveItem()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- MODAL MÁQUINAS -->
+<div id="machineModal" class="modal" onclick="closeMachineModalIfClicked(event)">
+  <div class="card">
+    <h2 id="machineModalTitle">Nova Máquina</h2>
+
+    <div class="form-grid">
+      
+
+      <div>
+        <label>Nome da Máquina</label>
+        <input id="mNome" type="text">
+      </div>
+
+      <div>
+        <label>Patrimônio</label>
+        <input id="mPatrimonio" type="text">
+      </div>
+
+      <div>
+        <div>
+  <label>Local</label>
+  <select id="mLocal">
+   
+    <option value="Prefeitura">Prefeitura</option>
+    <option value="Secretaria de Saúde">Secretaria de Saúde</option>
+    <option value="Secretaria de Educação">Secretaria de Educação</option>
+    <option value="Almoxarifado">Central de veiculos</option>
+    <option value="Outro">Outro</option>
+  </select>
+
+  <input
+    id="mLocalOutro"
+    type="text"
+    placeholder="Digite o local"
+    style="display:none;margin-top:6px;"
+  >
+</div>
+
+
+</select>
+
+      </div>
+      <div>
+  <label>Status</label>
+  <select id="mStatus" class="status-select">
+    <option value="Ativa">Ativa</option>
+    <option value="Manutenção">Manutenção</option>
+    <option value="Inativa">Inativa</option>
+  </select>
+</div>
+
+
+      <div style="grid-column:1/3">
+        <label>Descrição</label>
+        <textarea id="mDescricao" rows="3" placeholder="Descrição da máquina..."></textarea>
+
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeMachineModal()">Cancelar</button>
+      <button class="btn-salvar" onclick="saveMachine()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- BOTÃO FLUTUANTE – AÇÕES EM MASSA -->
+<div id="bulkActions" class="bulk-actions hidden">
+  <span id="bulkCounter">0 selecionados</span>
+
+  <button class="bulk-btn danger" onclick="deleteSelected()">
+    Excluir selecionados
+  </button>
+</div>
+<!-- MODAL DESCRIÇÃO COMPLETA -->
+<div id="descModal" class="modal" onclick="closeDescModal(event)">
+  <div class="card" style="max-width: 600px" onclick="event.stopPropagation()">
+    <h2>Descrição</h2>
+
+    <div
+      id="descModalContent"
+      style="
+        white-space: pre-wrap;
+        line-height: 1.6;
+        font-size: 14px;
+        color: #1f2937;
+        margin-top: 12px;
+      "
+    ></div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeDescModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+<div id="importModal" class="modal" onclick="closeImportModalIfClicked(event)">
+  <div class="card" style="max-width: 1100px" onclick="event.stopPropagation()">
+
+    <h2 id="importTitle">Importar Planilha</h2>
+
+    <!-- STEP 1: UPLOAD -->
+    <div id="importStepUpload">
+      <div class="import-header">
+        <input
+          type="file"
+          id="importFile"
+          accept=".xlsx,.xls"
+          onchange="handleImportFile()"
+        />
+        <small>Somente arquivos Excel (.xlsx)</small>
+      </div>
+    </div>
+
+    <!-- STEP 2: PREVIEW -->
+    <div id="importStepPreview" class="hidden">
+
+      <div class="table-wrap" style="margin-top:20px">
+        <table id="importPreviewTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeImportModal()">Cancelar</button>
+
+      <!-- BOTÃO MUDA DE FUNÇÃO -->
+      <button
+        id="importActionBtn"
+        class="btn-salvar"
+        onclick="confirmImport()"
+      >
+        Confirmar Importação
+      </button>
+    </div>
+
+  </div>
+</div>
+<div id="createTabModal" class="modal hidden" onclick="closeCreateTabModal(event)">
+  <div class="card" onclick="event.stopPropagation()">
+
+    <h2>Criar Nova Aba</h2>
+
+    <label>Nome da Aba</label>
+    <input id="newTabName" placeholder="Ex: Almoxarifado" />
+
+    <label>Campos da Tabela</label>
+    <div id="fieldsContainer"></div>
+
+    <button type="button" class="btn secondary" onclick="addField()">
+      + Adicionar Campo
+    </button>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeCreateTabModal()">Cancelar</button>
+      <button class="btn-salvar" onclick="salvarNovoModulo()">Criar Aba</button>
+    </div>
+
+  </div>
+</div>
+
+
+
+</body>
+</html>
