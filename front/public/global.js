@@ -13,7 +13,8 @@ let camposModuloAtual = [];
 /* ===========================
    MÓDULOS DINÂMICOS
    =========================== */
-const API_MODULOS = '/api/modulos';
+  const API_BASE = 'https://pertinently-unpublished-soila.ngrok-free.dev/api';
+const API_MODULOS = `${API_BASE}/modulos`;
 
 let modulos = [];
 let moduloAtual = null;
@@ -1437,6 +1438,7 @@ async function excluirModulo(mod) {
   if (!confirm(`Excluir a aba "${mod.nome}"?`)) return;
 
   try {
+    await fetch(`${API_MODULOS}/${mod.id}`, { method: 'DELETE' });
     await fetch(`/api/modulos/${mod.id}`, { method: 'DELETE' });
     await carregarModulos();
 
@@ -1454,6 +1456,8 @@ async function abrirModulo(mod) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
 
+  document.getElementById('moduloTitulo').textContent = mod.nome;
+
   await carregarCamposModulo();
   await carregarRegistrosModulo();
 
@@ -1461,12 +1465,12 @@ async function abrirModulo(mod) {
 }
 
 async function carregarCamposModulo() {
-  const res = await fetch(`/api/modulos/${moduloAtual.id}/campos`);
+  const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/campos`);
   moduloCampos = await res.json();
 }
 
 async function carregarRegistrosModulo() {
-  const res = await fetch(`/api/modulos/${moduloAtual.id}/registros`);
+  const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`);
   moduloRegistros = await res.json();
 }
 
@@ -1518,7 +1522,7 @@ function renderModuloDinamico() {
 async function excluirRegistroModulo(id) {
   if (!confirm('Remover este registro?')) return;
 
-  await fetch(`/api/modulos/${moduloAtual.id}/registros/${id}`, {
+  await fetch(`${API_MODULOS}/${moduloAtual.id}/registros/${id}`, {
     method: 'DELETE'
   });
 
@@ -1599,7 +1603,7 @@ function removeField(idx) {
 
 
 async function loadDynamicTabs() {
-  const res = await fetch('/api/modulos');
+  const res = await fetch(API_MODULOS);
   const modulos = await res.json();
 
   const nav = document.querySelector('.nav');
@@ -1620,7 +1624,7 @@ async function createNewTab() {
   if (!nome) return alert('Informe o nome da aba');
 
   // 1. cria módulo
-  const modRes = await fetch('/api/modulos', {
+  const modRes = await fetch(API_MODULOS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nome })
@@ -1636,7 +1640,7 @@ async function createNewTab() {
     const tipo = fields[i].querySelector('.field-type').value;
     const obrigatorio = fields[i].querySelector('.field-required').checked;
 
-    await fetch(`/api/modulos/${modulo.id}/campos`, {
+    await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1656,8 +1660,8 @@ async function openModulo(modulo) {
 
   document.getElementById('moduloTitulo').textContent = modulo.nome;
 
-  const campos = await fetch(`/api/modulos/${modulo.id}/campos`).then(r => r.json());
-  const registros = await fetch(`/api/modulos/${modulo.id}/registros`).then(r => r.json());
+  const campos = await fetch(`${API_MODULOS}/${modulo.id}/campos`).then(r => r.json());
+  const registros = await fetch(`${API_MODULOS}/${modulo.id}/registros`).then(r => r.json());
 
   renderModuloTable(campos, registros);
 }
@@ -1676,7 +1680,7 @@ async function openModulo(modulo) {
     return;
   }
 
-  const res = await fetch('/api/modulos', {
+  const res = await fetch(API_MODULOS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nome })
@@ -1700,7 +1704,7 @@ if (!camposValidos.length) {
 for (let i = 0; i < camposValidos.length; i++) {
   const f = camposValidos[i];
 
-  await fetch(`/api/modulos/${modulo.id}/campos`, {
+  await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
