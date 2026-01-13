@@ -25,6 +25,12 @@ exports.createModulo = async (nome, descricao) => {
 
     return { id: result.insertId, nome, slug, descricao: null };
   }
+  const [result] = await pool.query(
+    'INSERT INTO modulos (nome, slug, descricao) VALUES (?, ?, ?)',
+    [nome, slug, descricao || null]
+  );
+
+  return { id: result.insertId, nome, slug, descricao: descricao || null };
 };
 
 exports.listModulos = async () => {

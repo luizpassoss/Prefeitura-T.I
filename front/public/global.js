@@ -1438,6 +1438,7 @@ function renderAbasDinamicas() {
     } else {
       nav.appendChild(wrapper);
     }
+    nav.appendChild(wrapper);
   });
 }
 
@@ -1446,6 +1447,7 @@ async function excluirModulo(mod) {
 
   try {
     await fetch(`${API_MODULOS}/${mod.id}`, { method: 'DELETE' });
+    await fetch(`/api/modulos/${mod.id}`, { method: 'DELETE' });
     await carregarModulos();
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1576,6 +1578,7 @@ function addField() {
     />
 
     <select class="field-type" onchange="window.newTabFields[${idx}].tipo = this.value">
+    <select class="field-type" onchange="newTabFields[${idx}].tipo = this.value">
       <option value="texto">Texto</option>
       <option value="numero">Número</option>
       <option value="data">Data</option>
@@ -1584,6 +1587,7 @@ function addField() {
 
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:0;">
       <input class="field-required" type="checkbox" onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
+      <input class="field-required" type="checkbox" onchange="newTabFields[${idx}].obrigatorio = this.checked">
       Obrigatório
     </label>
 

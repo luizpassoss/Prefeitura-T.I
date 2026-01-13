@@ -1190,6 +1190,7 @@ textarea {
 .btn-add-tab {
   margin-top: 12px;
   border-radius: 999px;
+  border-radius: 10px;
   cursor: pointer;
   border: 1px solid #e2e8f0;
   text-align: left;
@@ -1199,6 +1200,8 @@ textarea {
   width: 32px;
   height: 32px;
   padding: 0;
+  width: 100%;
+  padding: 8px 12px;
   background: #f8fafc;
   color: #0f172a;
   font-weight: 600;
@@ -1227,6 +1230,28 @@ textarea {
   color: currentColor;
   font-size: 18px;
   font-weight: 600;
+
+.btn-add-tab:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #1e3a8a;
+}
+
+.btn-add-tab:active {
+  background: #e2e8f0;
+}
+
+.btn-add-tab-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  color: #1e3a8a;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 
