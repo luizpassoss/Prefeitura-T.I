@@ -19,6 +19,34 @@ exports.listModulos = async () => {
   return rows;
 };
 
+exports.deleteModulo = async (moduloId) => {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(
+      `DELETE v
+       FROM modulo_valores v
+       JOIN modulo_registros r ON v.registro_id = r.id
+       WHERE r.modulo_id = ?`,
+      [moduloId]
+    );
+
+    await conn.query('DELETE FROM modulo_registros WHERE modulo_id = ?', [moduloId]);
+    await conn.query('DELETE FROM modulo_campos WHERE modulo_id = ?', [moduloId]);
+    const [result] = await conn.query('DELETE FROM modulos WHERE id = ?', [moduloId]);
+
+    await conn.commit();
+    return { deleted: result.affectedRows > 0 };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};
+
 // ============================
 // CAMPOS
 // ============================

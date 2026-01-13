@@ -27,4 +27,20 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Excluir aba
+router.delete('/:id', async (req, res) => {
+  try {
+    const moduloId = Number(req.params.id);
+    if (!moduloId) return res.status(400).json({ error: 'ID inválido' });
+
+    const result = await modulosService.deleteModulo(moduloId);
+    if (!result.deleted) return res.status(404).json({ error: 'Módulo não encontrado' });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao excluir módulo' });
+  }
+});
+
 module.exports = router;
