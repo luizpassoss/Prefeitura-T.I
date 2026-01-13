@@ -13,7 +13,8 @@ let camposModuloAtual = [];
 /* ===========================
    MÓDULOS DINÂMICOS
    =========================== */
-const API_MODULOS = '/api/modulos';
+  const API_BASE = 'https://pertinently-unpublished-soila.ngrok-free.dev/api';
+const API_MODULOS = `${API_BASE}/modulos`;
 
 let modulos = [];
 let moduloAtual = null;
@@ -1400,8 +1401,12 @@ function renderAbasDinamicas() {
 
   // remove abas dinâmicas antigas
   nav.querySelectorAll('.tab-dinamica').forEach(e => e.remove());
+  nav.querySelectorAll('.tab-dinamica-wrapper').forEach(e => e.remove());
 
   modulos.forEach(mod => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tab-dinamica-wrapper';
+
     const a = document.createElement('a');
     a.className = 'tab-dinamica';
     a.textContent = mod.nome;
@@ -1413,9 +1418,35 @@ function renderAbasDinamicas() {
   abrirModulo(mod);
 };
 
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'tab-delete';
+    deleteBtn.title = 'Excluir aba';
+    deleteBtn.innerHTML = '✕';
+    deleteBtn.onclick = async (e) => {
+      e.stopPropagation();
+      await excluirModulo(mod);
+    };
 
-    nav.appendChild(a);
+    wrapper.appendChild(a);
+    wrapper.appendChild(deleteBtn);
+    nav.appendChild(wrapper);
   });
+}
+
+async function excluirModulo(mod) {
+  if (!confirm(`Excluir a aba "${mod.nome}"?`)) return;
+
+  try {
+    await fetch(`${API_MODULOS}/${mod.id}`, { method: 'DELETE' });
+    await carregarModulos();
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    switchTab('inventario');
+  } catch (e) {
+    console.error('Erro ao excluir módulo:', e);
+    alert('Erro ao excluir a aba.');
+  }
 }
 
 async function abrirModulo(mod) {
@@ -1424,6 +1455,8 @@ async function abrirModulo(mod) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
 
+  document.getElementById('moduloTitulo').textContent = mod.nome;
+
   await carregarCamposModulo();
   await carregarRegistrosModulo();
 
@@ -1431,12 +1464,12 @@ async function abrirModulo(mod) {
 }
 
 async function carregarCamposModulo() {
-  const res = await fetch(`/api/modulos/${moduloAtual.id}/campos`);
+  const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/campos`);
   moduloCampos = await res.json();
 }
 
 async function carregarRegistrosModulo() {
-  const res = await fetch(`/api/modulos/${moduloAtual.id}/registros`);
+  const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`);
   moduloRegistros = await res.json();
 }
 
@@ -1488,7 +1521,7 @@ function renderModuloDinamico() {
 async function excluirRegistroModulo(id) {
   if (!confirm('Remover este registro?')) return;
 
-  await fetch(`/api/modulos/${moduloAtual.id}/registros/${id}`, {
+  await fetch(`${API_MODULOS}/${moduloAtual.id}/registros/${id}`, {
     method: 'DELETE'
   });
 
@@ -1504,8 +1537,6 @@ function openCreateTabModal() {
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
   openModalById('createTabModal');
-
-
 }
 
 function closeCreateTabModal(e) {
@@ -1529,11 +1560,12 @@ function addField() {
   row.innerHTML = `
     <input
       type="text"
+      class="field-name"
       placeholder="Nome do campo"
       oninput="newTabFields[${idx}].nome = this.value"
     />
 
-    <select onchange="newTabFields[${idx}].tipo = this.value">
+    <select class="field-type" onchange="newTabFields[${idx}].tipo = this.value">
       <option value="texto">Texto</option>
       <option value="numero">Número</option>
       <option value="data">Data</option>
@@ -1541,7 +1573,7 @@ function addField() {
     </select>
 
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:0;">
-      <input type="checkbox" onchange="newTabFields[${idx}].obrigatorio = this.checked">
+      <input class="field-required" type="checkbox" onchange="newTabFields[${idx}].obrigatorio = this.checked">
       Obrigatório
     </label>
 
@@ -1570,7 +1602,7 @@ function removeField(idx) {
 
 
 async function loadDynamicTabs() {
-  const res = await fetch('/api/modulos');
+  const res = await fetch(API_MODULOS);
   const modulos = await res.json();
 
   const nav = document.querySelector('.nav');
@@ -1591,7 +1623,7 @@ async function createNewTab() {
   if (!nome) return alert('Informe o nome da aba');
 
   // 1. cria módulo
-  const modRes = await fetch('/api/modulos', {
+  const modRes = await fetch(API_MODULOS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nome })
@@ -1607,7 +1639,7 @@ async function createNewTab() {
     const tipo = fields[i].querySelector('.field-type').value;
     const obrigatorio = fields[i].querySelector('.field-required').checked;
 
-    await fetch(`/api/modulos/${modulo.id}/campos`, {
+    await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1627,8 +1659,8 @@ async function openModulo(modulo) {
 
   document.getElementById('moduloTitulo').textContent = modulo.nome;
 
-  const campos = await fetch(`/api/modulos/${modulo.id}/campos`).then(r => r.json());
-  const registros = await fetch(`/api/modulos/${modulo.id}/registros`).then(r => r.json());
+  const campos = await fetch(`${API_MODULOS}/${modulo.id}/campos`).then(r => r.json());
+  const registros = await fetch(`${API_MODULOS}/${modulo.id}/registros`).then(r => r.json());
 
   renderModuloTable(campos, registros);
 }
@@ -1640,12 +1672,14 @@ async function openModulo(modulo) {
     return;
   }
 
-  if (!newTabFields.length) {
+  const fieldRows = [...document.querySelectorAll('#fieldsContainer .field-row')];
+
+  if (!fieldRows.length) {
     alert('Adicione ao menos um campo.');
     return;
   }
 
-  const res = await fetch('/api/modulos', {
+  const res = await fetch(API_MODULOS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nome })
@@ -1653,12 +1687,11 @@ async function openModulo(modulo) {
 
   const modulo = await res.json();
 
-const camposValidos = newTabFields
-  .filter(f => f && !f.__deleted)
-  .map(f => ({
-    nome: (f.nome || '').trim(),
-    tipo: f.tipo || 'texto',
-    obrigatorio: !!f.obrigatorio
+const camposValidos = fieldRows
+  .map(row => ({
+    nome: row.querySelector('.field-name')?.value.trim(),
+    tipo: row.querySelector('.field-type')?.value || 'texto',
+    obrigatorio: !!row.querySelector('.field-required')?.checked
   }))
   .filter(f => f.nome);
 
@@ -1670,7 +1703,7 @@ if (!camposValidos.length) {
 for (let i = 0; i < camposValidos.length; i++) {
   const f = camposValidos[i];
 
-  await fetch(`/api/modulos/${modulo.id}/campos`, {
+  await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1697,7 +1730,10 @@ function closeAllModals() {
 function openModalById(id) {
   closeAllModals();
   const el = document.getElementById(id);
-  if (el) el.classList.add('show');
+  if (el) {
+    el.classList.remove('hidden');
+    el.classList.add('show');
+  }
 }
 
 

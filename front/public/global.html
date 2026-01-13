@@ -238,50 +238,46 @@ class="select" onchange="applyFilters()">
       </main>
     </section>
 
+    <!-- MÓDULO DINÂMICO -->
+    <section id="tabModuloDinamico" class="tab">
+      <main class="main">
+        <div class="header">
+          <div>
+            <h1 id="moduloTitulo">Módulo</h1>
+            <div class="small">Tabela personalizada</div>
+          </div>
+
+          <div class="controls">
+            <div class="search-wrapper">
+              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="7" stroke="#7a7a7a" stroke-width="2" fill="none"/>
+                <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="#7a7a7a" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <input
+                id="moduloSearch"
+                class="search-input"
+                placeholder="Buscar..."
+                oninput="filtrarModulo()"
+              />
+            </div>
+
+            <button class="btn" onclick="openNovoRegistroModulo()">
+              + Novo
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="styled-table">
+            <thead id="moduloThead"></thead>
+            <tbody id="moduloTbody"></tbody>
+          </table>
+        </div>
+      </main>
+    </section>
   </div>
 
 </div>
-<section id="tabModuloDinamico" class="tab">
-  <main class="main">
-
-    <div class="header">
-      <div>
-        <h1 id="moduloTitulo">Módulo</h1>
-        <div class="small">Tabela personalizada</div>
-      </div>
-
-      <div class="controls">
-       <div class="search-wrapper">
-  <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <circle cx="11" cy="11" r="7" stroke="#7a7a7a" stroke-width="2" fill="none"/>
-    <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="#7a7a7a" stroke-width="2" stroke-linecap="round"/>
-  </svg>
-  <input
-    id="moduloSearch"
-    class="search-input"
-    placeholder="Buscar..."
-    oninput="filtrarModulo()"
-  />
-</div>
-
-
-        <button class="btn" onclick="openNovoRegistroModulo()">
-          + Novo
-        </button>
-      </div>
-    </div>
-
-    <div class="table-wrap">
-      <table class="styled-table">
-        <thead id="moduloThead"></thead>
-        <tbody id="moduloTbody"></tbody>
-      </table>
-    </div>
-
-  </main>
-</section>
-
-
 
 <!-- MODAL INVENTÁRIO -->
 <div id="modal" class="modal" onclick="closeModalIfClicked(event)">
@@ -524,26 +520,31 @@ class="select" onchange="applyFilters()">
 
   </div>
 </div>
-<div id="createTabModal" class="modal hidden" onclick="closeCreateTabModal(event)">
-  <div class="card" onclick="event.stopPropagation()">
+<div id="createTabModal" class="modal" onclick="closeCreateTabModal(event)">
+  <div class="card create-tab-card" onclick="event.stopPropagation()">
+    <div class="modal-heading">
+      <h2>Criar nova aba</h2>
+      <p class="modal-subtitle">
+        Defina o nome da aba e os campos que deseja na tabela personalizada.
+      </p>
+    </div>
 
-    <h2>Criar Nova Aba</h2>
-
-    <label>Nome da Aba</label>
+    <label for="newTabName">Nome da Aba</label>
     <input id="newTabName" placeholder="Ex: Almoxarifado" />
 
-    <label>Campos da Tabela</label>
-    <div id="fieldsContainer"></div>
+    <div class="create-tab-header">
+      <label>Campos da Tabela</label>
+      <button type="button" class="btn secondary" onclick="addField()">
+        + Adicionar Campo
+      </button>
+    </div>
 
-    <button type="button" class="btn secondary" onclick="addField()">
-      + Adicionar Campo
-    </button>
+    <div id="fieldsContainer"></div>
 
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeCreateTabModal()">Cancelar</button>
       <button class="btn-salvar" onclick="salvarNovoModulo()">Criar Aba</button>
     </div>
-
   </div>
 </div>
 
