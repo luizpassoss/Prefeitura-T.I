@@ -1439,6 +1439,7 @@ async function excluirModulo(mod) {
 
   try {
     await fetch(`${API_MODULOS}/${mod.id}`, { method: 'DELETE' });
+    await fetch(`/api/modulos/${mod.id}`, { method: 'DELETE' });
     await carregarModulos();
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
