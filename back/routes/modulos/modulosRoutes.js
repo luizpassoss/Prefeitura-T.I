@@ -5,10 +5,10 @@ const modulosService = require('../../services/modulosService');
 // Criar nova aba
 router.post('/', async (req, res) => {
   try {
-    const { nome } = req.body;
+    const { nome, descricao } = req.body;
     if (!nome) return res.status(400).json({ error: 'Nome obrigatório' });
 
-    const modulo = await modulosService.createModulo(nome);
+    const modulo = await modulosService.createModulo(nome, descricao);
     res.json(modulo);
 
   } catch (err) {

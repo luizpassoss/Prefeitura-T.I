@@ -3,15 +3,15 @@ const pool = require('../db');
 // ============================
 // MÓDULOS
 // ============================
-exports.createModulo = async (nome) => {
+exports.createModulo = async (nome, descricao) => {
   const slug = nome.toLowerCase().replace(/\s+/g, '_');
 
   const [result] = await pool.query(
-    'INSERT INTO modulos (nome, slug) VALUES (?, ?)',
-    [nome, slug]
+    'INSERT INTO modulos (nome, slug, descricao) VALUES (?, ?, ?)',
+    [nome, slug, descricao || null]
   );
 
-  return { id: result.insertId, nome, slug };
+  return { id: result.insertId, nome, slug, descricao: descricao || null };
 };
 
 exports.listModulos = async () => {

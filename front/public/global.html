@@ -34,9 +34,10 @@
     <nav class="nav">
       <a class="active" onclick="switchTab('inventario')">Inventário</a>
       <a onclick="switchTab('maquinas')">Máquinas</a>
-        <button class="btn-add-tab" onclick="openCreateTabModal()">
-    + Nova Aba
-  </button>
+      <button class="btn-add-tab" onclick="openCreateTabModal()">
+        <span class="btn-add-tab-icon" aria-hidden="true">＋</span>
+        <span>Nova aba</span>
+      </button>
     </nav>
   </aside>
 
@@ -244,6 +245,7 @@ class="select" onchange="applyFilters()">
         <div class="header">
           <div>
             <h1 id="moduloTitulo">Módulo</h1>
+            <div id="moduloDescricao" class="small">Tabela personalizada</div>
             <div class="small">Tabela personalizada</div>
           </div>
 
@@ -531,6 +533,13 @@ class="select" onchange="applyFilters()">
 
     <label for="newTabName">Nome da Aba</label>
     <input id="newTabName" placeholder="Ex: Almoxarifado" />
+
+    <label for="newTabDescription">Descrição</label>
+    <textarea
+      id="newTabDescription"
+      rows="2"
+      placeholder="Ex: Controle de materiais e reposições"
+    ></textarea>
 
     <div class="create-tab-header">
       <label>Campos da Tabela</label>

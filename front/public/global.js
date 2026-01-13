@@ -1457,6 +1457,7 @@ async function abrirModulo(mod) {
   document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
 
   document.getElementById('moduloTitulo').textContent = mod.nome;
+  document.getElementById('moduloDescricao').textContent = mod.descricao || 'Tabela personalizada';
 
   await carregarCamposModulo();
   await carregarRegistrosModulo();
@@ -1537,6 +1538,7 @@ function openCreateTabModal() {
   newTabFields = [];
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
+  document.getElementById('newTabDescription').value = '';
   openModalById('createTabModal');
 }
 
@@ -1621,13 +1623,14 @@ async function loadDynamicTabs() {
 
 async function createNewTab() {
   const nome = document.getElementById('newTabName').value.trim();
+  const descricao = document.getElementById('newTabDescription').value.trim();
   if (!nome) return alert('Informe o nome da aba');
 
   // 1. cria módulo
   const modRes = await fetch(API_MODULOS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome })
+    body: JSON.stringify({ nome, descricao })
   });
 
   const modulo = await modRes.json();
@@ -1659,6 +1662,7 @@ async function openModulo(modulo) {
   switchTab('modulo');
 
   document.getElementById('moduloTitulo').textContent = modulo.nome;
+  document.getElementById('moduloDescricao').textContent = modulo.descricao || 'Tabela personalizada';
 
   const campos = await fetch(`${API_MODULOS}/${modulo.id}/campos`).then(r => r.json());
   const registros = await fetch(`${API_MODULOS}/${modulo.id}/registros`).then(r => r.json());
@@ -1667,6 +1671,7 @@ async function openModulo(modulo) {
 }
  async function salvarNovoModulo() {
   const nome = document.getElementById('newTabName').value.trim();
+  const descricao = document.getElementById('newTabDescription').value.trim();
 
   if (!nome) {
     alert('Informe o nome da aba.');
@@ -1683,7 +1688,7 @@ async function openModulo(modulo) {
   const res = await fetch(API_MODULOS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome })
+    body: JSON.stringify({ nome, descricao })
   });
 
   const modulo = await res.json();
