@@ -134,6 +134,38 @@ body {
   transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease;
 }
 
+.tab-dinamica-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-dinamica-wrapper .tab-dinamica {
+  flex: 1;
+}
+
+.tab-delete {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.tab-delete:hover {
+  color: #ef4444;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
 /* Hover suave */
 .nav a:hover {
   background: rgba(0, 153, 255, 0.096);

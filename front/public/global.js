@@ -1400,8 +1400,12 @@ function renderAbasDinamicas() {
 
   // remove abas dinâmicas antigas
   nav.querySelectorAll('.tab-dinamica').forEach(e => e.remove());
+  nav.querySelectorAll('.tab-dinamica-wrapper').forEach(e => e.remove());
 
   modulos.forEach(mod => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tab-dinamica-wrapper';
+
     const a = document.createElement('a');
     a.className = 'tab-dinamica';
     a.textContent = mod.nome;
@@ -1413,9 +1417,35 @@ function renderAbasDinamicas() {
   abrirModulo(mod);
 };
 
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'tab-delete';
+    deleteBtn.title = 'Excluir aba';
+    deleteBtn.innerHTML = '✕';
+    deleteBtn.onclick = async (e) => {
+      e.stopPropagation();
+      await excluirModulo(mod);
+    };
 
-    nav.appendChild(a);
+    wrapper.appendChild(a);
+    wrapper.appendChild(deleteBtn);
+    nav.appendChild(wrapper);
   });
+}
+
+async function excluirModulo(mod) {
+  if (!confirm(`Excluir a aba "${mod.nome}"?`)) return;
+
+  try {
+    await fetch(`/api/modulos/${mod.id}`, { method: 'DELETE' });
+    await carregarModulos();
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    switchTab('inventario');
+  } catch (e) {
+    console.error('Erro ao excluir módulo:', e);
+    alert('Erro ao excluir a aba.');
+  }
 }
 
 async function abrirModulo(mod) {
@@ -1527,11 +1557,12 @@ function addField() {
   row.innerHTML = `
     <input
       type="text"
+      class="field-name"
       placeholder="Nome do campo"
       oninput="newTabFields[${idx}].nome = this.value"
     />
 
-    <select onchange="newTabFields[${idx}].tipo = this.value">
+    <select class="field-type" onchange="newTabFields[${idx}].tipo = this.value">
       <option value="texto">Texto</option>
       <option value="numero">Número</option>
       <option value="data">Data</option>
@@ -1539,7 +1570,7 @@ function addField() {
     </select>
 
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:0;">
-      <input type="checkbox" onchange="newTabFields[${idx}].obrigatorio = this.checked">
+      <input class="field-required" type="checkbox" onchange="newTabFields[${idx}].obrigatorio = this.checked">
       Obrigatório
     </label>
 
@@ -1638,7 +1669,9 @@ async function openModulo(modulo) {
     return;
   }
 
-  if (!newTabFields.length) {
+  const fieldRows = [...document.querySelectorAll('#fieldsContainer .field-row')];
+
+  if (!fieldRows.length) {
     alert('Adicione ao menos um campo.');
     return;
   }
@@ -1651,12 +1684,11 @@ async function openModulo(modulo) {
 
   const modulo = await res.json();
 
-const camposValidos = newTabFields
-  .filter(f => f && !f.__deleted)
-  .map(f => ({
-    nome: (f.nome || '').trim(),
-    tipo: f.tipo || 'texto',
-    obrigatorio: !!f.obrigatorio
+const camposValidos = fieldRows
+  .map(row => ({
+    nome: row.querySelector('.field-name')?.value.trim(),
+    tipo: row.querySelector('.field-type')?.value || 'texto',
+    obrigatorio: !!row.querySelector('.field-required')?.checked
   }))
   .filter(f => f.nome);
 
