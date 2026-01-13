@@ -347,6 +347,41 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: none !important;
 }
 
+.create-tab-card {
+  max-width: 720px;
+}
+
+.modal-heading h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.modal-subtitle {
+  margin: 6px 0 16px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.create-tab-header {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.btn.secondary {
+  background: #eef2ff;
+  color: #1f3a8a;
+  border: 1px solid #d9e2ec;
+  font-weight: 600;
+}
+
+.btn.secondary:hover {
+  background: #e0e7ff;
+  color: #1e40af;
+}
 
 /* CAMPOS */
 label {
@@ -1148,6 +1183,16 @@ textarea {
   gap: 10px;
 }
 
+#fieldsContainer:empty::before {
+  content: "Nenhum campo adicionado ainda.";
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5f5;
+  color: #64748b;
+  font-size: 13px;
+}
+
 .field-row {
   display: grid;
   grid-template-columns: 1.2fr 0.9fr 0.5fr 0.35fr;
@@ -1172,4 +1217,19 @@ textarea {
 .field-row .field-remove:hover {
   background: #fee2e2;
   border-color: #fca5a5;
+}
+
+@media (max-width: 700px) {
+  .create-tab-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .field-row .field-remove {
+    width: 100%;
+  }
 }

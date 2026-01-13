@@ -1504,8 +1504,6 @@ function openCreateTabModal() {
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
   openModalById('createTabModal');
-
-
 }
 
 function closeCreateTabModal(e) {
@@ -1697,7 +1695,10 @@ function closeAllModals() {
 function openModalById(id) {
   closeAllModals();
   const el = document.getElementById(id);
-  if (el) el.classList.add('show');
+  if (el) {
+    el.classList.remove('hidden');
+    el.classList.add('show');
+  }
 }
 
 
