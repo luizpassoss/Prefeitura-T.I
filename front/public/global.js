@@ -1,4 +1,6 @@
 
+window.newTabFields = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.modal').forEach(m => {
   m.classList.remove('show');
@@ -1398,6 +1400,7 @@ async function carregarModulos() {
 
 function renderAbasDinamicas() {
   const nav = document.querySelector('.nav');
+  const addButton = nav.querySelector('.btn-add-tab');
 
   // remove abas dinâmicas antigas
   nav.querySelectorAll('.tab-dinamica').forEach(e => e.remove());
@@ -1430,6 +1433,11 @@ function renderAbasDinamicas() {
 
     wrapper.appendChild(a);
     wrapper.appendChild(deleteBtn);
+    if (addButton) {
+      nav.insertBefore(wrapper, addButton);
+    } else {
+      nav.appendChild(wrapper);
+    }
     nav.appendChild(wrapper);
   });
 }
@@ -1532,10 +1540,11 @@ async function excluirRegistroModulo(id) {
 }
 
 
-let newTabFields = [];
+let newTabFields = window.newTabFields;
 
 function openCreateTabModal() {
   newTabFields = [];
+  window.newTabFields = newTabFields;
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
   document.getElementById('newTabDescription').value = '';
@@ -1565,9 +1574,10 @@ function addField() {
       type="text"
       class="field-name"
       placeholder="Nome do campo"
-      oninput="newTabFields[${idx}].nome = this.value"
+      oninput="window.newTabFields[${idx}].nome = this.value"
     />
 
+    <select class="field-type" onchange="window.newTabFields[${idx}].tipo = this.value">
     <select class="field-type" onchange="newTabFields[${idx}].tipo = this.value">
       <option value="texto">Texto</option>
       <option value="numero">Número</option>
@@ -1576,6 +1586,7 @@ function addField() {
     </select>
 
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:0;">
+      <input class="field-required" type="checkbox" onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
       <input class="field-required" type="checkbox" onchange="newTabFields[${idx}].obrigatorio = this.checked">
       Obrigatório
     </label>

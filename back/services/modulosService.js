@@ -6,6 +6,25 @@ const pool = require('../db');
 exports.createModulo = async (nome, descricao) => {
   const slug = nome.toLowerCase().replace(/\s+/g, '_');
 
+  try {
+    const [result] = await pool.query(
+      'INSERT INTO modulos (nome, slug, descricao) VALUES (?, ?, ?)',
+      [nome, slug, descricao || null]
+    );
+
+    return { id: result.insertId, nome, slug, descricao: descricao || null };
+  } catch (err) {
+    if (err.code !== 'ER_BAD_FIELD_ERROR') {
+      throw err;
+    }
+
+    const [result] = await pool.query(
+      'INSERT INTO modulos (nome, slug) VALUES (?, ?)',
+      [nome, slug]
+    );
+
+    return { id: result.insertId, nome, slug, descricao: null };
+  }
   const [result] = await pool.query(
     'INSERT INTO modulos (nome, slug, descricao) VALUES (?, ?, ?)',
     [nome, slug, descricao || null]
