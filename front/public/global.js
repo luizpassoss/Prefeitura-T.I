@@ -115,6 +115,16 @@ function updateBulkUI() {
   function hideModal(el){ el.classList.remove('show'); }
   let confirmCallback = null;
 
+  function toggleFilters(panelId, button) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    panel.classList.toggle('hidden');
+    if (button) {
+      const isOpen = !panel.classList.contains('hidden');
+      button.setAttribute('aria-pressed', String(isOpen));
+    }
+  }
+
   function showMessage(message, title = 'Aviso') {
     const titleEl = document.getElementById('systemMessageTitle');
     const textEl = document.getElementById('systemMessageText');
@@ -300,6 +310,11 @@ function getFiltered() {
   // PEGAR O SELECT APENAS SE EXISTIR (ABA INVENTÁRIO)
   const catEl = document.getElementById('filterCategoryInv');
   const cat = catEl ? catEl.value : "All";
+  const fieldFilter = (document.getElementById('filterFieldInv')?.value || 'all').toLowerCase();
+  const valueFilter = (document.getElementById('filterValueInv')?.value || '').trim().toLowerCase();
+  const localFilter = (document.getElementById('filterLocalInv')?.value || '').trim().toLowerCase();
+  const velFilter = (document.getElementById('filterVelInv')?.value || '').trim().toLowerCase();
+  const telFilter = (document.getElementById('filterTelInv')?.value || '').trim().toLowerCase();
 
   let list = [...data];
 
@@ -324,7 +339,54 @@ if (cat !== "All") {
     );
   }
 
+  if (localFilter) {
+    list = list.filter(x => (x.local || '').toLowerCase().includes(localFilter));
+  }
+
+  if (velFilter) {
+    list = list.filter(x => (x.velocidade || '').toLowerCase().includes(velFilter));
+  }
+
+  if (telFilter) {
+    list = list.filter(x => (x.telefone || '').toLowerCase().includes(telFilter));
+  }
+
+  if (valueFilter) {
+    list = list.filter(x => {
+      const fields = {
+        link: x.link,
+        velocidade: x.velocidade,
+        telefone: x.telefone,
+        local: x.local,
+        endereco: x.endereco,
+        categoria: x.categoria
+      };
+      if (fieldFilter === 'all') {
+        return Object.values(fields).some(val =>
+          (val || '').toString().toLowerCase().includes(valueFilter)
+        );
+      }
+      return (fields[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
+    });
+  }
+
   return list;
+}
+
+function clearInventoryFilters() {
+  const catEl = document.getElementById('filterCategoryInv');
+  if (catEl) catEl.value = 'All';
+  const fieldEl = document.getElementById('filterFieldInv');
+  if (fieldEl) fieldEl.value = 'all';
+  const valueEl = document.getElementById('filterValueInv');
+  if (valueEl) valueEl.value = '';
+  const localEl = document.getElementById('filterLocalInv');
+  if (localEl) localEl.value = '';
+  const velEl = document.getElementById('filterVelInv');
+  if (velEl) velEl.value = '';
+  const telEl = document.getElementById('filterTelInv');
+  if (telEl) telEl.value = '';
+  applyFilters();
 }
 
 
@@ -414,20 +476,6 @@ async function carregarLogoPrefeitura() {
 
     showModal(modal);
   }
-  document.getElementById('inpLink').addEventListener('change', function () {
-  document.getElementById('inpLinkOutro').style.display =
-    this.value === 'Outro' ? 'block' : 'none';
-});
-
-document.getElementById('inpVel').addEventListener('change', function () {
-  document.getElementById('inpVelOutro').style.display =
-    this.value === 'Outro' ? 'block' : 'none';
-});
-
-document.getElementById('inpLocal').addEventListener('change', function () {
-  document.getElementById('inpLocalOutro').style.display =
-    this.value === 'Outro' ? 'block' : 'none';
-});
 const mLocalSelect = document.getElementById('mLocal');
 const mLocalOutro = document.getElementById('mLocalOutro');
 
@@ -803,6 +851,10 @@ mtbody.addEventListener('click', (e) => {
      =========================== */
  function applyMachineFilters() {
   const q = (document.getElementById('mq').value || '').trim().toLowerCase();
+  const statusFilter = (document.getElementById('filterMachineStatus')?.value || 'All').toLowerCase();
+  const fieldFilter = (document.getElementById('filterMachineField')?.value || 'all').toLowerCase();
+  const valueFilter = (document.getElementById('filterMachineValue')?.value || '').trim().toLowerCase();
+  const localFilter = (document.getElementById('filterMachineLocal')?.value || '').trim().toLowerCase();
 
   let list = [...machineData];
 
@@ -817,10 +869,48 @@ mtbody.addEventListener('click', (e) => {
     );
   }
 
+  if (statusFilter !== 'all') {
+    list = list.filter(x => (x.status || '').toLowerCase() === statusFilter);
+  }
+
+  if (localFilter) {
+    list = list.filter(x => (x.local || '').toLowerCase().includes(localFilter));
+  }
+
+  if (valueFilter) {
+    list = list.filter(x => {
+      const fields = {
+        nome_maquina: x.nome_maquina,
+        patrimonio: x.patrimonio,
+        local: x.local,
+        status: x.status,
+        descricao: x.descricao
+      };
+      if (fieldFilter === 'all') {
+        return Object.values(fields).some(val =>
+          (val || '').toString().toLowerCase().includes(valueFilter)
+        );
+      }
+      return (fields[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
+    });
+  }
+
   renderMachines(list);
 }
 
-  function clearMachineFilters(){ document.getElementById('mq').value=''; document.getElementById('filterMachineCategory').value='All'; applyMachineFilters(); }
+  function clearMachineFilters(){
+    const mqEl = document.getElementById('mq');
+    if (mqEl) mqEl.value = '';
+    const statusEl = document.getElementById('filterMachineStatus');
+    if (statusEl) statusEl.value = 'All';
+    const fieldEl = document.getElementById('filterMachineField');
+    if (fieldEl) fieldEl.value = 'all';
+    const valueEl = document.getElementById('filterMachineValue');
+    if (valueEl) valueEl.value = '';
+    const localEl = document.getElementById('filterMachineLocal');
+    if (localEl) localEl.value = '';
+    applyMachineFilters();
+  }
 
 
 const filterCategoryInv = document.getElementById('filterCategoryInv');
@@ -1787,13 +1877,15 @@ function renderModuloDinamico() {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
 
+  updateModuloFilterFields();
+
   const filtered = getModuloFiltrado();
 
   // HEADER
   thead.innerHTML = `
     <tr>
       ${moduloCampos.map(c => `<th>${c.nome}</th>`).join('')}
-      <th>Ações</th>
+      <th class="actions-header">Ações</th>
     </tr>
   `;
 
@@ -1851,17 +1943,75 @@ function renderModuloDinamico() {
 
 function getModuloFiltrado() {
   const q = (document.getElementById('moduloSearch')?.value || '').trim().toLowerCase();
+  const fieldFilter = (document.getElementById('moduloFilterField')?.value || 'all').toLowerCase();
+  const valueFilter = (document.getElementById('moduloFilterValue')?.value || '').trim().toLowerCase();
   if (!q) {
-    return moduloRegistros.map((row, idx) => ({ row, idx }));
+    let filtered = moduloRegistros.map((row, idx) => ({ row, idx }));
+    if (valueFilter) {
+      filtered = filtered.filter(({ row }) => {
+        if (fieldFilter === 'all') {
+          return moduloCampos.some(campo =>
+            (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
+          );
+        }
+        return (row[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
+      });
+    }
+    return filtered;
   }
 
-  return moduloRegistros
+  let filtered = moduloRegistros
     .map((row, idx) => ({ row, idx }))
     .filter(({ row }) =>
       moduloCampos.some(campo =>
         (row[campo.nome] || '').toString().toLowerCase().includes(q)
       )
     );
+  if (valueFilter) {
+    filtered = filtered.filter(({ row }) => {
+      if (fieldFilter === 'all') {
+        return moduloCampos.some(campo =>
+          (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
+        );
+      }
+      return (row[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
+    });
+  }
+  return filtered;
+}
+
+function updateModuloFilterFields() {
+  const select = document.getElementById('moduloFilterField');
+  if (!select) return;
+  const currentValue = select.value || 'all';
+  const fieldNames = moduloCampos.map(campo => campo.nome);
+
+  select.innerHTML = '';
+  const allOption = document.createElement('option');
+  allOption.value = 'all';
+  allOption.textContent = 'Todos os campos';
+  select.appendChild(allOption);
+
+  fieldNames.forEach(nome => {
+    const option = document.createElement('option');
+    option.value = nome;
+    option.textContent = nome;
+    select.appendChild(option);
+  });
+
+  if ([...select.options].some(opt => opt.value === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function clearModuloFilters() {
+  const searchEl = document.getElementById('moduloSearch');
+  if (searchEl) searchEl.value = '';
+  const fieldEl = document.getElementById('moduloFilterField');
+  if (fieldEl) fieldEl.value = 'all';
+  const valueEl = document.getElementById('moduloFilterValue');
+  if (valueEl) valueEl.value = '';
+  filtrarModulo();
 }
 
 function filtrarModulo() {
@@ -1957,7 +2107,6 @@ async function salvarRegistroModulo() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ valores })
   });
-}
 
   closeModuloRegistroModal();
   await carregarRegistrosModulo();
@@ -1973,12 +2122,32 @@ function openNovoRegistroModulo() {
 
 let newTabFields = window.newTabFields;
 
+const tabTemplates = {
+  inventario: [
+    { nome: 'Link de Internet', tipo: 'texto', obrigatorio: true },
+    { nome: 'Velocidade (DL/UL)', tipo: 'texto', obrigatorio: false },
+    { nome: 'Telefone', tipo: 'texto', obrigatorio: false },
+    { nome: 'Local', tipo: 'texto', obrigatorio: true },
+    { nome: 'Endereço', tipo: 'texto', obrigatorio: false },
+    { nome: 'Categoria', tipo: 'texto', obrigatorio: false }
+  ],
+  maquinas: [
+    { nome: 'Nome Máquina', tipo: 'texto', obrigatorio: true },
+    { nome: 'Patrimônio', tipo: 'texto', obrigatorio: false },
+    { nome: 'Local', tipo: 'texto', obrigatorio: false },
+    { nome: 'Status', tipo: 'texto', obrigatorio: false },
+    { nome: 'Descrição', tipo: 'texto', obrigatorio: false }
+  ]
+};
+
 function openCreateTabModal() {
   newTabFields = [];
   window.newTabFields = newTabFields;
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
   document.getElementById('newTabDescription').value = '';
+  const templateSelect = document.getElementById('newTabTemplate');
+  if (templateSelect) templateSelect.value = 'custom';
   openModalById('createTabModal');
 }
 
@@ -1987,13 +2156,30 @@ function closeCreateTabModal(e) {
     document.getElementById('createTabModal').classList.remove('show');
   }
 }
-function addField() {
+
+function applyTabTemplate() {
+  const templateSelect = document.getElementById('newTabTemplate');
+  if (!templateSelect) return;
+  const templateKey = templateSelect.value;
+  const container = document.getElementById('fieldsContainer');
+  if (!container) return;
+
+  newTabFields = [];
+  window.newTabFields = newTabFields;
+  container.innerHTML = '';
+
+  if (templateKey === 'custom') return;
+  const templateFields = tabTemplates[templateKey] || [];
+  templateFields.forEach(field => addFieldWithValues(field));
+}
+
+function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } = {}) {
   const idx = newTabFields.length;
 
   newTabFields.push({
-    nome: '',
-    tipo: 'texto',
-    obrigatorio: false
+    nome,
+    tipo,
+    obrigatorio
   });
 
   const row = document.createElement('div');
@@ -2005,6 +2191,7 @@ function addField() {
       type="text"
       class="field-name"
       placeholder="Nome do campo"
+      value="${escapeHtml(nome)}"
       oninput="window.newTabFields[${idx}].nome = this.value"
     />
 
@@ -2016,7 +2203,7 @@ function addField() {
     </select>
 
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:0;">
-      <input class="field-required" type="checkbox" onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
+      <input class="field-required" type="checkbox" ${obrigatorio ? 'checked' : ''} onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
       Obrigatório
     </label>
 
@@ -2029,6 +2216,15 @@ function addField() {
   `;
 
   document.getElementById('fieldsContainer').appendChild(row);
+
+  const typeSelect = row.querySelector('.field-type');
+  if (typeSelect) {
+    typeSelect.value = tipo;
+  }
+}
+
+function addField() {
+  addFieldWithValues();
 }
 function removeField(idx) {
   // marca como removido
@@ -2242,6 +2438,10 @@ document.addEventListener('click', (e) => {
   window.exportModulo = exportModulo;
   window.toggleExportMenu = toggleExportMenu;
   window.carregarLogoPrefeitura = carregarLogoPrefeitura;
+  window.toggleFilters = toggleFilters;
+  window.clearInventoryFilters = clearInventoryFilters;
+  window.clearMachineFilters = clearMachineFilters;
+  window.clearModuloFilters = clearModuloFilters;
   window.openImportModal = openImportModal;
   window.closeImportModal = closeImportModal;
   window.closeImportModalIfClicked = closeImportModalIfClicked;
@@ -2250,10 +2450,11 @@ document.addEventListener('click', (e) => {
   window.removeImportRow = removeImportRow;
   window.updateImportCell = updateImportCell;
 
-window.openCreateTabModal = openCreateTabModal;
-window.closeCreateTabModal = closeCreateTabModal;
-window.addField = addField;
-window.salvarNovoModulo = salvarNovoModulo;
+  window.openCreateTabModal = openCreateTabModal;
+  window.closeCreateTabModal = closeCreateTabModal;
+  window.applyTabTemplate = applyTabTemplate;
+  window.addField = addField;
+  window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
 window.removeField = removeField;
 window.openNovoRegistroModulo = openNovoRegistroModulo;
