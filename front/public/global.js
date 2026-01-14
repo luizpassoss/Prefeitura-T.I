@@ -1260,6 +1260,10 @@ function openImportModal(type) {
   document.getElementById('importPreviewTable').querySelector('thead').innerHTML = '';
   document.getElementById('importPreviewTable').querySelector('tbody').innerHTML = '';
   document.getElementById('importFile').value = '';
+  document.getElementById('importStepUpload')?.classList.remove('hidden');
+  document.getElementById('importStepPreview')?.classList.add('hidden');
+  const actionBtn = document.getElementById('importActionBtn');
+  if (actionBtn) actionBtn.textContent = 'Confirmar Importação';
   openModalById('importModal');
 
 
@@ -1267,6 +1271,10 @@ function openImportModal(type) {
 
 function closeImportModal() {
   document.getElementById('importModal').classList.remove('show');
+  document.getElementById('importStepPreview')?.classList.add('hidden');
+  document.getElementById('importStepUpload')?.classList.remove('hidden');
+  const actionBtn = document.getElementById('importActionBtn');
+  if (actionBtn) actionBtn.textContent = 'Confirmar Importação';
 }
 
 function closeImportModalIfClicked(e) {
@@ -1281,10 +1289,12 @@ function handleImportFile() {
   reader.onload = (e) => {
     const wb = XLSX.read(e.target.result, { type: 'binary' });
     const sheet = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
 
-    importHeaders = data[0];
-    importRows = data.slice(1);
+    importHeaders = (data[0] || []).map(h => (h ?? '').toString().trim());
+    importRows = data
+      .slice(1)
+      .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
 
     renderImportPreview();
   };
@@ -1294,6 +1304,9 @@ function handleImportFile() {
 function renderImportPreview() {
   const thead = document.querySelector('#importPreviewTable thead');
   const tbody = document.querySelector('#importPreviewTable tbody');
+  const preview = document.getElementById('importStepPreview');
+  const actionBtn = document.getElementById('importActionBtn');
+  const uploadStep = document.getElementById('importStepUpload');
 
   thead.innerHTML = `
     <tr>
@@ -1323,6 +1336,12 @@ function renderImportPreview() {
 
     tbody.appendChild(tr);
   });
+
+  preview?.classList.remove('hidden');
+  uploadStep?.classList.add('hidden');
+  if (actionBtn) {
+    actionBtn.textContent = `Importar ${importRows.length} linha(s)`;
+  }
 }
 
 function updateImportCell(row, col, value) {
@@ -1334,28 +1353,62 @@ function removeImportRow(index) {
   renderImportPreview();
 }
 function mapImportRows() {
+  const headerMap = importHeaders.reduce((acc, header, idx) => {
+    const key = normalizeHeader(header);
+    if (key) acc[key] = idx;
+    return acc;
+  }, {});
+
+  const getValue = (row, keys, fallbackIndex) => {
+    for (const key of keys) {
+      const idx = headerMap[normalizeHeader(key)];
+      if (idx !== undefined) return row[idx];
+    }
+    return row[fallbackIndex];
+  };
+
   if (importType === 'inventario') {
     return importRows.map(r => ({
-      categoria: r[0],
-      link: r[1],
-      velocidade: r[2],
-      telefone: r[3],
-      local: r[4],
-      endereco: r[5]
+      categoria: getValue(r, ['categoria'], 0),
+      link: getValue(r, ['link', 'link de internet', 'internet'], 1),
+      velocidade: getValue(r, ['velocidade', 'velocidade dl/ul', 'download', 'upload'], 2),
+      telefone: getValue(r, ['telefone', 'contato'], 3),
+      local: getValue(r, ['local'], 4),
+      endereco: getValue(r, ['endereco', 'endereço'], 5)
     }));
   }
 
   if (importType === 'maquinas') {
     return importRows.map(r => ({
-      nome_maquina: r[0],
-      patrimonio: r[1],
-      local: r[2],
-      status: r[3],
-      descricao: r[4]
+      nome_maquina: getValue(r, ['nome', 'nome maquina', 'nome da maquina', 'máquina', 'maquina'], 0),
+      patrimonio: getValue(r, ['patrimonio', 'patrimônio'], 1),
+      local: getValue(r, ['local'], 2),
+      status: getValue(r, ['status'], 3),
+      descricao: getValue(r, ['descricao', 'descrição'], 4)
     }));
   }
 
   return [];
+}
+
+function normalizeHeader(value = '') {
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function columnLetter(index) {
+  let result = '';
+  let n = index + 1;
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    result = String.fromCharCode(65 + rem) + result;
+    n = Math.floor((n - 1) / 26);
+  }
+  return result;
 }
 async function confirmImport() {
   const rows = mapImportRows();
@@ -1416,12 +1469,13 @@ async function importarRegistrosModulo() {
 
   const headerMap = {};
   importHeaders.forEach((h, idx) => {
-    if (h) headerMap[h.toString().trim().toLowerCase()] = idx;
+    const key = normalizeHeader(h);
+    if (key) headerMap[key] = idx;
   });
 
   const camposMap = moduloCampos.map(c => ({
     nome: c.nome,
-    key: c.nome.toString().trim().toLowerCase()
+    key: normalizeHeader(c.nome)
   }));
 
   const hasMatch = camposMap.some(c => headerMap[c.key] !== undefined);
@@ -1485,37 +1539,97 @@ function exportModulo(tipo) {
 
 function exportModuloExcel() {
   const headers = moduloCampos.map(c => c.nome);
-  const rows = moduloRegistros.map(row =>
-    headers.reduce((acc, h) => {
-      acc[h] = row[h] || '';
-      return acc;
-    }, {})
-  );
+  const wsData = [
+    ['Prefeitura Municipal de São Francisco do Sul'],
+    ['Secretaria Municipal de Tecnologia da Informação'],
+    [`Relatório de ${moduloAtual?.nome || 'Módulo'}`],
+    [`Gerado em ${new Date().toLocaleString('pt-BR')}`],
+    [],
+    headers
+  ];
 
-  const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+  moduloRegistros.forEach(row => {
+    wsData.push(headers.map(h => row[h] || ''));
+  });
+
+  const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+  worksheet['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } },
+    { s: { r: 3, c: 0 }, e: { r: 3, c: headers.length - 1 } }
+  ];
+  worksheet['!cols'] = headers.map(() => ({ wch: 24 }));
+  worksheet['!autofilter'] = {
+    ref: `A6:${columnLetter(headers.length - 1)}${moduloRegistros.length + 6}`
+  };
+  worksheet['!freeze'] = { xSplit: 0, ySplit: 6 };
+
+  Object.keys(worksheet).forEach(cell => {
+    if (!cell.startsWith('!')) {
+      worksheet[cell].s = {
+        alignment: {
+          vertical: 'center',
+          horizontal: 'left',
+          wrapText: true
+        }
+      };
+    }
+  });
+
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Modulo');
 
-  XLSX.writeFile(workbook, `${moduloAtual?.nome || 'modulo'}.xlsx`);
+  XLSX.writeFile(
+    workbook,
+    `${moduloAtual?.nome || 'modulo'}_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
 }
 
 function exportModuloPDF() {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p', 'mm', 'a4');
+  const doc = new jsPDF('landscape');
   const headers = moduloCampos.map(c => c.nome);
   const data = moduloRegistros.map(row =>
     headers.map(h => row[h] || '')
   );
 
-  doc.text(moduloAtual?.nome || 'Módulo', 14, 14);
+  if (PREFEITURA_LOGO) {
+    doc.addImage(PREFEITURA_LOGO, 'PNG', 14, 14, 18, 18);
+  }
+
+  doc.setFontSize(14);
+  doc.text('PREFEITURA MUNICIPAL', 50, 18);
+  doc.setFontSize(10);
+  doc.text('Diretoria de Tecnologia da Informação', 50, 25);
+  doc.setFontSize(10);
+  doc.text('Secretaria de governo', 50, 30);
+  doc.setFontSize(16);
+  doc.text(`Relatório de ${moduloAtual?.nome || 'Módulo'}`, 148, 45, { align: 'center' });
+
   doc.autoTable({
-    startY: 20,
+    startY: 50,
     head: [headers],
     body: data,
-    styles: { fontSize: 9 }
+    theme: 'grid',
+    styles: {
+      fontSize: 9,
+      textColor: [31, 41, 55],
+      cellPadding: 6,
+      lineColor: [229, 231, 235],
+      lineWidth: 0.5
+    },
+    headStyles: {
+      fillColor: [243, 244, 246],
+      textColor: [17, 24, 39],
+      fontStyle: 'bold'
+    },
+    alternateRowStyles: {
+      fillColor: [249, 250, 251]
+    }
   });
 
-  doc.save(`${moduloAtual?.nome || 'modulo'}.pdf`);
+  doc.save(`Relatorio_${moduloAtual?.nome || 'modulo'}_TI.pdf`);
 }
 
 
