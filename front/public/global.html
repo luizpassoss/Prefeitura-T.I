@@ -22,22 +22,11 @@
   <aside class="sidebar">
     <div class="brand">
       <span class="brand-icon" aria-hidden="true">
-        <svg viewBox="0 0 48 48">
-          <defs>
-            <linearGradient id="brandGlow" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#1d4ed8"/>
-              <stop offset="100%" stop-color="#0f172a"/>
-            </linearGradient>
-          </defs>
-          <circle cx="24" cy="24" r="20" fill="url(#brandGlow)"/>
-          <path d="M16 20h16v8H16z" fill="#fff" opacity="0.9"/>
-          <path d="M20 16h8v4h-8z" fill="#fff"/>
-          <path d="M20 32h8v4h-8z" fill="#fff"/>
-        </svg>
+        <img src="Imagens/logo-prefeitura.png" alt="Logo da Prefeitura" />
       </span>
       <span class="brand-text">
-        <strong>TI Prefeitura</strong>
-        <small>Sistemas Municipais</small>
+        <strong>T.I Prefeitura</strong>
+        <small>Prefeitura Municipal</small>
       </span>
     </div>
 
@@ -74,23 +63,23 @@
 
 
             <button class="btn" onclick="openModal()">+ Novo</button>
-            <button class="btn secondary" onclick="openImportModal('inventario')">
-  <svg class="icon" viewBox="0 0 24 24">
-    <path d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"
-      stroke="currentColor"
-      stroke-width="2"
-      fill="none"/>
-  </svg>
-  Importar Planilha
-</button>
+            <button class="btn secondary filter-btn" onclick="toggleFilters('inventoryFilters', this)">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              Filtros
+            </button>
+            <button class="btn secondary import-btn" onclick="openImportModal('inventario')">
+              <span class="icon excel-icon" aria-hidden="true"></span>
+              Importar Planilha
+            </button>
 
 <div class="export-wrapper">
   <button class="btn export" onclick="toggleExportMenu('inv')">
-    <svg class="icon" viewBox="0 0 24 24">
-      <path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17h16"
-        stroke="currentColor"
-        stroke-width="2"
-        fill="none"/>
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M12 11v6m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14 2v4h4" fill="none" stroke="currentColor" stroke-width="1.8"/>
     </svg>
     Exportar Relatório
     
@@ -123,7 +112,7 @@
 
         <div class="pills" id="pillsArea"></div>
 
-        <div class="filters">
+        <div id="inventoryFilters" class="filters filters-panel hidden">
           <select id="filterCategoryInv"
 class="select" onchange="applyFilters()">
             <option value="All">Todas as categorias</option>
@@ -133,7 +122,10 @@ class="select" onchange="applyFilters()">
             <option value="Assistência Cultural">Assistência Cultural</option>
             <option value="Fundacao Cultural">Fundação Cultural</option>
           </select>
-         
+          <input id="filterLocalInv" class="input" placeholder="Filtrar por local" oninput="applyFilters()" />
+          <input id="filterVelInv" class="input" placeholder="Filtrar por velocidade" oninput="applyFilters()" />
+          <input id="filterTelInv" class="input" placeholder="Filtrar por telefone" oninput="applyFilters()" />
+          <button class="btn cancel" type="button" onclick="clearInventoryFilters()">Limpar</button>
         </div>
 
         <div class="table-wrap">
@@ -180,25 +172,23 @@ class="select" onchange="applyFilters()">
 
 
         <button class="btn" onclick="openMachineModal()">+ Novo</button>
-        <button class="btn secondary" onclick="openImportModal('maquinas')">
-  <svg class="icon" viewBox="0 0 24 24">
-    <path d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"
-      stroke="currentColor"
-      stroke-width="2"
-      fill="none"/>
-  </svg>
-  Importar Planilha
-</button>
+        <button class="btn secondary filter-btn" onclick="toggleFilters('machineFilters', this)">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Filtros
+        </button>
+        <button class="btn secondary import-btn" onclick="openImportModal('maquinas')">
+          <span class="icon excel-icon" aria-hidden="true"></span>
+          Importar Planilha
+        </button>
 
     <div class="export-wrapper">
   <button class="btn export" onclick="toggleExportMenu('mq')">
-    <svg class="icon" viewBox="0 0 24 24">
-      <path
-        d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17h16"
-        stroke="currentColor"
-        stroke-width="2"
-        fill="none"
-      />
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+      <path d="M12 11v6m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M14 2v4h4" fill="none" stroke="currentColor" stroke-width="1.8"/>
     </svg>
     Exportar Relatório
   </button>
@@ -226,7 +216,18 @@ class="select" onchange="applyFilters()">
 
       </div>
 
-    </div>
+      </div>
+
+      <div id="machineFilters" class="filters filters-panel hidden">
+        <select id="filterMachineStatus" class="select" onchange="applyMachineFilters()">
+          <option value="All">Todos os status</option>
+          <option value="Ativa">Ativa</option>
+          <option value="Manutenção">Manutenção</option>
+          <option value="Inativa">Inativa</option>
+        </select>
+        <input id="filterMachineLocal" class="input" placeholder="Filtrar por local" oninput="applyMachineFilters()" />
+        <button class="btn cancel" type="button" onclick="clearMachineFilters()">Limpar</button>
+      </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -275,25 +276,25 @@ class="select" onchange="applyFilters()">
             <button class="btn" onclick="openNovoRegistroModulo()">
               + Novo
             </button>
-            <button class="btn secondary" onclick="openImportModal('modulo')">
-              <svg class="icon" viewBox="0 0 24 24">
-                <path d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  fill="none"/>
+            <button class="btn secondary filter-btn" onclick="toggleFilters('moduleFilters', this)">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              Importar
+              Filtros
+            </button>
+            <button class="btn secondary import-btn" onclick="openImportModal('modulo')">
+              <span class="icon excel-icon" aria-hidden="true"></span>
+              Importar Planilha
             </button>
 
             <div class="export-wrapper">
               <button class="btn export" onclick="toggleExportMenu('mod')">
-                <svg class="icon" viewBox="0 0 24 24">
-                  <path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17h16"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    fill="none"/>
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                  <path d="M12 11v6m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M14 2v4h4" fill="none" stroke="currentColor" stroke-width="1.8"/>
                 </svg>
-                Exportar
+                Exportar Relatório
               </button>
 
               <div id="exportMenuMod" class="export-menu hidden">
@@ -314,6 +315,14 @@ class="select" onchange="applyFilters()">
               </div>
             </div>
           </div>
+        </div>
+
+        <div id="moduleFilters" class="filters filters-panel hidden">
+          <select id="moduloFilterField" class="select" onchange="filtrarModulo()">
+            <option value="all">Todos os campos</option>
+          </select>
+          <input id="moduloFilterValue" class="input" placeholder="Filtrar por valor" oninput="filtrarModulo()" />
+          <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar</button>
         </div>
 
         <div class="table-wrap">
