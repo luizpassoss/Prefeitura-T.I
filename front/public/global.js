@@ -1649,12 +1649,34 @@ function renderModuloDinamico() {
         <td>${escapeHtml(row[c.nome] || '')}</td>
       `).join('')}
       <td class="actions">
-        <button class="icon-btn edit" onclick="editarRegistroModulo(${idx})">✏️</button>
-        <button class="icon-btn delete" onclick="excluirRegistroModulo(${row.id})">🗑</button>
+        <div class="action-group">
+          <button class="icon-btn edit mod-edit" title="Editar" data-idx="${idx}">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/>
+              <path d="M14.06 4.94l3.75 3.75"/>
+            </svg>
+          </button>
+          <button class="icon-btn delete mod-delete" title="Excluir" data-id="${row.id}">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M8 6v14"/>
+              <path d="M16 6v14"/>
+              <path d="M5 6l1 16h12l1-16"/>
+              <path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
       </td>
     `;
 
     tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('.mod-edit').forEach(btn => {
+    btn.onclick = (e) => editarRegistroModulo(Number(e.currentTarget.dataset.idx));
+  });
+  tbody.querySelectorAll('.mod-delete').forEach(btn => {
+    btn.onclick = (e) => excluirRegistroModulo(Number(e.currentTarget.dataset.id));
   });
 }
 async function excluirRegistroModulo(id) {
