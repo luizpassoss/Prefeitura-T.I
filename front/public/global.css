@@ -93,16 +93,15 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 24px;
+  height: 26px;
   background-image: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 80'>\
-<path d='M0 78h600' stroke='%23d6dee8' stroke-width='1.5'/>\
-<path d='M18 78V50h26v28M52 78V36h30v42M92 78V30h22v48M122 78V42h26v36M154 78V24h36v54M202 78V34h24v44M234 78V16h44v62M286 78V44h24v34M316 78V28h28v50M350 78V20h34v58M392 78V36h24v42M424 78V26h34v52M470 78V40h28v38M506 78V18h36v60M548 78V32h34v46' fill='none' stroke='%23d6dee8' stroke-width='1.5' stroke-linecap='round'/>\
-<path d='M254 78V10h8v68M258 10h-10M302 78V14h6v64' stroke='%23d6dee8' stroke-width='1.5' stroke-linecap='round'/>\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 40'>\
+<path d='M0 38h240' stroke='%23d6dee8' stroke-width='1.2'/>\
+<path d='M6 38V26h10v12M20 38V18h12v20M38 38V22h8v16M50 38V14h14v24M70 38V10h12v28M86 38V20h10v18M100 38V8h16v30M120 38V16h12v22M136 38V12h10v26M150 38V6h14v32M168 38V18h10v20M182 38V10h14v28M200 38V20h10v18M214 38V8h14v30' fill='none' stroke='%23d6dee8' stroke-width='1.2' stroke-linecap='round'/>\
 </svg>");
-  background-repeat: no-repeat;
-  background-position: center bottom;
-  background-size: cover;
+  background-repeat: repeat-x;
+  background-position: left bottom;
+  background-size: auto 100%;
   opacity: 0.7;
   pointer-events: none;
 }
