@@ -44,11 +44,33 @@ let moduloDeleteTarget = null;
   const machineModal = document.getElementById('machineModal');
 
   const btnNovaAba = document.getElementById('btnNovaAba');
+  const themeToggle = document.getElementById('themeToggle');
   
 
 if (btnNovaAba) {
   btnNovaAba.addEventListener('click', openCreateTabModal);
 }
+
+  function applyTheme(theme) {
+    const isDark = theme === 'dark';
+    document.body.classList.toggle('theme-dark', isDark);
+    if (themeToggle) {
+      themeToggle.setAttribute('aria-pressed', String(isDark));
+      themeToggle.setAttribute('title', isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro');
+    }
+    localStorage.setItem('ti-theme', theme);
+  }
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const nextTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    });
+  }
+
+  const savedTheme = localStorage.getItem('ti-theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
 
 
   /* ===========================
@@ -1907,7 +1929,7 @@ function renderModuloDinamico() {
 
     tr.innerHTML = `
       ${moduloCampos.map(c => `
-        <td>${escapeHtml(row[c.nome] || '')}</td>
+        <td>${renderModuloCell(c.nome, row[c.nome])}</td>
       `).join('')}
       <td class="actions">
         <div class="action-group">
@@ -1939,6 +1961,21 @@ function renderModuloDinamico() {
   tbody.querySelectorAll('.mod-delete').forEach(btn => {
     btn.onclick = (e) => excluirRegistroModulo(Number(e.currentTarget.dataset.id));
   });
+}
+
+function renderModuloCell(fieldName, value) {
+  const label = (value ?? '').toString();
+  const normalizedField = (fieldName || '').toString().toLowerCase();
+  if (normalizedField.includes('status')) {
+    const display = label || 'Ativa';
+    return `
+      <div class="status-pill status-${normalizeStatus(display)}">
+        <span class="status-dot"></span>
+        <span class="status-text">${escapeHtml(display)}</span>
+      </div>
+    `;
+  }
+  return escapeHtml(label);
 }
 
 function getModuloFiltrado() {
