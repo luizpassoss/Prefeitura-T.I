@@ -134,6 +134,38 @@ body {
   transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease;
 }
 
+.tab-dinamica-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-dinamica-wrapper .tab-dinamica {
+  flex: 1;
+}
+
+.tab-delete {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.tab-delete:hover {
+  color: #ef4444;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
 /* Hover suave */
 .nav a:hover {
   background: rgba(0, 153, 255, 0.096);
@@ -347,6 +379,46 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: none !important;
 }
 
+.create-tab-card {
+  max-width: 720px;
+}
+
+.create-tab-card .form-grid {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.modal-heading h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.modal-subtitle {
+  margin: 6px 0 16px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.create-tab-header {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.btn.secondary {
+  background: #eef2ff;
+  color: #1f3a8a;
+  border: 1px solid #d9e2ec;
+  font-weight: 600;
+}
+
+.btn.secondary:hover {
+  background: #e0e7ff;
+  color: #1e40af;
+}
 
 /* CAMPOS */
 label {
@@ -1122,17 +1194,44 @@ textarea {
 
 .btn-add-tab {
   margin-top: 12px;
-  border-radius: 6px;
+  border-radius: 999px;
   cursor: pointer;
-  border: none;
+  border: 1px solid #e2e8f0;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 12px;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
 
-      background: rgba(0, 153, 255, 0.164);
-    color: #001d5ab7;
-    font-weight: 700;
-    border-left: 3px solid #003a91a9;
-    border-right: 3px solid #003a91a9;
-    padding-left: 12px;
+.btn-add-tab:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #1e3a8a;
+}
+
+.btn-add-tab:active {
+  background: #e2e8f0;
+}
+
+.btn-add-tab-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: currentColor;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 
@@ -1146,6 +1245,16 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+#fieldsContainer:empty::before {
+  content: "Nenhum campo adicionado ainda.";
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5f5;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .field-row {
@@ -1172,4 +1281,19 @@ textarea {
 .field-row .field-remove:hover {
   background: #fee2e2;
   border-color: #fca5a5;
+}
+
+@media (max-width: 700px) {
+  .create-tab-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .field-row .field-remove {
+    width: 100%;
+  }
 }
