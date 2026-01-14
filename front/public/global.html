@@ -264,6 +264,39 @@ class="select" onchange="applyFilters()">
             <button class="btn" onclick="openNovoRegistroModulo()">
               + Novo
             </button>
+            <button class="btn secondary" onclick="openImportModal('modulo')">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  fill="none"/>
+              </svg>
+              Importar
+            </button>
+
+            <div class="export-wrapper">
+              <button class="btn export" onclick="toggleExportMenu('mod')">
+                <svg class="icon" viewBox="0 0 24 24">
+                  <path d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17h16"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    fill="none"/>
+                </svg>
+                Exportar
+              </button>
+
+              <div id="exportMenuMod" class="export-menu hidden">
+                <button onclick="exportModulo('pdf')">
+                  <span class="icon pdf-icon"></span>
+                  PDF
+                </button>
+
+                <button onclick="exportModulo('excel')">
+                  <span class="icon excel-icon"></span>
+                  Excel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -1228,13 +1228,20 @@ function normalizeStatus(status = '') {
 function toggleExportMenu(tipo) {
   const inv = document.getElementById('exportMenuInv');
   const mq  = document.getElementById('exportMenuMq');
+  const mod = document.getElementById('exportMenuMod');
 
   if (tipo === 'inv') {
     inv.classList.toggle('hidden');
     mq.classList.add('hidden');
-  } else {
+    mod?.classList.add('hidden');
+  } else if (tipo === 'mq') {
     mq.classList.toggle('hidden');
     inv.classList.add('hidden');
+    mod?.classList.add('hidden');
+  } else if (tipo === 'mod') {
+    mod?.classList.toggle('hidden');
+    inv.classList.add('hidden');
+    mq.classList.add('hidden');
   }
 }
 function openImportModal(type) {
@@ -1245,7 +1252,9 @@ function openImportModal(type) {
   document.getElementById('importTitle').innerText =
     type === 'inventario'
       ? 'Importar Inventário (Links)'
-      : 'Importar Máquinas';
+      : type === 'maquinas'
+        ? 'Importar Máquinas'
+        : `Importar ${moduloAtual?.nome || 'Módulo'}`;
 
   document.getElementById('importPreviewTable').querySelector('thead').innerHTML = '';
   document.getElementById('importPreviewTable').querySelector('tbody').innerHTML = '';
@@ -1350,6 +1359,12 @@ function mapImportRows() {
 async function confirmImport() {
   const rows = mapImportRows();
 
+  if (importType === 'modulo') {
+    await importarRegistrosModulo();
+    closeImportModal();
+    return;
+  }
+
   if (!rows.length) {
     alert('Nenhum dado para importar.');
     return;
@@ -1385,6 +1400,118 @@ await fetchMachines();
     console.error(err);
     alert('Erro ao importar dados.');
   }
+}
+
+async function importarRegistrosModulo() {
+  if (!moduloAtual?.id) {
+    alert('Selecione uma aba personalizada antes de importar.');
+    return;
+  }
+
+  if (!importRows.length) {
+    alert('Nenhum dado para importar.');
+    return;
+  }
+
+  const headerMap = {};
+  importHeaders.forEach((h, idx) => {
+    if (h) headerMap[h.toString().trim().toLowerCase()] = idx;
+  });
+
+  const camposMap = moduloCampos.map(c => ({
+    nome: c.nome,
+    key: c.nome.toString().trim().toLowerCase()
+  }));
+
+  const hasMatch = camposMap.some(c => headerMap[c.key] !== undefined);
+  if (!hasMatch) {
+    alert('Os cabeçalhos da planilha não correspondem aos campos do módulo.');
+    return;
+  }
+
+  let successCount = 0;
+  const errors = [];
+
+  for (let i = 0; i < importRows.length; i++) {
+    const row = importRows[i];
+    const valores = {};
+
+    camposMap.forEach(campo => {
+      const idx = headerMap[campo.key];
+      if (idx !== undefined) {
+        valores[campo.nome] = row[idx];
+      }
+    });
+
+    try {
+      await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valores })
+      });
+      successCount += 1;
+    } catch (err) {
+      errors.push({ linha: i + 2, erro: err.message });
+    }
+  }
+
+  if (errors.length) {
+    console.table(errors);
+    alert(`Importação concluída com ${errors.length} erro(s).`);
+  } else {
+    alert(`Importação concluída: ${successCount} registro(s).`);
+  }
+
+  await carregarRegistrosModulo();
+  renderModuloDinamico();
+}
+
+function exportModulo(tipo) {
+  if (!moduloCampos.length || !moduloRegistros.length) {
+    alert('Nenhum registro para exportar.');
+    return;
+  }
+
+  if (tipo === 'excel') {
+    exportModuloExcel();
+  } else if (tipo === 'pdf') {
+    exportModuloPDF();
+  }
+}
+
+function exportModuloExcel() {
+  const headers = moduloCampos.map(c => c.nome);
+  const rows = moduloRegistros.map(row =>
+    headers.reduce((acc, h) => {
+      acc[h] = row[h] || '';
+      return acc;
+    }, {})
+  );
+
+  const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Modulo');
+
+  XLSX.writeFile(workbook, `${moduloAtual?.nome || 'modulo'}.xlsx`);
+}
+
+function exportModuloPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const headers = moduloCampos.map(c => c.nome);
+  const data = moduloRegistros.map(row =>
+    headers.map(h => row[h] || '')
+  );
+
+  doc.text(moduloAtual?.nome || 'Módulo', 14, 14);
+  doc.autoTable({
+    startY: 20,
+    head: [headers],
+    body: data,
+    styles: { fontSize: 9 }
+  });
+
+  doc.save(`${moduloAtual?.nome || 'modulo'}.pdf`);
 }
 
 
@@ -1758,6 +1885,7 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.export-wrapper')) {
     document.getElementById('exportMenuInv')?.classList.add('hidden');
     document.getElementById('exportMenuMq')?.classList.add('hidden');
+    document.getElementById('exportMenuMod')?.classList.add('hidden');
   }
 });
 
@@ -1769,10 +1897,12 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
   const inv = document.getElementById('exportMenuInv');
   const mq  = document.getElementById('exportMenuMq');
+  const mod = document.getElementById('exportMenuMod');
 
   if (!e.target.closest('.export-wrapper')) {
     inv?.classList.add('hidden');
     mq?.classList.add('hidden');
+    mod?.classList.add('hidden');
   }
 });
 
@@ -1800,6 +1930,7 @@ document.addEventListener('click', (e) => {
   window.exportMaquinasRelatorio = exportMaquinasRelatorio;
   window.exportInventario = exportInventario;
   window.exportMaquinas = exportMaquinas;
+  window.exportModulo = exportModulo;
   window.toggleExportMenu = toggleExportMenu;
   window.carregarLogoPrefeitura = carregarLogoPrefeitura;
   window.openImportModal = openImportModal;
