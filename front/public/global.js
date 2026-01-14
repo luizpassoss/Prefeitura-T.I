@@ -1943,7 +1943,7 @@ function renderModuloDinamico() {
 
 function getModuloFiltrado() {
   const q = (document.getElementById('moduloSearch')?.value || '').trim().toLowerCase();
-  const fieldFilter = (document.getElementById('moduloFilterField')?.value || 'all').toLowerCase();
+  const fieldFilter = document.getElementById('moduloFilterField')?.value || 'all';
   const valueFilter = (document.getElementById('moduloFilterValue')?.value || '').trim().toLowerCase();
   if (!q) {
     let filtered = moduloRegistros.map((row, idx) => ({ row, idx }));
@@ -2061,14 +2061,35 @@ function renderFormularioModulo(valores = {}) {
     const label = document.createElement('label');
     label.textContent = campo.nome;
 
-    const input = document.createElement('input');
     const typeMap = {
       numero: 'number',
       data: 'date'
     };
 
-    input.type = typeMap[campo.tipo] || 'text';
-    input.value = valores[campo.nome] || '';
+    let input;
+    if (campo.tipo === 'select') {
+      input = document.createElement('select');
+      const options = getSelectOptionsForCampo(campo);
+      options.forEach(optionValue => {
+        const option = document.createElement('option');
+        option.value = optionValue;
+        option.textContent = optionValue;
+        input.appendChild(option);
+      });
+      const currentValue = valores[campo.nome] || '';
+      if (currentValue && !options.includes(currentValue)) {
+        const option = document.createElement('option');
+        option.value = currentValue;
+        option.textContent = currentValue;
+        input.appendChild(option);
+      }
+      input.value = currentValue;
+    } else {
+      input = document.createElement('input');
+      input.type = typeMap[campo.tipo] || 'text';
+      input.value = valores[campo.nome] || '';
+    }
+
     input.dataset.field = campo.nome;
     input.dataset.required = campo.obrigatorio ? 'true' : 'false';
 
@@ -2124,21 +2145,109 @@ let newTabFields = window.newTabFields;
 
 const tabTemplates = {
   inventario: [
-    { nome: 'Link de Internet', tipo: 'texto', obrigatorio: true },
-    { nome: 'Velocidade (DL/UL)', tipo: 'texto', obrigatorio: false },
+    { nome: 'Link de Internet', tipo: 'select', obrigatorio: true },
+    { nome: 'Velocidade (DL/UL)', tipo: 'select', obrigatorio: false },
     { nome: 'Telefone', tipo: 'texto', obrigatorio: false },
-    { nome: 'Local', tipo: 'texto', obrigatorio: true },
+    { nome: 'Local', tipo: 'select', obrigatorio: true },
     { nome: 'Endereço', tipo: 'texto', obrigatorio: false },
-    { nome: 'Categoria', tipo: 'texto', obrigatorio: false }
+    { nome: 'Categoria', tipo: 'select', obrigatorio: false }
   ],
   maquinas: [
     { nome: 'Nome Máquina', tipo: 'texto', obrigatorio: true },
     { nome: 'Patrimônio', tipo: 'texto', obrigatorio: false },
-    { nome: 'Local', tipo: 'texto', obrigatorio: false },
-    { nome: 'Status', tipo: 'texto', obrigatorio: false },
+    { nome: 'Local', tipo: 'select', obrigatorio: false },
+    { nome: 'Status', tipo: 'select', obrigatorio: false },
     { nome: 'Descrição', tipo: 'texto', obrigatorio: false }
   ]
 };
+
+const inventoryLocalOptions = [
+  'Prefeitura Sede',
+  'Multiuso',
+  'Sec. de Obras',
+  'Sec. de Obras - Diretoria de Balneários',
+  'Sec. de Administração - Patrimônio',
+  'Sec. Atendimento ao Cidadão - Shopping',
+  'Sec. de Esporte - Ginásio',
+  'Sec. de Esporte - Terminal Walter Gama Lobo',
+  'Sec. Meio Ambiente - CBEA',
+  'Sec. de Obras - Cemitério',
+  'Sec. de Obras - Gerência Ervino',
+  'Sec. de Obras - Gerência Distrito do Saí',
+  'PAV - Ponto de Atendimento Virtual',
+  'NAC - Núcleo de Atendimento ao Cidadão',
+  'Sec. Pesca - Gerência',
+  'Sec. Pesca - Viveiro de Mudas',
+  'CAPS',
+  'UPA',
+  'Cine Teatro',
+  'Biblioteca',
+  'Museu',
+  'CRAS',
+  'CREAS',
+  'PAE',
+  'Polícia Militar',
+  'Bombeiros',
+  'Conselho Tutelar',
+  'Sec. de Turismo',
+  'Sec. de Educação',
+  'Sec. de Saúde',
+  'Sec. de Assistência Social',
+  'Sec. de Administração',
+  'Sec. de Obras - Garagem',
+  'Sec. de Obras - Recolhimento Animais',
+  'Sec. de Obras - Estações',
+  'Sec. de Obras - Usina Asfalto',
+  'Sec. de Obras - Rodoviária',
+  'Sec. de Obras - Campings',
+  'Sec. de Obras - Garagem Ervino',
+  'Sec. de Obras - Garagem Itacolomi',
+  'Sec. de Obras - Garagem Saí',
+  'Sec. de Obras - Garagem Rocio',
+  'Sec. de Obras - Garagem Paulas',
+  'Sec. de Obras - Garagem Ubatuba',
+  'Sec. de Obras - Garagem Bela Vista',
+  'Sec. de Obras - Garagem Primavera',
+  'Outro'
+];
+
+const machineLocalOptions = [
+  'Prefeitura',
+  'Secretaria de Saúde',
+  'Secretaria de Educação',
+  'Central de veiculos',
+  'Outro'
+];
+
+const selectOptionsMap = {
+  status: ['Ativa', 'Manutenção', 'Inativa'],
+  categoria: [
+    'Prefeitura',
+    'Educação',
+    'Saúde',
+    'Assistência Cultural',
+    'Fundação Cultural'
+  ],
+  'link de internet': [
+    'Link Dedicado',
+    'Interconexão (CONCENTRADOR)',
+    'Interconexão',
+    'Banda Larga',
+    'Outro'
+  ],
+  'velocidade (dl/ul)': ['800/800', '1400/1400', '400/400', '100/100', 'Outro']
+};
+
+function getSelectOptionsForCampo(campo) {
+  const nome = (campo.nome || '').toLowerCase();
+  if (nome === 'local') {
+    return Array.from(new Set([...inventoryLocalOptions, ...machineLocalOptions]));
+  }
+  if (selectOptionsMap[nome]) {
+    return selectOptionsMap[nome];
+  }
+  return [];
+}
 
 function openCreateTabModal() {
   newTabFields = [];
