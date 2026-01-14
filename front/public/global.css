@@ -38,6 +38,30 @@
     border-radius: 6px;
 }
 
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.theme-toggle:hover {
+  background: rgba(148, 163, 184, 0.12);
+  transform: translateY(-1px);
+}
+
+.theme-toggle-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
 
 /* Reset e fontes */
 * {
@@ -52,6 +76,16 @@ body {
   font-size: 13px;
 }
 
+body.theme-dark {
+  --bg: #0f172a;
+  --panel: #111827;
+  --muted: #94a3b8;
+  --accent: #93c5fd;
+  --border: #1f2937;
+  --pill-bg: #1e293b;
+  color: #e2e8f0;
+}
+
 .app {
   display: flex;
   min-height: 100vh;
@@ -63,6 +97,8 @@ body {
   background: var(--panel);
   padding: 28px 20px;
   border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Sidebar Brand Minimalista */
@@ -160,6 +196,7 @@ body {
   display: flex;
   flex-direction: column;
   margin-top: 10px;
+  flex: 1;
 }
 
 .nav a {
@@ -243,6 +280,10 @@ h1 {
   margin: 0;
   color: #1a1f27e5;
   font-weight: 700;
+}
+
+body.theme-dark h1 {
+  color: #f8fafc;
 }
 
 /* Controls */
@@ -371,6 +412,67 @@ tbody td {
 
 tbody tr:hover td {
   background: #f0f7ff;
+}
+
+body.theme-dark .nav a {
+  color: #cbd5f5;
+}
+
+body.theme-dark .nav a.active {
+  background: #1e40af;
+  color: #fff;
+}
+
+body.theme-dark .table-wrap {
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.35);
+}
+
+body.theme-dark thead th {
+  background: #1e293b;
+  color: #cbd5f5;
+  border-bottom: 1px solid #334155;
+}
+
+body.theme-dark tbody td {
+  color: #e2e8f0;
+  border-bottom: 1px solid #334155;
+}
+
+body.theme-dark tbody tr:hover td {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+body.theme-dark .filters-panel {
+  background: #0b1220;
+  border-color: #1f2937;
+}
+
+body.theme-dark .search-wrapper .search-input {
+  background: #0b1220;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+body.theme-dark .search-wrapper .search-input::placeholder {
+  color: #94a3b8;
+}
+
+body.theme-dark input[type="text"],
+body.theme-dark select,
+body.theme-dark .input,
+body.theme-dark .select {
+  background-color: #0b1220;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+body.theme-dark .form-card {
+  background: #111827;
+  border-color: #1f2937;
+}
+
+body.theme-dark .modal-title {
+  color: #f1f5f9;
 }
 
 /* Categorias coloridas */
