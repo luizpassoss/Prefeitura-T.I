@@ -130,14 +130,16 @@ body {
 
 .brand-text {
   display: flex;
-  flex-direction: row;
-  align-items: baseline;
-  gap: 6px;
-  line-height: 1.1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.05;
 }
 
 .brand-text strong {
   font-size: 16px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
 .brand-text small {
