@@ -1931,6 +1931,12 @@ async function salvarRegistroModulo() {
   renderModuloDinamico();
 }
 
+function openNovoRegistroModulo() {
+  moduloEditId = null;
+  document.getElementById('moduloRegistroTitulo').textContent = 'Novo Registro';
+  renderFormularioModulo();
+  openModalById('moduloRegistroModal');
+}
 
 let newTabFields = window.newTabFields;
 
