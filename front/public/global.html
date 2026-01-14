@@ -628,6 +628,33 @@ class="select" onchange="applyFilters()">
   </div>
 </div>
 
+<div id="systemMessageModal" class="modal" onclick="closeSystemMessageModal(event)">
+  <div class="card" onclick="event.stopPropagation()">
+    <div class="modal-heading">
+      <h2 id="systemMessageTitle">Aviso</h2>
+      <p class="modal-subtitle" id="systemMessageText"></p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-salvar" onclick="closeSystemMessageModal()">Ok</button>
+    </div>
+  </div>
+</div>
+
+<div id="systemConfirmModal" class="modal" onclick="closeSystemConfirmModal(event)">
+  <div class="card" onclick="event.stopPropagation()">
+    <div class="modal-heading">
+      <h2 id="systemConfirmTitle">Confirmar ação</h2>
+      <p class="modal-subtitle" id="systemConfirmText"></p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeSystemConfirmModal()">Cancelar</button>
+      <button class="btn-salvar danger" onclick="confirmSystemAction()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 
 
 </body>

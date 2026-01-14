@@ -113,6 +113,44 @@ function updateBulkUI() {
   function escapeHtml(s){ return (s||'').toString().replaceAll('<','&lt;').replaceAll('>','&gt;'); }
   function showModal(el){ el.classList.add('show'); }
   function hideModal(el){ el.classList.remove('show'); }
+  let confirmCallback = null;
+
+  function showMessage(message, title = 'Aviso') {
+    const titleEl = document.getElementById('systemMessageTitle');
+    const textEl = document.getElementById('systemMessageText');
+    if (titleEl) titleEl.textContent = title;
+    if (textEl) textEl.textContent = message;
+    openModalById('systemMessageModal');
+  }
+
+  function closeSystemMessageModal(e) {
+    if (!e || e.target.id === 'systemMessageModal') {
+      document.getElementById('systemMessageModal').classList.remove('show');
+    }
+  }
+
+  function showConfirm(message, onConfirm, title = 'Confirmar ação') {
+    confirmCallback = onConfirm;
+    const titleEl = document.getElementById('systemConfirmTitle');
+    const textEl = document.getElementById('systemConfirmText');
+    if (titleEl) titleEl.textContent = title;
+    if (textEl) textEl.textContent = message;
+    openModalById('systemConfirmModal');
+  }
+
+  function closeSystemConfirmModal(e) {
+    if (!e || e.target.id === 'systemConfirmModal') {
+      document.getElementById('systemConfirmModal').classList.remove('show');
+    }
+  }
+
+  function confirmSystemAction() {
+    if (typeof confirmCallback === 'function') {
+      confirmCallback();
+    }
+    confirmCallback = null;
+    closeSystemConfirmModal();
+  }
 
   /* ===========================
      RENDER INVENTÁRIO
@@ -417,7 +455,7 @@ if (mLocalSelect && mLocalOutro) {
 telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
  const endereco = (document.getElementById('inpEnd').value || '').trim();
 
-    if(!link || !local){ alert('Preencha ao menos Link e Local.'); return; }
+    if(!link || !local){ showMessage('Preencha ao menos Link e Local.'); return; }
 
     const item = { categoria, link, velocidade, telefone, local, endereco };
 
@@ -434,20 +472,21 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
       closeModal();
     } catch(err){
       console.error('Erro salvar item:', err);
-      alert('Erro ao salvar item.');
+      showMessage('Erro ao salvar item.');
     }
   }
 
   async function removeItem(idx){
-    if(!confirm('Remover este registro?')) return;
-    try {
-      const id = data[idx].id;
-      await fetch(`${API_URL}/${id}`, { method:'DELETE' });
-      await fetchData();
-    } catch(err){
-      console.error('Erro remover item:', err);
-      alert('Erro ao remover item.');
-    }
+    showConfirm('Remover este registro?', async () => {
+      try {
+        const id = data[idx].id;
+        await fetch(`${API_URL}/${id}`, { method:'DELETE' });
+        await fetchData();
+      } catch(err){
+        console.error('Erro remover item:', err);
+        showMessage('Erro ao remover item.');
+      }
+    }, 'Confirmar exclusão');
   }
 async function loadImageToBase64(url) {
   const res = await fetch(url);
@@ -464,7 +503,7 @@ function exportInventario(type) {
   const rows = getInventarioExportData();
 
   if (!rows.length) {
-    alert('Nenhum registro para exportar.');
+    showMessage('Nenhum registro para exportar.');
     return;
   }
 
@@ -496,7 +535,7 @@ function exportInventarioRelatorio() {
   const rows = getInventarioExportData();
 
   if (!rows.length) {
-    alert('Nenhum registro para exportar.');
+    showMessage('Nenhum registro para exportar.');
     return;
   }
 
@@ -847,13 +886,13 @@ async function saveMachine(){
   };
 
 if(!item.local){
-  alert("Informe o local da máquina.");
+  showMessage("Informe o local da máquina.");
   return;
 }
 
 
   if(!item.nome_maquina){
-    alert("Preencha o nome da máquina.");
+    showMessage("Preencha o nome da máquina.");
     return;
   }
 
@@ -884,21 +923,22 @@ if(!item.local){
 
   } catch (err) {
     console.error("Erro ao salvar máquina:", err);
-    alert("Erro ao salvar máquina.");
+    showMessage("Erro ao salvar máquina.");
   }
 }
 
 
   async function deleteMachine(idx){
-    if(!confirm('Remover esta máquina?')) return;
-    try{
-      const id = machineData[idx].id;
-      await fetch(`${API_MAQUINAS}/${id}`, { method:'DELETE' });
-      await fetchMachines();
-    } catch(err){
-      console.error('Erro deletar máquina:', err);
-      alert('Erro ao deletar máquina.');
-    }
+    showConfirm('Remover esta máquina?', async () => {
+      try{
+        const id = machineData[idx].id;
+        await fetch(`${API_MAQUINAS}/${id}`, { method:'DELETE' });
+        await fetchMachines();
+      } catch(err){
+        console.error('Erro deletar máquina:', err);
+        showMessage('Erro ao deletar máquina.');
+      }
+    }, 'Confirmar exclusão');
   }
 function drawHeader(doc, titulo, logoBase64) {
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -909,20 +949,20 @@ function drawHeader(doc, titulo, logoBase64) {
       logoBase64,
       'PNG',
       40,   // X
-      32,   // Y
-      42,   // largura (ANTES: 60)
-      42    // altura
+      38,   // Y
+      28,   // largura
+      28    // altura
     );
   }
 
   /* ===== TEXTO INSTITUCIONAL ===== */
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text('Prefeitura Municipal de São Francisco do Sul', 95, 45);
+  doc.text('Prefeitura Municipal de São Francisco do Sul', 82, 46);
 
   doc.setFontSize(10);
   doc.setFont('Helvetica', 'normal');
-  doc.text('Secretaria Municipal de Tecnologia da Informação', 95, 60);
+  doc.text('Secretaria Municipal de Tecnologia da Informação', 82, 61);
 
   /* ===== TÍTULO ===== */
   doc.setFontSize(15);
@@ -961,7 +1001,7 @@ function exportMaquinas(type) {
   const rows = getMaquinasExportData();
 
   if (!rows.length) {
-    alert('Nenhuma máquina para exportar.');
+    showMessage('Nenhuma máquina para exportar.');
     return;
   }
 
@@ -992,7 +1032,7 @@ function exportMaquinasRelatorio() {
   const rows = getMaquinasExportData();
 
   if (!rows.length) {
-    alert('Nenhuma máquina para exportar.');
+    showMessage('Nenhuma máquina para exportar.');
     return;
   }
 
@@ -1156,27 +1196,27 @@ async function deleteSelected() {
 
   if (!ids.length) return;
 
-  if (!confirm(`Excluir ${ids.length} item(ns)?`)) return;
+  showConfirm(`Excluir ${ids.length} item(ns)?`, async () => {
+    try {
+      for (const id of ids) {
+        const url = isInventario
+          ? `${API_URL}/${id}`
+          : `${API_MAQUINAS}/${id}`;
 
-  try {
-    for (const id of ids) {
-      const url = isInventario
-        ? `${API_URL}/${id}`
-        : `${API_MAQUINAS}/${id}`;
+        await fetch(url, { method: 'DELETE' });
+      }
 
-      await fetch(url, { method: 'DELETE' });
+      selectedInvIds.clear();
+      selectedMaqIds.clear();
+      updateBulkUI();
+
+      isInventario ? fetchData() : fetchMachines();
+
+    } catch (err) {
+      console.error('Erro ao excluir selecionados:', err);
+      showMessage('Erro ao excluir itens.');
     }
-
-    selectedInvIds.clear();
-    selectedMaqIds.clear();
-    updateBulkUI();
-
-    isInventario ? fetchData() : fetchMachines();
-
-  } catch (err) {
-    console.error('Erro ao excluir selecionados:', err);
-    alert('Erro ao excluir itens.');
-  }
+  }, 'Confirmar exclusão');
 }
 
 function openDescModal(el) {
@@ -1395,7 +1435,7 @@ async function confirmImport() {
   }
 
   if (!rows.length) {
-    alert('Nenhum dado para importar.');
+    showMessage('Nenhum dado para importar.');
     return;
   }
 
@@ -1414,10 +1454,10 @@ async function confirmImport() {
     const result = await res.json();
 
     if (result.errors?.length) {
-      alert(`Importação concluída com ${result.errors.length} erro(s).`);
+      showMessage(`Importação concluída com ${result.errors.length} erro(s).`);
       console.table(result.errors);
     } else {
-      alert('Importação realizada com sucesso!');
+      showMessage('Importação realizada com sucesso!');
     }
 
     closeImportModal();
@@ -1427,18 +1467,18 @@ await fetchMachines();
 
   } catch (err) {
     console.error(err);
-    alert('Erro ao importar dados.');
+    showMessage('Erro ao importar dados.');
   }
 }
 
 async function importarRegistrosModulo() {
   if (!moduloAtual?.id) {
-    alert('Selecione uma aba personalizada antes de importar.');
+    showMessage('Selecione uma aba personalizada antes de importar.');
     return;
   }
 
   if (!importRows.length) {
-    alert('Nenhum dado para importar.');
+    showMessage('Nenhum dado para importar.');
     return;
   }
 
@@ -1455,7 +1495,7 @@ async function importarRegistrosModulo() {
 
   const hasMatch = camposMap.some(c => headerMap[c.key] !== undefined);
   if (!hasMatch) {
-    alert('Os cabeçalhos da planilha não correspondem aos campos do módulo.');
+    showMessage('Os cabeçalhos da planilha não correspondem aos campos do módulo.');
     return;
   }
 
@@ -1487,9 +1527,9 @@ async function importarRegistrosModulo() {
 
   if (errors.length) {
     console.table(errors);
-    alert(`Importação concluída com ${errors.length} erro(s).`);
+    showMessage(`Importação concluída com ${errors.length} erro(s).`);
   } else {
-    alert(`Importação concluída: ${successCount} registro(s).`);
+    showMessage(`Importação concluída: ${successCount} registro(s).`);
   }
 
   await carregarRegistrosModulo();
@@ -1498,7 +1538,7 @@ async function importarRegistrosModulo() {
 
 function exportModulo(tipo) {
   if (!moduloCampos.length || !moduloRegistros.length) {
-    alert('Nenhum registro para exportar.');
+    showMessage('Nenhum registro para exportar.');
     return;
   }
 
@@ -1675,7 +1715,7 @@ async function confirmDeleteModulo() {
     switchTab('inventario');
   } catch (e) {
     console.error('Erro ao excluir módulo:', e);
-    alert('Erro ao excluir a aba.');
+    showMessage('Erro ao excluir a aba.');
   } finally {
     moduloDeleteTarget = null;
     closeConfirmDeleteModulo();
@@ -1796,14 +1836,14 @@ function filtrarModulo() {
   renderModuloDinamico();
 }
 async function excluirRegistroModulo(id) {
-  if (!confirm('Remover este registro?')) return;
+  showConfirm('Remover este registro?', async () => {
+    await fetch(`${API_MODULOS}/${moduloAtual.id}/registros/${id}`, {
+      method: 'DELETE'
+    });
 
-  await fetch(`${API_MODULOS}/${moduloAtual.id}/registros/${id}`, {
-    method: 'DELETE'
-  });
-
-  await carregarRegistrosModulo();
-  renderModuloDinamico();
+    await carregarRegistrosModulo();
+    renderModuloDinamico();
+  }, 'Confirmar exclusão');
 }
 
 function openNovoRegistroModulo() {
@@ -1858,7 +1898,7 @@ function renderFormularioModulo(valores = {}) {
 
 async function salvarRegistroModulo() {
   if (!moduloAtual?.id) {
-    alert('Selecione uma aba personalizada.');
+    showMessage('Selecione uma aba personalizada.');
     return;
   }
 
@@ -1869,7 +1909,7 @@ async function salvarRegistroModulo() {
     const nome = input.dataset.field;
     const valor = input.value?.trim();
     if (input.dataset.required === 'true' && !valor) {
-      alert(`Preencha o campo obrigatório: ${nome}`);
+      showMessage(`Preencha o campo obrigatório: ${nome}`);
       return;
     }
     valores[nome] = valor || '';
@@ -1891,6 +1931,12 @@ async function salvarRegistroModulo() {
   renderModuloDinamico();
 }
 
+function openNovoRegistroModulo() {
+  moduloEditId = null;
+  document.getElementById('moduloRegistroTitulo').textContent = 'Novo Registro';
+  renderFormularioModulo();
+  openModalById('moduloRegistroModal');
+}
 
 let newTabFields = window.newTabFields;
 
@@ -1985,7 +2031,10 @@ async function loadDynamicTabs() {
 async function createNewTab() {
   const nome = document.getElementById('newTabName').value.trim();
   const descricao = document.getElementById('newTabDescription').value.trim();
-  if (!nome) return alert('Informe o nome da aba');
+  if (!nome) {
+    showMessage('Informe o nome da aba');
+    return;
+  }
 
   // 1. cria módulo
   const modRes = await fetch(API_MODULOS, {
@@ -2035,14 +2084,14 @@ async function openModulo(modulo) {
   const descricao = document.getElementById('newTabDescription').value.trim();
 
   if (!nome) {
-    alert('Informe o nome da aba.');
+    showMessage('Informe o nome da aba.');
     return;
   }
 
   const fieldRows = [...document.querySelectorAll('#fieldsContainer .field-row')];
 
   if (!fieldRows.length) {
-    alert('Adicione ao menos um campo.');
+    showMessage('Adicione ao menos um campo.');
     return;
   }
 
@@ -2063,7 +2112,7 @@ const camposValidos = fieldRows
   .filter(f => f.nome);
 
 if (!camposValidos.length) {
-  alert('Adicione ao menos um campo com nome válido.');
+  showMessage('Adicione ao menos um campo com nome válido.');
   return;
 }
 
@@ -2182,6 +2231,9 @@ window.filtrarModulo = filtrarModulo;
 window.openConfirmDeleteModulo = openConfirmDeleteModulo;
 window.closeConfirmDeleteModulo = closeConfirmDeleteModulo;
 window.confirmDeleteModulo = confirmDeleteModulo;
+window.closeSystemMessageModal = closeSystemMessageModal;
+window.closeSystemConfirmModal = closeSystemConfirmModal;
+window.confirmSystemAction = confirmSystemAction;
 
 
   /* ===========================
