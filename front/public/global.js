@@ -414,20 +414,6 @@ async function carregarLogoPrefeitura() {
 
     showModal(modal);
   }
-  document.getElementById('inpLink').addEventListener('change', function () {
-  document.getElementById('inpLinkOutro').style.display =
-    this.value === 'Outro' ? 'block' : 'none';
-});
-
-document.getElementById('inpVel').addEventListener('change', function () {
-  document.getElementById('inpVelOutro').style.display =
-    this.value === 'Outro' ? 'block' : 'none';
-});
-
-document.getElementById('inpLocal').addEventListener('change', function () {
-  document.getElementById('inpLocalOutro').style.display =
-    this.value === 'Outro' ? 'block' : 'none';
-});
 const mLocalSelect = document.getElementById('mLocal');
 const mLocalOutro = document.getElementById('mLocalOutro');
 
@@ -1957,7 +1943,6 @@ async function salvarRegistroModulo() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ valores })
   });
-}
 
   closeModuloRegistroModal();
   await carregarRegistrosModulo();
