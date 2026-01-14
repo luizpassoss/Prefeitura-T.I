@@ -1,4 +1,6 @@
 
+window.newTabFields = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.modal').forEach(m => {
   m.classList.remove('show');
@@ -13,12 +15,14 @@ let camposModuloAtual = [];
 /* ===========================
    MÓDULOS DINÂMICOS
    =========================== */
-const API_MODULOS = '/api/modulos';
+  const API_BASE = 'https://pertinently-unpublished-soila.ngrok-free.dev/api';
+const API_MODULOS = `${API_BASE}/modulos`;
 
 let modulos = [];
 let moduloAtual = null;
 let moduloCampos = [];
 let moduloRegistros = [];
+let moduloEditId = null;
 
   /* ===========================
      CONFIG
@@ -1225,13 +1229,20 @@ function normalizeStatus(status = '') {
 function toggleExportMenu(tipo) {
   const inv = document.getElementById('exportMenuInv');
   const mq  = document.getElementById('exportMenuMq');
+  const mod = document.getElementById('exportMenuMod');
 
   if (tipo === 'inv') {
     inv.classList.toggle('hidden');
     mq.classList.add('hidden');
-  } else {
+    mod?.classList.add('hidden');
+  } else if (tipo === 'mq') {
     mq.classList.toggle('hidden');
     inv.classList.add('hidden');
+    mod?.classList.add('hidden');
+  } else if (tipo === 'mod') {
+    mod?.classList.toggle('hidden');
+    inv.classList.add('hidden');
+    mq.classList.add('hidden');
   }
 }
 function openImportModal(type) {
@@ -1242,11 +1253,17 @@ function openImportModal(type) {
   document.getElementById('importTitle').innerText =
     type === 'inventario'
       ? 'Importar Inventário (Links)'
-      : 'Importar Máquinas';
+      : type === 'maquinas'
+        ? 'Importar Máquinas'
+        : `Importar ${moduloAtual?.nome || 'Módulo'}`;
 
   document.getElementById('importPreviewTable').querySelector('thead').innerHTML = '';
   document.getElementById('importPreviewTable').querySelector('tbody').innerHTML = '';
   document.getElementById('importFile').value = '';
+  document.getElementById('importStepUpload')?.classList.remove('hidden');
+  document.getElementById('importStepPreview')?.classList.add('hidden');
+  const actionBtn = document.getElementById('importActionBtn');
+  if (actionBtn) actionBtn.textContent = 'Confirmar Importação';
   openModalById('importModal');
 
 
@@ -1254,6 +1271,10 @@ function openImportModal(type) {
 
 function closeImportModal() {
   document.getElementById('importModal').classList.remove('show');
+  document.getElementById('importStepPreview')?.classList.add('hidden');
+  document.getElementById('importStepUpload')?.classList.remove('hidden');
+  const actionBtn = document.getElementById('importActionBtn');
+  if (actionBtn) actionBtn.textContent = 'Confirmar Importação';
 }
 
 function closeImportModalIfClicked(e) {
@@ -1268,10 +1289,12 @@ function handleImportFile() {
   reader.onload = (e) => {
     const wb = XLSX.read(e.target.result, { type: 'binary' });
     const sheet = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
 
-    importHeaders = data[0];
-    importRows = data.slice(1);
+    importHeaders = (data[0] || []).map(h => (h ?? '').toString().trim());
+    importRows = data
+      .slice(1)
+      .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
 
     renderImportPreview();
   };
@@ -1281,6 +1304,9 @@ function handleImportFile() {
 function renderImportPreview() {
   const thead = document.querySelector('#importPreviewTable thead');
   const tbody = document.querySelector('#importPreviewTable tbody');
+  const preview = document.getElementById('importStepPreview');
+  const actionBtn = document.getElementById('importActionBtn');
+  const uploadStep = document.getElementById('importStepUpload');
 
   thead.innerHTML = `
     <tr>
@@ -1310,6 +1336,12 @@ function renderImportPreview() {
 
     tbody.appendChild(tr);
   });
+
+  preview?.classList.remove('hidden');
+  uploadStep?.classList.add('hidden');
+  if (actionBtn) {
+    actionBtn.textContent = `Importar ${importRows.length} linha(s)`;
+  }
 }
 
 function updateImportCell(row, col, value) {
@@ -1321,31 +1353,71 @@ function removeImportRow(index) {
   renderImportPreview();
 }
 function mapImportRows() {
+  const headerMap = importHeaders.reduce((acc, header, idx) => {
+    const key = normalizeHeader(header);
+    if (key) acc[key] = idx;
+    return acc;
+  }, {});
+
+  const getValue = (row, keys, fallbackIndex) => {
+    for (const key of keys) {
+      const idx = headerMap[normalizeHeader(key)];
+      if (idx !== undefined) return row[idx];
+    }
+    return row[fallbackIndex];
+  };
+
   if (importType === 'inventario') {
     return importRows.map(r => ({
-      categoria: r[0],
-      link: r[1],
-      velocidade: r[2],
-      telefone: r[3],
-      local: r[4],
-      endereco: r[5]
+      categoria: getValue(r, ['categoria'], 0),
+      link: getValue(r, ['link', 'link de internet', 'internet'], 1),
+      velocidade: getValue(r, ['velocidade', 'velocidade dl/ul', 'download', 'upload'], 2),
+      telefone: getValue(r, ['telefone', 'contato'], 3),
+      local: getValue(r, ['local'], 4),
+      endereco: getValue(r, ['endereco', 'endereço'], 5)
     }));
   }
 
   if (importType === 'maquinas') {
     return importRows.map(r => ({
-      nome_maquina: r[0],
-      patrimonio: r[1],
-      local: r[2],
-      status: r[3],
-      descricao: r[4]
+      nome_maquina: getValue(r, ['nome', 'nome maquina', 'nome da maquina', 'máquina', 'maquina'], 0),
+      patrimonio: getValue(r, ['patrimonio', 'patrimônio'], 1),
+      local: getValue(r, ['local'], 2),
+      status: getValue(r, ['status'], 3),
+      descricao: getValue(r, ['descricao', 'descrição'], 4)
     }));
   }
 
   return [];
 }
+
+function normalizeHeader(value = '') {
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function columnLetter(index) {
+  let result = '';
+  let n = index + 1;
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    result = String.fromCharCode(65 + rem) + result;
+    n = Math.floor((n - 1) / 26);
+  }
+  return result;
+}
 async function confirmImport() {
   const rows = mapImportRows();
+
+  if (importType === 'modulo') {
+    await importarRegistrosModulo();
+    closeImportModal();
+    return;
+  }
 
   if (!rows.length) {
     alert('Nenhum dado para importar.');
@@ -1384,6 +1456,182 @@ await fetchMachines();
   }
 }
 
+async function importarRegistrosModulo() {
+  if (!moduloAtual?.id) {
+    alert('Selecione uma aba personalizada antes de importar.');
+    return;
+  }
+
+  if (!importRows.length) {
+    alert('Nenhum dado para importar.');
+    return;
+  }
+
+  const headerMap = {};
+  importHeaders.forEach((h, idx) => {
+    const key = normalizeHeader(h);
+    if (key) headerMap[key] = idx;
+  });
+
+  const camposMap = moduloCampos.map(c => ({
+    nome: c.nome,
+    key: normalizeHeader(c.nome)
+  }));
+
+  const hasMatch = camposMap.some(c => headerMap[c.key] !== undefined);
+  if (!hasMatch) {
+    alert('Os cabeçalhos da planilha não correspondem aos campos do módulo.');
+    return;
+  }
+
+  let successCount = 0;
+  const errors = [];
+
+  for (let i = 0; i < importRows.length; i++) {
+    const row = importRows[i];
+    const valores = {};
+
+    camposMap.forEach(campo => {
+      const idx = headerMap[campo.key];
+      if (idx !== undefined) {
+        valores[campo.nome] = row[idx];
+      }
+    });
+
+    try {
+      await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valores })
+      });
+      successCount += 1;
+    } catch (err) {
+      errors.push({ linha: i + 2, erro: err.message });
+    }
+  }
+
+  if (errors.length) {
+    console.table(errors);
+    alert(`Importação concluída com ${errors.length} erro(s).`);
+  } else {
+    alert(`Importação concluída: ${successCount} registro(s).`);
+  }
+
+  await carregarRegistrosModulo();
+  renderModuloDinamico();
+}
+
+function exportModulo(tipo) {
+  if (!moduloCampos.length || !moduloRegistros.length) {
+    alert('Nenhum registro para exportar.');
+    return;
+  }
+
+  if (tipo === 'excel') {
+    exportModuloExcel();
+  } else if (tipo === 'pdf') {
+    exportModuloPDF();
+  } else if (tipo === 'both') {
+    exportModuloPDF();
+    exportModuloExcel();
+  }
+}
+
+function exportModuloExcel() {
+  const headers = moduloCampos.map(c => c.nome);
+  const wsData = [
+    ['Prefeitura Municipal de São Francisco do Sul'],
+    ['Secretaria Municipal de Tecnologia da Informação'],
+    [`Relatório de ${moduloAtual?.nome || 'Módulo'}`],
+    [`Gerado em ${new Date().toLocaleString('pt-BR')}`],
+    [],
+    headers
+  ];
+
+  moduloRegistros.forEach(row => {
+    wsData.push(headers.map(h => row[h] || ''));
+  });
+
+  const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+  worksheet['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } },
+    { s: { r: 3, c: 0 }, e: { r: 3, c: headers.length - 1 } }
+  ];
+  worksheet['!cols'] = headers.map(() => ({ wch: 24 }));
+  worksheet['!autofilter'] = {
+    ref: `A6:${columnLetter(headers.length - 1)}${moduloRegistros.length + 6}`
+  };
+  worksheet['!freeze'] = { xSplit: 0, ySplit: 6 };
+
+  Object.keys(worksheet).forEach(cell => {
+    if (!cell.startsWith('!')) {
+      worksheet[cell].s = {
+        alignment: {
+          vertical: 'center',
+          horizontal: 'left',
+          wrapText: true
+        }
+      };
+    }
+  });
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Modulo');
+
+  XLSX.writeFile(
+    workbook,
+    `${moduloAtual?.nome || 'modulo'}_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
+}
+
+function exportModuloPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('landscape');
+  const headers = moduloCampos.map(c => c.nome);
+  const data = moduloRegistros.map(row =>
+    headers.map(h => row[h] || '')
+  );
+
+  if (PREFEITURA_LOGO) {
+    doc.addImage(PREFEITURA_LOGO, 'PNG', 14, 14, 18, 18);
+  }
+
+  doc.setFontSize(14);
+  doc.text('PREFEITURA MUNICIPAL', 50, 18);
+  doc.setFontSize(10);
+  doc.text('Diretoria de Tecnologia da Informação', 50, 25);
+  doc.setFontSize(10);
+  doc.text('Secretaria de governo', 50, 30);
+  doc.setFontSize(16);
+  doc.text(`Relatório de ${moduloAtual?.nome || 'Módulo'}`, 148, 45, { align: 'center' });
+
+  doc.autoTable({
+    startY: 50,
+    head: [headers],
+    body: data,
+    theme: 'grid',
+    styles: {
+      fontSize: 9,
+      textColor: [31, 41, 55],
+      cellPadding: 6,
+      lineColor: [229, 231, 235],
+      lineWidth: 0.5
+    },
+    headStyles: {
+      fillColor: [243, 244, 246],
+      textColor: [17, 24, 39],
+      fontStyle: 'bold'
+    },
+    alternateRowStyles: {
+      fillColor: [249, 250, 251]
+    }
+  });
+
+  doc.save(`Relatorio_${moduloAtual?.nome || 'modulo'}_TI.pdf`);
+}
+
 
 async function carregarModulos() {
   try {
@@ -1397,11 +1645,16 @@ async function carregarModulos() {
 
 function renderAbasDinamicas() {
   const nav = document.querySelector('.nav');
+  const addButton = nav.querySelector('.btn-add-tab');
 
   // remove abas dinâmicas antigas
   nav.querySelectorAll('.tab-dinamica').forEach(e => e.remove());
+  nav.querySelectorAll('.tab-dinamica-wrapper').forEach(e => e.remove());
 
   modulos.forEach(mod => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tab-dinamica-wrapper';
+
     const a = document.createElement('a');
     a.className = 'tab-dinamica';
     a.textContent = mod.nome;
@@ -1413,9 +1666,39 @@ function renderAbasDinamicas() {
   abrirModulo(mod);
 };
 
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'tab-delete';
+    deleteBtn.title = 'Excluir aba';
+    deleteBtn.innerHTML = '✕';
+    deleteBtn.onclick = async (e) => {
+      e.stopPropagation();
+      await excluirModulo(mod);
+    };
 
-    nav.appendChild(a);
+    wrapper.appendChild(a);
+    wrapper.appendChild(deleteBtn);
+    if (addButton) {
+      nav.insertBefore(wrapper, addButton);
+    } else {
+      nav.appendChild(wrapper);
+    }
   });
+}
+
+async function excluirModulo(mod) {
+  if (!confirm(`Excluir a aba "${mod.nome}"?`)) return;
+
+  try {
+    await fetch(`${API_MODULOS}/${mod.id}`, { method: 'DELETE' });
+    await carregarModulos();
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    switchTab('inventario');
+  } catch (e) {
+    console.error('Erro ao excluir módulo:', e);
+    alert('Erro ao excluir a aba.');
+  }
 }
 
 async function abrirModulo(mod) {
@@ -1424,6 +1707,9 @@ async function abrirModulo(mod) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
 
+  document.getElementById('moduloTitulo').textContent = mod.nome;
+  document.getElementById('moduloDescricao').textContent = mod.descricao || 'Tabela personalizada';
+
   await carregarCamposModulo();
   await carregarRegistrosModulo();
 
@@ -1431,12 +1717,12 @@ async function abrirModulo(mod) {
 }
 
 async function carregarCamposModulo() {
-  const res = await fetch(`/api/modulos/${moduloAtual.id}/campos`);
+  const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/campos`);
   moduloCampos = await res.json();
 }
 
 async function carregarRegistrosModulo() {
-  const res = await fetch(`/api/modulos/${moduloAtual.id}/registros`);
+  const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`);
   moduloRegistros = await res.json();
 }
 
@@ -1477,18 +1763,40 @@ function renderModuloDinamico() {
         <td>${escapeHtml(row[c.nome] || '')}</td>
       `).join('')}
       <td class="actions">
-        <button class="icon-btn edit" onclick="editarRegistroModulo(${idx})">✏️</button>
-        <button class="icon-btn delete" onclick="excluirRegistroModulo(${row.id})">🗑</button>
+        <div class="action-group">
+          <button class="icon-btn edit mod-edit" title="Editar" data-idx="${idx}">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/>
+              <path d="M14.06 4.94l3.75 3.75"/>
+            </svg>
+          </button>
+          <button class="icon-btn delete mod-delete" title="Excluir" data-id="${row.id}">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M8 6v14"/>
+              <path d="M16 6v14"/>
+              <path d="M5 6l1 16h12l1-16"/>
+              <path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
       </td>
     `;
 
     tbody.appendChild(tr);
   });
+
+  tbody.querySelectorAll('.mod-edit').forEach(btn => {
+    btn.onclick = (e) => editarRegistroModulo(Number(e.currentTarget.dataset.idx));
+  });
+  tbody.querySelectorAll('.mod-delete').forEach(btn => {
+    btn.onclick = (e) => excluirRegistroModulo(Number(e.currentTarget.dataset.id));
+  });
 }
 async function excluirRegistroModulo(id) {
   if (!confirm('Remover este registro?')) return;
 
-  await fetch(`/api/modulos/${moduloAtual.id}/registros/${id}`, {
+  await fetch(`${API_MODULOS}/${moduloAtual.id}/registros/${id}`, {
     method: 'DELETE'
   });
 
@@ -1496,16 +1804,101 @@ async function excluirRegistroModulo(id) {
   renderModuloDinamico();
 }
 
+function openNovoRegistroModulo() {
+  moduloEditId = null;
+  document.getElementById('moduloRegistroTitulo').textContent = 'Novo Registro';
+  renderFormularioModulo();
+  openModalById('moduloRegistroModal');
+}
 
-let newTabFields = [];
+function editarRegistroModulo(idx) {
+  const registro = moduloRegistros[idx];
+  if (!registro) return;
+  moduloEditId = registro.id;
+  document.getElementById('moduloRegistroTitulo').textContent = 'Editar Registro';
+  renderFormularioModulo(registro);
+  openModalById('moduloRegistroModal');
+}
+
+function closeModuloRegistroModal(e) {
+  if (!e || e.target.id === 'moduloRegistroModal') {
+    document.getElementById('moduloRegistroModal').classList.remove('show');
+  }
+}
+
+function renderFormularioModulo(valores = {}) {
+  const container = document.getElementById('moduloFormFields');
+  container.innerHTML = '';
+
+  moduloCampos.forEach(campo => {
+    const field = document.createElement('div');
+    field.className = 'form-full';
+
+    const label = document.createElement('label');
+    label.textContent = campo.nome;
+
+    const input = document.createElement('input');
+    const typeMap = {
+      numero: 'number',
+      data: 'date'
+    };
+
+    input.type = typeMap[campo.tipo] || 'text';
+    input.value = valores[campo.nome] || '';
+    input.dataset.field = campo.nome;
+    input.dataset.required = campo.obrigatorio ? 'true' : 'false';
+
+    field.appendChild(label);
+    field.appendChild(input);
+    container.appendChild(field);
+  });
+}
+
+async function salvarRegistroModulo() {
+  if (!moduloAtual?.id) {
+    alert('Selecione uma aba personalizada.');
+    return;
+  }
+
+  const inputs = [...document.querySelectorAll('#moduloFormFields [data-field]')];
+  const valores = {};
+
+  for (const input of inputs) {
+    const nome = input.dataset.field;
+    const valor = input.value?.trim();
+    if (input.dataset.required === 'true' && !valor) {
+      alert(`Preencha o campo obrigatório: ${nome}`);
+      return;
+    }
+    valores[nome] = valor || '';
+  }
+
+  const url = moduloEditId
+    ? `${API_MODULOS}/${moduloAtual.id}/registros/${moduloEditId}`
+    : `${API_MODULOS}/${moduloAtual.id}/registros`;
+  const method = moduloEditId ? 'PUT' : 'POST';
+
+  await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ valores })
+  });
+
+  closeModuloRegistroModal();
+  await carregarRegistrosModulo();
+  renderModuloDinamico();
+}
+
+
+let newTabFields = window.newTabFields;
 
 function openCreateTabModal() {
   newTabFields = [];
+  window.newTabFields = newTabFields;
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
+  document.getElementById('newTabDescription').value = '';
   openModalById('createTabModal');
-
-
 }
 
 function closeCreateTabModal(e) {
@@ -1529,11 +1922,12 @@ function addField() {
   row.innerHTML = `
     <input
       type="text"
+      class="field-name"
       placeholder="Nome do campo"
-      oninput="newTabFields[${idx}].nome = this.value"
+      oninput="window.newTabFields[${idx}].nome = this.value"
     />
 
-    <select onchange="newTabFields[${idx}].tipo = this.value">
+    <select class="field-type" onchange="window.newTabFields[${idx}].tipo = this.value">
       <option value="texto">Texto</option>
       <option value="numero">Número</option>
       <option value="data">Data</option>
@@ -1541,7 +1935,7 @@ function addField() {
     </select>
 
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:0;">
-      <input type="checkbox" onchange="newTabFields[${idx}].obrigatorio = this.checked">
+      <input class="field-required" type="checkbox" onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
       Obrigatório
     </label>
 
@@ -1570,7 +1964,7 @@ function removeField(idx) {
 
 
 async function loadDynamicTabs() {
-  const res = await fetch('/api/modulos');
+  const res = await fetch(API_MODULOS);
   const modulos = await res.json();
 
   const nav = document.querySelector('.nav');
@@ -1588,13 +1982,14 @@ async function loadDynamicTabs() {
 
 async function createNewTab() {
   const nome = document.getElementById('newTabName').value.trim();
+  const descricao = document.getElementById('newTabDescription').value.trim();
   if (!nome) return alert('Informe o nome da aba');
 
   // 1. cria módulo
-  const modRes = await fetch('/api/modulos', {
+  const modRes = await fetch(API_MODULOS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome })
+    body: JSON.stringify({ nome, descricao })
   });
 
   const modulo = await modRes.json();
@@ -1607,7 +2002,7 @@ async function createNewTab() {
     const tipo = fields[i].querySelector('.field-type').value;
     const obrigatorio = fields[i].querySelector('.field-required').checked;
 
-    await fetch(`/api/modulos/${modulo.id}/campos`, {
+    await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1626,39 +2021,42 @@ async function openModulo(modulo) {
   switchTab('modulo');
 
   document.getElementById('moduloTitulo').textContent = modulo.nome;
+  document.getElementById('moduloDescricao').textContent = modulo.descricao || 'Tabela personalizada';
 
-  const campos = await fetch(`/api/modulos/${modulo.id}/campos`).then(r => r.json());
-  const registros = await fetch(`/api/modulos/${modulo.id}/registros`).then(r => r.json());
+  const campos = await fetch(`${API_MODULOS}/${modulo.id}/campos`).then(r => r.json());
+  const registros = await fetch(`${API_MODULOS}/${modulo.id}/registros`).then(r => r.json());
 
   renderModuloTable(campos, registros);
 }
  async function salvarNovoModulo() {
   const nome = document.getElementById('newTabName').value.trim();
+  const descricao = document.getElementById('newTabDescription').value.trim();
 
   if (!nome) {
     alert('Informe o nome da aba.');
     return;
   }
 
-  if (!newTabFields.length) {
+  const fieldRows = [...document.querySelectorAll('#fieldsContainer .field-row')];
+
+  if (!fieldRows.length) {
     alert('Adicione ao menos um campo.');
     return;
   }
 
-  const res = await fetch('/api/modulos', {
+  const res = await fetch(API_MODULOS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome })
+    body: JSON.stringify({ nome, descricao })
   });
 
   const modulo = await res.json();
 
-const camposValidos = newTabFields
-  .filter(f => f && !f.__deleted)
-  .map(f => ({
-    nome: (f.nome || '').trim(),
-    tipo: f.tipo || 'texto',
-    obrigatorio: !!f.obrigatorio
+const camposValidos = fieldRows
+  .map(row => ({
+    nome: row.querySelector('.field-name')?.value.trim(),
+    tipo: row.querySelector('.field-type')?.value || 'texto',
+    obrigatorio: !!row.querySelector('.field-required')?.checked
   }))
   .filter(f => f.nome);
 
@@ -1670,7 +2068,7 @@ if (!camposValidos.length) {
 for (let i = 0; i < camposValidos.length; i++) {
   const f = camposValidos[i];
 
-  await fetch(`/api/modulos/${modulo.id}/campos`, {
+  await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1697,7 +2095,10 @@ function closeAllModals() {
 function openModalById(id) {
   closeAllModals();
   const el = document.getElementById(id);
-  if (el) el.classList.add('show');
+  if (el) {
+    el.classList.remove('hidden');
+    el.classList.add('show');
+  }
 }
 
 
@@ -1709,6 +2110,7 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.export-wrapper')) {
     document.getElementById('exportMenuInv')?.classList.add('hidden');
     document.getElementById('exportMenuMq')?.classList.add('hidden');
+    document.getElementById('exportMenuMod')?.classList.add('hidden');
   }
 });
 
@@ -1720,10 +2122,12 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
   const inv = document.getElementById('exportMenuInv');
   const mq  = document.getElementById('exportMenuMq');
+  const mod = document.getElementById('exportMenuMod');
 
   if (!e.target.closest('.export-wrapper')) {
     inv?.classList.add('hidden');
     mq?.classList.add('hidden');
+    mod?.classList.add('hidden');
   }
 });
 
@@ -1751,6 +2155,7 @@ document.addEventListener('click', (e) => {
   window.exportMaquinasRelatorio = exportMaquinasRelatorio;
   window.exportInventario = exportInventario;
   window.exportMaquinas = exportMaquinas;
+  window.exportModulo = exportModulo;
   window.toggleExportMenu = toggleExportMenu;
   window.carregarLogoPrefeitura = carregarLogoPrefeitura;
   window.openImportModal = openImportModal;
@@ -1767,6 +2172,10 @@ window.addField = addField;
 window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
 window.removeField = removeField;
+window.openNovoRegistroModulo = openNovoRegistroModulo;
+window.editarRegistroModulo = editarRegistroModulo;
+window.closeModuloRegistroModal = closeModuloRegistroModal;
+window.salvarRegistroModulo = salvarRegistroModulo;
 
 
   /* ===========================
