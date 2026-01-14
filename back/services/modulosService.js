@@ -3,20 +3,61 @@ const pool = require('../db');
 // ============================
 // MÓDULOS
 // ============================
-exports.createModulo = async (nome) => {
+exports.createModulo = async (nome, descricao) => {
   const slug = nome.toLowerCase().replace(/\s+/g, '_');
 
-  const [result] = await pool.query(
-    'INSERT INTO modulos (nome, slug) VALUES (?, ?)',
-    [nome, slug]
-  );
+  try {
+    const [result] = await pool.query(
+      'INSERT INTO modulos (nome, slug, descricao) VALUES (?, ?, ?)',
+      [nome, slug, descricao || null]
+    );
 
-  return { id: result.insertId, nome, slug };
+    return { id: result.insertId, nome, slug, descricao: descricao || null };
+  } catch (err) {
+    if (err.code !== 'ER_BAD_FIELD_ERROR') {
+      throw err;
+    }
+
+    const [result] = await pool.query(
+      'INSERT INTO modulos (nome, slug) VALUES (?, ?)',
+      [nome, slug]
+    );
+
+    return { id: result.insertId, nome, slug, descricao: null };
+  }
 };
 
 exports.listModulos = async () => {
   const [rows] = await pool.query('SELECT * FROM modulos ORDER BY id');
   return rows;
+};
+
+exports.deleteModulo = async (moduloId) => {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(
+      `DELETE v
+       FROM modulo_valores v
+       JOIN modulo_registros r ON v.registro_id = r.id
+       WHERE r.modulo_id = ?`,
+      [moduloId]
+    );
+
+    await conn.query('DELETE FROM modulo_registros WHERE modulo_id = ?', [moduloId]);
+    await conn.query('DELETE FROM modulo_campos WHERE modulo_id = ?', [moduloId]);
+    const [result] = await conn.query('DELETE FROM modulos WHERE id = ?', [moduloId]);
+
+    await conn.commit();
+    return { deleted: result.affectedRows > 0 };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 };
 
 // ============================
