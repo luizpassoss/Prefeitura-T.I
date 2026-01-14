@@ -122,6 +122,16 @@ class="select" onchange="applyFilters()">
             <option value="Assistência Cultural">Assistência Cultural</option>
             <option value="Fundacao Cultural">Fundação Cultural</option>
           </select>
+          <select id="filterFieldInv" class="select" onchange="applyFilters()">
+            <option value="all">Todos os campos</option>
+            <option value="link">Link de Internet</option>
+            <option value="velocidade">Velocidade</option>
+            <option value="telefone">Telefone</option>
+            <option value="local">Local</option>
+            <option value="endereco">Endereço</option>
+            <option value="categoria">Categoria</option>
+          </select>
+          <input id="filterValueInv" class="input" placeholder="Filtrar por valor" oninput="applyFilters()" />
           <input id="filterLocalInv" class="input" placeholder="Filtrar por local" oninput="applyFilters()" />
           <input id="filterVelInv" class="input" placeholder="Filtrar por velocidade" oninput="applyFilters()" />
           <input id="filterTelInv" class="input" placeholder="Filtrar por telefone" oninput="applyFilters()" />
@@ -141,7 +151,7 @@ class="select" onchange="applyFilters()">
                 <th style="width:12%">Telefone</th>
                 <th style="width:16%">Local</th>
                 <th style="width:28%">Endereço</th>
-                <th style="width:9%">Ações</th>
+                <th class="actions-header" style="width:9%">Ações</th>
               </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -225,6 +235,15 @@ class="select" onchange="applyFilters()">
           <option value="Manutenção">Manutenção</option>
           <option value="Inativa">Inativa</option>
         </select>
+        <select id="filterMachineField" class="select" onchange="applyMachineFilters()">
+          <option value="all">Todos os campos</option>
+          <option value="nome_maquina">Nome</option>
+          <option value="patrimonio">Patrimônio</option>
+          <option value="local">Local</option>
+          <option value="status">Status</option>
+          <option value="descricao">Descrição</option>
+        </select>
+        <input id="filterMachineValue" class="input" placeholder="Filtrar por valor" oninput="applyMachineFilters()" />
         <input id="filterMachineLocal" class="input" placeholder="Filtrar por local" oninput="applyMachineFilters()" />
         <button class="btn cancel" type="button" onclick="clearMachineFilters()">Limpar</button>
       </div>
@@ -600,6 +619,15 @@ class="select" onchange="applyFilters()">
           rows="2"
           placeholder="Ex: Controle de materiais e reposições"
         ></textarea>
+      </div>
+
+      <div class="form-full">
+        <label for="newTabTemplate">Modelo de Campos</label>
+        <select id="newTabTemplate" class="select" onchange="applyTabTemplate()">
+          <option value="custom">Personalizado</option>
+          <option value="inventario">Inventário (links e conexões)</option>
+          <option value="maquinas">Máquinas (status e patrimônio)</option>
+        </select>
       </div>
     </div>
 

@@ -310,6 +310,8 @@ function getFiltered() {
   // PEGAR O SELECT APENAS SE EXISTIR (ABA INVENTÁRIO)
   const catEl = document.getElementById('filterCategoryInv');
   const cat = catEl ? catEl.value : "All";
+  const fieldFilter = (document.getElementById('filterFieldInv')?.value || 'all').toLowerCase();
+  const valueFilter = (document.getElementById('filterValueInv')?.value || '').trim().toLowerCase();
   const localFilter = (document.getElementById('filterLocalInv')?.value || '').trim().toLowerCase();
   const velFilter = (document.getElementById('filterVelInv')?.value || '').trim().toLowerCase();
   const telFilter = (document.getElementById('filterTelInv')?.value || '').trim().toLowerCase();
@@ -349,12 +351,35 @@ if (cat !== "All") {
     list = list.filter(x => (x.telefone || '').toLowerCase().includes(telFilter));
   }
 
+  if (valueFilter) {
+    list = list.filter(x => {
+      const fields = {
+        link: x.link,
+        velocidade: x.velocidade,
+        telefone: x.telefone,
+        local: x.local,
+        endereco: x.endereco,
+        categoria: x.categoria
+      };
+      if (fieldFilter === 'all') {
+        return Object.values(fields).some(val =>
+          (val || '').toString().toLowerCase().includes(valueFilter)
+        );
+      }
+      return (fields[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
+    });
+  }
+
   return list;
 }
 
 function clearInventoryFilters() {
   const catEl = document.getElementById('filterCategoryInv');
   if (catEl) catEl.value = 'All';
+  const fieldEl = document.getElementById('filterFieldInv');
+  if (fieldEl) fieldEl.value = 'all';
+  const valueEl = document.getElementById('filterValueInv');
+  if (valueEl) valueEl.value = '';
   const localEl = document.getElementById('filterLocalInv');
   if (localEl) localEl.value = '';
   const velEl = document.getElementById('filterVelInv');
@@ -827,6 +852,8 @@ mtbody.addEventListener('click', (e) => {
  function applyMachineFilters() {
   const q = (document.getElementById('mq').value || '').trim().toLowerCase();
   const statusFilter = (document.getElementById('filterMachineStatus')?.value || 'All').toLowerCase();
+  const fieldFilter = (document.getElementById('filterMachineField')?.value || 'all').toLowerCase();
+  const valueFilter = (document.getElementById('filterMachineValue')?.value || '').trim().toLowerCase();
   const localFilter = (document.getElementById('filterMachineLocal')?.value || '').trim().toLowerCase();
 
   let list = [...machineData];
@@ -850,6 +877,24 @@ mtbody.addEventListener('click', (e) => {
     list = list.filter(x => (x.local || '').toLowerCase().includes(localFilter));
   }
 
+  if (valueFilter) {
+    list = list.filter(x => {
+      const fields = {
+        nome_maquina: x.nome_maquina,
+        patrimonio: x.patrimonio,
+        local: x.local,
+        status: x.status,
+        descricao: x.descricao
+      };
+      if (fieldFilter === 'all') {
+        return Object.values(fields).some(val =>
+          (val || '').toString().toLowerCase().includes(valueFilter)
+        );
+      }
+      return (fields[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
+    });
+  }
+
   renderMachines(list);
 }
 
@@ -858,6 +903,10 @@ mtbody.addEventListener('click', (e) => {
     if (mqEl) mqEl.value = '';
     const statusEl = document.getElementById('filterMachineStatus');
     if (statusEl) statusEl.value = 'All';
+    const fieldEl = document.getElementById('filterMachineField');
+    if (fieldEl) fieldEl.value = 'all';
+    const valueEl = document.getElementById('filterMachineValue');
+    if (valueEl) valueEl.value = '';
     const localEl = document.getElementById('filterMachineLocal');
     if (localEl) localEl.value = '';
     applyMachineFilters();
@@ -1836,7 +1885,7 @@ function renderModuloDinamico() {
   thead.innerHTML = `
     <tr>
       ${moduloCampos.map(c => `<th>${c.nome}</th>`).join('')}
-      <th>Ações</th>
+      <th class="actions-header">Ações</th>
     </tr>
   `;
 
@@ -2073,12 +2122,32 @@ function openNovoRegistroModulo() {
 
 let newTabFields = window.newTabFields;
 
+const tabTemplates = {
+  inventario: [
+    { nome: 'Link de Internet', tipo: 'texto', obrigatorio: true },
+    { nome: 'Velocidade (DL/UL)', tipo: 'texto', obrigatorio: false },
+    { nome: 'Telefone', tipo: 'texto', obrigatorio: false },
+    { nome: 'Local', tipo: 'texto', obrigatorio: true },
+    { nome: 'Endereço', tipo: 'texto', obrigatorio: false },
+    { nome: 'Categoria', tipo: 'texto', obrigatorio: false }
+  ],
+  maquinas: [
+    { nome: 'Nome Máquina', tipo: 'texto', obrigatorio: true },
+    { nome: 'Patrimônio', tipo: 'texto', obrigatorio: false },
+    { nome: 'Local', tipo: 'texto', obrigatorio: false },
+    { nome: 'Status', tipo: 'texto', obrigatorio: false },
+    { nome: 'Descrição', tipo: 'texto', obrigatorio: false }
+  ]
+};
+
 function openCreateTabModal() {
   newTabFields = [];
   window.newTabFields = newTabFields;
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
   document.getElementById('newTabDescription').value = '';
+  const templateSelect = document.getElementById('newTabTemplate');
+  if (templateSelect) templateSelect.value = 'custom';
   openModalById('createTabModal');
 }
 
@@ -2087,13 +2156,30 @@ function closeCreateTabModal(e) {
     document.getElementById('createTabModal').classList.remove('show');
   }
 }
-function addField() {
+
+function applyTabTemplate() {
+  const templateSelect = document.getElementById('newTabTemplate');
+  if (!templateSelect) return;
+  const templateKey = templateSelect.value;
+  const container = document.getElementById('fieldsContainer');
+  if (!container) return;
+
+  newTabFields = [];
+  window.newTabFields = newTabFields;
+  container.innerHTML = '';
+
+  if (templateKey === 'custom') return;
+  const templateFields = tabTemplates[templateKey] || [];
+  templateFields.forEach(field => addFieldWithValues(field));
+}
+
+function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } = {}) {
   const idx = newTabFields.length;
 
   newTabFields.push({
-    nome: '',
-    tipo: 'texto',
-    obrigatorio: false
+    nome,
+    tipo,
+    obrigatorio
   });
 
   const row = document.createElement('div');
@@ -2105,6 +2191,7 @@ function addField() {
       type="text"
       class="field-name"
       placeholder="Nome do campo"
+      value="${escapeHtml(nome)}"
       oninput="window.newTabFields[${idx}].nome = this.value"
     />
 
@@ -2116,7 +2203,7 @@ function addField() {
     </select>
 
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:0;">
-      <input class="field-required" type="checkbox" onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
+      <input class="field-required" type="checkbox" ${obrigatorio ? 'checked' : ''} onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
       Obrigatório
     </label>
 
@@ -2129,6 +2216,15 @@ function addField() {
   `;
 
   document.getElementById('fieldsContainer').appendChild(row);
+
+  const typeSelect = row.querySelector('.field-type');
+  if (typeSelect) {
+    typeSelect.value = tipo;
+  }
+}
+
+function addField() {
+  addFieldWithValues();
 }
 function removeField(idx) {
   // marca como removido
@@ -2354,10 +2450,11 @@ document.addEventListener('click', (e) => {
   window.removeImportRow = removeImportRow;
   window.updateImportCell = updateImportCell;
 
-window.openCreateTabModal = openCreateTabModal;
-window.closeCreateTabModal = closeCreateTabModal;
-window.addField = addField;
-window.salvarNovoModulo = salvarNovoModulo;
+  window.openCreateTabModal = openCreateTabModal;
+  window.closeCreateTabModal = closeCreateTabModal;
+  window.applyTabTemplate = applyTabTemplate;
+  window.addField = addField;
+  window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
 window.removeField = removeField;
 window.openNovoRegistroModulo = openNovoRegistroModulo;

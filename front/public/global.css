@@ -102,7 +102,7 @@ body {
 </svg>");
   background-repeat: no-repeat;
   background-position: center bottom;
-  opacity: 0.6;
+  opacity: 0.7;
   pointer-events: none;
 }
 
@@ -353,13 +353,17 @@ thead th {
   font-weight: 600;
   padding: 18px 14px;
   text-align: left;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #e6edf5;
   font-size: 14px;
+}
+
+thead th.actions-header {
+  text-align: center;
 }
 
 tbody td {
   padding: 16px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #e6edf5;
   color: #1a1f27;
   font-size: 14px;
 }
@@ -556,6 +560,13 @@ label {
   align-items: center;
   gap: 12px;
   margin-bottom: 18px;
+}
+
+.filters-panel {
+  background: #f8fafc;
+  border: 1px solid #e6edf5;
+  border-radius: 12px;
+  padding: 12px;
 }
 
 .filters-panel.hidden {
