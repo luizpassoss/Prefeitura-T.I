@@ -1941,12 +1941,25 @@ async function salvarRegistroModulo() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ valores })
   });
+}
+
+async function salvarRegistroModulo() {
+  if (!moduloAtual?.id) {
+    showMessage('Selecione uma aba personalizada.');
+    return;
+  }
 
   closeModuloRegistroModal();
   await carregarRegistrosModulo();
   renderModuloDinamico();
 }
 
+function openNovoRegistroModulo() {
+  moduloEditId = null;
+  document.getElementById('moduloRegistroTitulo').textContent = 'Novo Registro';
+  renderFormularioModulo();
+  openModalById('moduloRegistroModal');
+}
 
 let newTabFields = window.newTabFields;
 
