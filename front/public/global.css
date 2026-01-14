@@ -96,8 +96,9 @@ body {
   height: 24px;
   background-image: url("data:image/svg+xml;utf8,\
 <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 80'>\
-<path d='M0 78h600' stroke='%23e2e8f0' stroke-width='1.5'/>\
-<path d='M20 78V52h24v26M58 78V40h28v38M102 78V34h20v44M134 78V44h26v34M172 78V26h30v52M214 78V38h22v40M246 78V18h36v60M294 78V46h26v32M326 78V30h24v48M356 78V22h28v56M396 78V36h24v42M426 78V28h32v50M468 78V42h26v36M502 78V20h34v58M546 78V34h32v44' fill='none' stroke='%23e2e8f0' stroke-width='1.5' stroke-linecap='round'/>\
+<path d='M0 78h600' stroke='%23d6dee8' stroke-width='1.5'/>\
+<path d='M18 78V50h26v28M52 78V36h30v42M92 78V30h22v48M122 78V42h26v36M154 78V24h36v54M202 78V34h24v44M234 78V16h44v62M286 78V44h24v34M316 78V28h28v50M350 78V20h34v58M392 78V36h24v42M424 78V26h34v52M470 78V40h28v38M506 78V18h36v60M548 78V32h34v46' fill='none' stroke='%23d6dee8' stroke-width='1.5' stroke-linecap='round'/>\
+<path d='M254 78V10h8v68M258 10h-10M302 78V14h6v64' stroke='%23d6dee8' stroke-width='1.5' stroke-linecap='round'/>\
 </svg>");
   background-repeat: no-repeat;
   background-position: center bottom;
@@ -484,6 +485,17 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   color: #1b4332;
 }
 
+.btn.secondary.filter-btn {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.btn.secondary.filter-btn:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
 /* CAMPOS */
 label {
   font-size: 15px;
@@ -544,6 +556,10 @@ label {
   align-items: center;
   gap: 12px;
   margin-bottom: 18px;
+}
+
+.filters-panel.hidden {
+  display: none;
 }
 
 .filters .input,
