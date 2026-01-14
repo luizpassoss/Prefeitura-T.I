@@ -582,9 +582,9 @@ function exportInventarioPDF(data) {
       fillColor: [249, 250, 251]
     },
     columnStyles: {
-      1: { halign: 'left', cellWidth: 70 },
-      4: { halign: 'left', cellWidth: 40 },
-      5: { halign: 'left', cellWidth: 70 }
+      1: { halign: 'left', cellWidth: 62 },
+      4: { halign: 'left', cellWidth: 36 },
+      5: { halign: 'left', cellWidth: 62 }
     }
   });
 
@@ -996,14 +996,14 @@ function drawFooter(doc) {
   doc.text(
     `Página ${pageCount}`,
     pageWidth / 2,
-    pageHeight - 25,
+    pageHeight - 18,
     { align: 'center' }
   );
 
   doc.text(
     'Documento oficial gerado pelo Sistema de Inventário de T.I',
-    40,
-    pageHeight - 25
+    24,
+    pageHeight - 18
   );
 }
 function exportMaquinas(type) {
@@ -1086,9 +1086,9 @@ function exportMaquinasPDF(data) {
       fillColor: [249, 250, 251]
     },
     columnStyles: {
-      0: { halign: 'left', cellWidth: 55 },
-      2: { halign: 'left', cellWidth: 45 },
-      4: { halign: 'left', cellWidth: 90 }
+      0: { halign: 'left', cellWidth: 48 },
+      2: { halign: 'left', cellWidth: 40 },
+      4: { halign: 'left', cellWidth: 80 }
     }
   });
 
@@ -1653,6 +1653,91 @@ function exportModuloPDF() {
   doc.save(`Relatorio_${moduloAtual?.nome || 'modulo'}_TI.pdf`);
 }
 
+function exportModuloExcel() {
+  const headers = moduloCampos.map(c => c.nome);
+  const wsData = [
+    ['Prefeitura Municipal de São Francisco do Sul'],
+    ['Secretaria Municipal de Tecnologia da Informação'],
+    [`Relatório de ${moduloAtual?.nome || 'Módulo'}`],
+    [],
+    headers
+  ];
+
+  moduloRegistros.forEach(row => {
+    wsData.push(headers.map(h => row[h] || ''));
+  });
+
+  const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+  worksheet['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
+  ];
+  worksheet['!cols'] = headers.map(() => ({ wch: 24 }));
+  worksheet['!autofilter'] = {
+    ref: `A5:${columnLetter(headers.length - 1)}${moduloRegistros.length + 5}`
+  };
+  worksheet['!freeze'] = { xSplit: 0, ySplit: 5 };
+
+  Object.keys(worksheet).forEach(cell => {
+    if (!cell.startsWith('!')) {
+      worksheet[cell].s = {
+        alignment: {
+          vertical: 'center',
+          horizontal: 'left',
+          wrapText: true
+        }
+      };
+    }
+  });
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Modulo');
+
+  XLSX.writeFile(
+    workbook,
+    `${moduloAtual?.nome || 'modulo'}_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
+}
+
+function exportModuloPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('landscape');
+  const headers = moduloCampos.map(c => c.nome);
+  const data = moduloRegistros.map(row =>
+    headers.map(h => row[h] || '')
+  );
+
+  drawHeader(doc, `Relatório de ${moduloAtual?.nome || 'Módulo'}`, PREFEITURA_LOGO);
+
+  doc.autoTable({
+    startY: 70,
+    head: [headers],
+    body: data,
+    theme: 'grid',
+    styles: {
+      fontSize: 9,
+      textColor: [75, 85, 99],
+      cellPadding: 4,
+      lineColor: [229, 231, 235],
+      lineWidth: 0.5,
+      halign: 'center'
+    },
+    headStyles: {
+      fillColor: [15, 23, 42],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'center'
+    },
+    alternateRowStyles: {
+      fillColor: [249, 250, 251]
+    }
+  });
+
+  drawFooter(doc);
+  doc.save(`Relatorio_${moduloAtual?.nome || 'modulo'}_TI.pdf`);
+}
+
 async function importarRegistrosModulo() {
   if (!moduloAtual?.id) {
     showMessage('Selecione uma aba personalizada antes de importar.');
@@ -2110,43 +2195,6 @@ async function salvarRegistroModulo() {
     body: JSON.stringify({ valores })
   });
 }
-
-async function salvarRegistroModulo() {
-  if (!moduloAtual?.id) {
-    showMessage('Selecione uma aba personalizada.');
-    return;
-  }
-
-  const inputs = [...document.querySelectorAll('#moduloFormFields [data-field]')];
-  const valores = {};
-
-  for (const input of inputs) {
-    const nome = input.dataset.field;
-    const valor = input.value?.trim();
-    if (input.dataset.required === 'true' && !valor) {
-      showMessage(`Preencha o campo obrigatório: ${nome}`);
-      return;
-    }
-    valores[nome] = valor || '';
-  }
-
-  const url = moduloEditId
-    ? `${API_MODULOS}/${moduloAtual.id}/registros/${moduloEditId}`
-    : `${API_MODULOS}/${moduloAtual.id}/registros`;
-  const method = moduloEditId ? 'PUT' : 'POST';
-
-  await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ valores })
-  });
-}
-
-async function salvarRegistroModulo() {
-  if (!moduloAtual?.id) {
-    showMessage('Selecione uma aba personalizada.');
-    return;
-  }
 
   closeModuloRegistroModal();
   await carregarRegistrosModulo();

@@ -69,14 +69,12 @@ body {
 .brand {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px; /* espaço entre ícone e texto */
-  height: 50px; /* menor altura */
+  gap: 12px;
+  height: 52px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  font-weight: bold;
-  font-size: 18px;
-  color: #001e4bef;
-  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+  color: #0f172a;
   cursor: default;
   transition: color 0.3s ease, transform 0.3s ease;
   margin-bottom: 20px;
@@ -86,32 +84,37 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-
-  width: 34px;
-  height: 34px;
-
-  border-radius: 20px;
-  background: linear-gradient(135deg, #00218b, #1a73e8);
-
-  box-shadow: 0 4px 12px rgba(0, 33, 139, 0.35);
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: #eef2ff;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
 }
 
 .brand-icon svg {
-  width: 18px;
-  height: 18px;
-
-  fill: none;
-  stroke: #ffffff;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  width: 34px;
+  height: 34px;
 }
 
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
 
+.brand-text strong {
+  font-size: 16px;
+}
+
+.brand-text small {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
 
 .brand:hover {
-  color: #00133d; /* muda a cor ao passar o mouse */
-  transform: scale(1.05); /* leve efeito de destaque */
+  color: #0f172a;
+  transform: translateY(-1px);
 }
 
 
