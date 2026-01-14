@@ -295,6 +295,11 @@ class="select" onchange="applyFilters()">
                   <span class="icon excel-icon"></span>
                   Excel
                 </button>
+
+                <button onclick="exportModulo('both')">
+                  <span class="icon both-icon"></span>
+                  PDF + Excel
+                </button>
               </div>
             </div>
           </div>
@@ -590,6 +595,19 @@ class="select" onchange="applyFilters()">
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeCreateTabModal()">Cancelar</button>
       <button class="btn-salvar" onclick="salvarNovoModulo()">Criar Aba</button>
+    </div>
+  </div>
+</div>
+
+<div id="moduloRegistroModal" class="modal" onclick="closeModuloRegistroModal(event)">
+  <div class="card" onclick="event.stopPropagation()">
+    <h2 id="moduloRegistroTitulo">Novo Registro</h2>
+
+    <div id="moduloFormFields" class="form-grid"></div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeModuloRegistroModal()">Cancelar</button>
+      <button class="btn-salvar" onclick="salvarRegistroModulo()">Salvar</button>
     </div>
   </div>
 </div>

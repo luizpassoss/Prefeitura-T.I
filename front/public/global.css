@@ -1208,30 +1208,31 @@ textarea {
 
 
 .btn-add-tab {
-  margin-top: 12px;
-  margin-left: 6px;
+  margin-top: 10px;
+  margin-left: 12px;
   border-radius: 999px;
   cursor: pointer;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   text-align: left;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   padding: 0;
-  background: #f8fafc;
-  color: #0f172a;
+  background: #f1f5f9;
+  color: #1f2937;
   font-weight: 600;
   font-size: 12px;
   transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
   align-self: flex-start;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .btn-add-tab:hover {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #1e3a8a;
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
 }
 
 .btn-add-tab:active {

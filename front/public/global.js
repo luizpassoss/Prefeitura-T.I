@@ -22,6 +22,7 @@ let modulos = [];
 let moduloAtual = null;
 let moduloCampos = [];
 let moduloRegistros = [];
+let moduloEditId = null;
 
   /* ===========================
      CONFIG
@@ -1476,6 +1477,9 @@ function exportModulo(tipo) {
     exportModuloExcel();
   } else if (tipo === 'pdf') {
     exportModuloPDF();
+  } else if (tipo === 'both') {
+    exportModuloPDF();
+    exportModuloExcel();
   }
 }
 
@@ -1660,6 +1664,91 @@ async function excluirRegistroModulo(id) {
     method: 'DELETE'
   });
 
+  await carregarRegistrosModulo();
+  renderModuloDinamico();
+}
+
+function openNovoRegistroModulo() {
+  moduloEditId = null;
+  document.getElementById('moduloRegistroTitulo').textContent = 'Novo Registro';
+  renderFormularioModulo();
+  openModalById('moduloRegistroModal');
+}
+
+function editarRegistroModulo(idx) {
+  const registro = moduloRegistros[idx];
+  if (!registro) return;
+  moduloEditId = registro.id;
+  document.getElementById('moduloRegistroTitulo').textContent = 'Editar Registro';
+  renderFormularioModulo(registro);
+  openModalById('moduloRegistroModal');
+}
+
+function closeModuloRegistroModal(e) {
+  if (!e || e.target.id === 'moduloRegistroModal') {
+    document.getElementById('moduloRegistroModal').classList.remove('show');
+  }
+}
+
+function renderFormularioModulo(valores = {}) {
+  const container = document.getElementById('moduloFormFields');
+  container.innerHTML = '';
+
+  moduloCampos.forEach(campo => {
+    const field = document.createElement('div');
+    field.className = 'form-full';
+
+    const label = document.createElement('label');
+    label.textContent = campo.nome;
+
+    const input = document.createElement('input');
+    const typeMap = {
+      numero: 'number',
+      data: 'date'
+    };
+
+    input.type = typeMap[campo.tipo] || 'text';
+    input.value = valores[campo.nome] || '';
+    input.dataset.field = campo.nome;
+    input.dataset.required = campo.obrigatorio ? 'true' : 'false';
+
+    field.appendChild(label);
+    field.appendChild(input);
+    container.appendChild(field);
+  });
+}
+
+async function salvarRegistroModulo() {
+  if (!moduloAtual?.id) {
+    alert('Selecione uma aba personalizada.');
+    return;
+  }
+
+  const inputs = [...document.querySelectorAll('#moduloFormFields [data-field]')];
+  const valores = {};
+
+  for (const input of inputs) {
+    const nome = input.dataset.field;
+    const valor = input.value?.trim();
+    if (input.dataset.required === 'true' && !valor) {
+      alert(`Preencha o campo obrigatório: ${nome}`);
+      return;
+    }
+    valores[nome] = valor || '';
+  }
+
+  const url = moduloEditId
+    ? `${API_MODULOS}/${moduloAtual.id}/registros/${moduloEditId}`
+    : `${API_MODULOS}/${moduloAtual.id}/registros`;
+  const method = moduloEditId ? 'PUT' : 'POST';
+
+  await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ valores })
+  });
+
+  closeModuloRegistroModal();
   await carregarRegistrosModulo();
   renderModuloDinamico();
 }
@@ -1947,6 +2036,10 @@ window.addField = addField;
 window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
 window.removeField = removeField;
+window.openNovoRegistroModulo = openNovoRegistroModulo;
+window.editarRegistroModulo = editarRegistroModulo;
+window.closeModuloRegistroModal = closeModuloRegistroModal;
+window.salvarRegistroModulo = salvarRegistroModulo;
 
 
   /* ===========================
