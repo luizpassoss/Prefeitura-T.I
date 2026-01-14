@@ -57,10 +57,6 @@ if (btnNovaAba) {
     if (themeToggle) {
       themeToggle.setAttribute('aria-pressed', String(isDark));
       themeToggle.setAttribute('title', isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro');
-      const icon = themeToggle.querySelector('.theme-toggle-icon');
-      if (icon) {
-        icon.textContent = isDark ? '☀️' : '🌙';
-      }
     }
     localStorage.setItem('ti-theme', theme);
   }
