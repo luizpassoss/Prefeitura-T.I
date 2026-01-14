@@ -1943,7 +1943,6 @@ async function salvarRegistroModulo() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ valores })
   });
-}
 
   closeModuloRegistroModal();
   await carregarRegistrosModulo();
