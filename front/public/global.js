@@ -550,7 +550,7 @@ function exportInventarioPDF(data) {
   drawHeader(doc, 'Relatório de Inventários', PREFEITURA_LOGO);
 
   doc.autoTable({
-    startY: 78,
+    startY: 70,
     head: [[ 'Categoria', 'Link', 'Velocidade', 'Telefone', 'Local', 'Endereço' ]],
     body: data.map(r => [
       r.categoria,
@@ -565,7 +565,7 @@ function exportInventarioPDF(data) {
     styles: {
       fontSize: 9,
       textColor: [75, 85, 99],
-      cellPadding: 6,
+      cellPadding: 4,
       lineColor: [229, 231, 235],
       lineWidth: 0.5,
       halign: 'center'
@@ -582,9 +582,9 @@ function exportInventarioPDF(data) {
       fillColor: [249, 250, 251]
     },
     columnStyles: {
-      1: { halign: 'left' },
-      4: { halign: 'left' },
-      5: { halign: 'left' }
+      1: { halign: 'left', cellWidth: 70 },
+      4: { halign: 'left', cellWidth: 40 },
+      5: { halign: 'left', cellWidth: 70 }
     }
   });
 
@@ -949,6 +949,8 @@ if(!item.local){
 function drawHeader(doc, titulo, logoBase64) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageMargin = 24;
+  const titleY = 52;
+  const ruleY = 60;
 
   /* ===== LOGO ===== */
   if (logoBase64) {
@@ -974,12 +976,12 @@ function drawHeader(doc, titulo, logoBase64) {
   /* ===== TÍTULO ===== */
   doc.setFontSize(13);
   doc.setFont('Helvetica', 'bold');
-  doc.text(titulo, pageWidth / 2, 58, { align: 'center' });
+  doc.text(titulo, pageWidth / 2, titleY, { align: 'center' });
 
   /* ===== LINHA ===== */
   doc.setDrawColor(200);
   doc.setLineWidth(0.5);
-  doc.line(pageMargin, 66, pageWidth - pageMargin, 66);
+  doc.line(pageMargin, ruleY, pageWidth - pageMargin, ruleY);
 }
 
 
@@ -1053,7 +1055,7 @@ function exportMaquinasPDF(data) {
   drawHeader(doc, 'Relatório de Máquinas', PREFEITURA_LOGO);
 
   doc.autoTable({
-    startY: 78,
+    startY: 70,
     head: [[ 'Máquina', 'Patrimônio', 'Local', 'Status', 'Descrição' ]],
     body: data.map(r => [
       r.nome,
@@ -1067,7 +1069,7 @@ function exportMaquinasPDF(data) {
     styles: {
       fontSize: 9,
       textColor: [75, 85, 99],
-      cellPadding: 6,
+      cellPadding: 4,
       lineColor: [229, 231, 235],
       lineWidth: 0.5,
       halign: 'center'
@@ -1084,9 +1086,9 @@ function exportMaquinasPDF(data) {
       fillColor: [249, 250, 251]
     },
     columnStyles: {
-      0: { halign: 'left' },
-      2: { halign: 'left' },
-      4: { halign: 'left' }
+      0: { halign: 'left', cellWidth: 55 },
+      2: { halign: 'left', cellWidth: 45 },
+      4: { halign: 'left', cellWidth: 90 }
     }
   });
 
@@ -1624,6 +1626,172 @@ function exportModuloPDF() {
   drawHeader(doc, `Relatório de ${moduloAtual?.nome || 'Módulo'}`, PREFEITURA_LOGO);
 
   doc.autoTable({
+    startY: 70,
+    head: [headers],
+    body: data,
+    theme: 'grid',
+    styles: {
+      fontSize: 9,
+      textColor: [75, 85, 99],
+      cellPadding: 4,
+      lineColor: [229, 231, 235],
+      lineWidth: 0.5,
+      halign: 'center'
+    },
+    headStyles: {
+      fillColor: [15, 23, 42],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'center'
+    },
+    alternateRowStyles: {
+      fillColor: [249, 250, 251]
+    }
+  });
+
+  drawFooter(doc);
+  doc.save(`Relatorio_${moduloAtual?.nome || 'modulo'}_TI.pdf`);
+}
+
+async function importarRegistrosModulo() {
+  if (!moduloAtual?.id) {
+    showMessage('Selecione uma aba personalizada antes de importar.');
+    return;
+  }
+
+  if (!importRows.length) {
+    showMessage('Nenhum dado para importar.');
+    return;
+  }
+
+  const headerMap = {};
+  importHeaders.forEach((h, idx) => {
+    const key = normalizeHeader(h);
+    if (key) headerMap[key] = idx;
+  });
+
+  const camposMap = moduloCampos.map(c => ({
+    nome: c.nome,
+    key: normalizeHeader(c.nome)
+  }));
+
+  const hasMatch = camposMap.some(c => headerMap[c.key] !== undefined);
+  if (!hasMatch) {
+    showMessage('Os cabeçalhos da planilha não correspondem aos campos do módulo.');
+    return;
+  }
+
+  let successCount = 0;
+  const errors = [];
+
+  for (let i = 0; i < importRows.length; i++) {
+    const row = importRows[i];
+    const valores = {};
+
+    camposMap.forEach(campo => {
+      const idx = headerMap[campo.key];
+      if (idx !== undefined) {
+        valores[campo.nome] = row[idx];
+      }
+    });
+
+    try {
+      await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valores })
+      });
+      successCount += 1;
+    } catch (err) {
+      errors.push({ linha: i + 2, erro: err.message });
+    }
+  }
+
+  if (errors.length) {
+    console.table(errors);
+    showMessage(`Importação concluída com ${errors.length} erro(s).`);
+  } else {
+    showMessage(`Importação concluída: ${successCount} registro(s).`);
+  }
+
+  await carregarRegistrosModulo();
+  renderModuloDinamico();
+}
+
+function exportModulo(tipo) {
+  if (!moduloCampos.length || !moduloRegistros.length) {
+    showMessage('Nenhum registro para exportar.');
+    return;
+  }
+
+  if (tipo === 'excel') {
+    exportModuloExcel();
+  } else if (tipo === 'pdf') {
+    exportModuloPDF();
+  } else if (tipo === 'both') {
+    exportModuloPDF();
+    exportModuloExcel();
+  }
+}
+
+function exportModuloExcel() {
+  const headers = moduloCampos.map(c => c.nome);
+  const wsData = [
+    ['Prefeitura Municipal de São Francisco do Sul'],
+    ['Secretaria Municipal de Tecnologia da Informação'],
+    [`Relatório de ${moduloAtual?.nome || 'Módulo'}`],
+    [],
+    headers
+  ];
+
+  moduloRegistros.forEach(row => {
+    wsData.push(headers.map(h => row[h] || ''));
+  });
+
+  const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+  worksheet['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
+  ];
+  worksheet['!cols'] = headers.map(() => ({ wch: 24 }));
+  worksheet['!autofilter'] = {
+    ref: `A5:${columnLetter(headers.length - 1)}${moduloRegistros.length + 5}`
+  };
+  worksheet['!freeze'] = { xSplit: 0, ySplit: 5 };
+
+  Object.keys(worksheet).forEach(cell => {
+    if (!cell.startsWith('!')) {
+      worksheet[cell].s = {
+        alignment: {
+          vertical: 'center',
+          horizontal: 'left',
+          wrapText: true
+        }
+      };
+    }
+  });
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Modulo');
+
+  XLSX.writeFile(
+    workbook,
+    `${moduloAtual?.nome || 'modulo'}_${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
+}
+
+function exportModuloPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('landscape');
+  const headers = moduloCampos.map(c => c.nome);
+  const data = moduloRegistros.map(row =>
+    headers.map(h => row[h] || '')
+  );
+
+  drawHeader(doc, `Relatório de ${moduloAtual?.nome || 'Módulo'}`, PREFEITURA_LOGO);
+
+  doc.autoTable({
     startY: 78,
     head: [headers],
     body: data,
@@ -1909,6 +2077,37 @@ function renderFormularioModulo(valores = {}) {
     field.appendChild(label);
     field.appendChild(input);
     container.appendChild(field);
+  });
+}
+
+async function salvarRegistroModulo() {
+  if (!moduloAtual?.id) {
+    showMessage('Selecione uma aba personalizada.');
+    return;
+  }
+
+  const inputs = [...document.querySelectorAll('#moduloFormFields [data-field]')];
+  const valores = {};
+
+  for (const input of inputs) {
+    const nome = input.dataset.field;
+    const valor = input.value?.trim();
+    if (input.dataset.required === 'true' && !valor) {
+      showMessage(`Preencha o campo obrigatório: ${nome}`);
+      return;
+    }
+    valores[nome] = valor || '';
+  }
+
+  const url = moduloEditId
+    ? `${API_MODULOS}/${moduloAtual.id}/registros/${moduloEditId}`
+    : `${API_MODULOS}/${moduloAtual.id}/registros`;
+  const method = moduloEditId ? 'PUT' : 'POST';
+
+  await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ valores })
   });
 }
 
