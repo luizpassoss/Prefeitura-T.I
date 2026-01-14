@@ -1,4 +1,6 @@
 
+window.newTabFields = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.modal').forEach(m => {
   m.classList.remove('show');
@@ -13,12 +15,14 @@ let camposModuloAtual = [];
 /* ===========================
    MÓDULOS DINÂMICOS
    =========================== */
-const API_MODULOS = '/api/modulos';
+  const API_BASE = 'https://pertinently-unpublished-soila.ngrok-free.dev/api';
+const API_MODULOS = `${API_BASE}/modulos`;
 
 let modulos = [];
 let moduloAtual = null;
 let moduloCampos = [];
 let moduloRegistros = [];
+let moduloEditId = null;
 
   /* ===========================
      CONFIG
@@ -1225,13 +1229,20 @@ function normalizeStatus(status = '') {
 function toggleExportMenu(tipo) {
   const inv = document.getElementById('exportMenuInv');
   const mq  = document.getElementById('exportMenuMq');
+  const mod = document.getElementById('exportMenuMod');
 
   if (tipo === 'inv') {
     inv.classList.toggle('hidden');
     mq.classList.add('hidden');
-  } else {
+    mod?.classList.add('hidden');
+  } else if (tipo === 'mq') {
     mq.classList.toggle('hidden');
     inv.classList.add('hidden');
+    mod?.classList.add('hidden');
+  } else if (tipo === 'mod') {
+    mod?.classList.toggle('hidden');
+    inv.classList.add('hidden');
+    mq.classList.add('hidden');
   }
 }
 function openImportModal(type) {
@@ -1242,7 +1253,9 @@ function openImportModal(type) {
   document.getElementById('importTitle').innerText =
     type === 'inventario'
       ? 'Importar Inventário (Links)'
-      : 'Importar Máquinas';
+      : type === 'maquinas'
+        ? 'Importar Máquinas'
+        : `Importar ${moduloAtual?.nome || 'Módulo'}`;
 
   document.getElementById('importPreviewTable').querySelector('thead').innerHTML = '';
   document.getElementById('importPreviewTable').querySelector('tbody').innerHTML = '';
@@ -1347,6 +1360,12 @@ function mapImportRows() {
 async function confirmImport() {
   const rows = mapImportRows();
 
+  if (importType === 'modulo') {
+    await importarRegistrosModulo();
+    closeImportModal();
+    return;
+  }
+
   if (!rows.length) {
     alert('Nenhum dado para importar.');
     return;
@@ -1384,6 +1403,121 @@ await fetchMachines();
   }
 }
 
+async function importarRegistrosModulo() {
+  if (!moduloAtual?.id) {
+    alert('Selecione uma aba personalizada antes de importar.');
+    return;
+  }
+
+  if (!importRows.length) {
+    alert('Nenhum dado para importar.');
+    return;
+  }
+
+  const headerMap = {};
+  importHeaders.forEach((h, idx) => {
+    if (h) headerMap[h.toString().trim().toLowerCase()] = idx;
+  });
+
+  const camposMap = moduloCampos.map(c => ({
+    nome: c.nome,
+    key: c.nome.toString().trim().toLowerCase()
+  }));
+
+  const hasMatch = camposMap.some(c => headerMap[c.key] !== undefined);
+  if (!hasMatch) {
+    alert('Os cabeçalhos da planilha não correspondem aos campos do módulo.');
+    return;
+  }
+
+  let successCount = 0;
+  const errors = [];
+
+  for (let i = 0; i < importRows.length; i++) {
+    const row = importRows[i];
+    const valores = {};
+
+    camposMap.forEach(campo => {
+      const idx = headerMap[campo.key];
+      if (idx !== undefined) {
+        valores[campo.nome] = row[idx];
+      }
+    });
+
+    try {
+      await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valores })
+      });
+      successCount += 1;
+    } catch (err) {
+      errors.push({ linha: i + 2, erro: err.message });
+    }
+  }
+
+  if (errors.length) {
+    console.table(errors);
+    alert(`Importação concluída com ${errors.length} erro(s).`);
+  } else {
+    alert(`Importação concluída: ${successCount} registro(s).`);
+  }
+
+  await carregarRegistrosModulo();
+  renderModuloDinamico();
+}
+
+function exportModulo(tipo) {
+  if (!moduloCampos.length || !moduloRegistros.length) {
+    alert('Nenhum registro para exportar.');
+    return;
+  }
+
+  if (tipo === 'excel') {
+    exportModuloExcel();
+  } else if (tipo === 'pdf') {
+    exportModuloPDF();
+  } else if (tipo === 'both') {
+    exportModuloPDF();
+    exportModuloExcel();
+  }
+}
+
+function exportModuloExcel() {
+  const headers = moduloCampos.map(c => c.nome);
+  const rows = moduloRegistros.map(row =>
+    headers.reduce((acc, h) => {
+      acc[h] = row[h] || '';
+      return acc;
+    }, {})
+  );
+
+  const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Modulo');
+
+  XLSX.writeFile(workbook, `${moduloAtual?.nome || 'modulo'}.xlsx`);
+}
+
+function exportModuloPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const headers = moduloCampos.map(c => c.nome);
+  const data = moduloRegistros.map(row =>
+    headers.map(h => row[h] || '')
+  );
+
+  doc.text(moduloAtual?.nome || 'Módulo', 14, 14);
+  doc.autoTable({
+    startY: 20,
+    head: [headers],
+    body: data,
+    styles: { fontSize: 9 }
+  });
+
+  doc.save(`${moduloAtual?.nome || 'modulo'}.pdf`);
+}
+
 
 async function carregarModulos() {
   try {
@@ -1397,11 +1531,16 @@ async function carregarModulos() {
 
 function renderAbasDinamicas() {
   const nav = document.querySelector('.nav');
+  const addButton = nav.querySelector('.btn-add-tab');
 
   // remove abas dinâmicas antigas
   nav.querySelectorAll('.tab-dinamica').forEach(e => e.remove());
+  nav.querySelectorAll('.tab-dinamica-wrapper').forEach(e => e.remove());
 
   modulos.forEach(mod => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'tab-dinamica-wrapper';
+
     const a = document.createElement('a');
     a.className = 'tab-dinamica';
     a.textContent = mod.nome;
@@ -1413,9 +1552,39 @@ function renderAbasDinamicas() {
   abrirModulo(mod);
 };
 
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'tab-delete';
+    deleteBtn.title = 'Excluir aba';
+    deleteBtn.innerHTML = '✕';
+    deleteBtn.onclick = async (e) => {
+      e.stopPropagation();
+      await excluirModulo(mod);
+    };
 
-    nav.appendChild(a);
+    wrapper.appendChild(a);
+    wrapper.appendChild(deleteBtn);
+    if (addButton) {
+      nav.insertBefore(wrapper, addButton);
+    } else {
+      nav.appendChild(wrapper);
+    }
   });
+}
+
+async function excluirModulo(mod) {
+  if (!confirm(`Excluir a aba "${mod.nome}"?`)) return;
+
+  try {
+    await fetch(`${API_MODULOS}/${mod.id}`, { method: 'DELETE' });
+    await carregarModulos();
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    switchTab('inventario');
+  } catch (e) {
+    console.error('Erro ao excluir módulo:', e);
+    alert('Erro ao excluir a aba.');
+  }
 }
 
 async function abrirModulo(mod) {
@@ -1424,6 +1593,9 @@ async function abrirModulo(mod) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
 
+  document.getElementById('moduloTitulo').textContent = mod.nome;
+  document.getElementById('moduloDescricao').textContent = mod.descricao || 'Tabela personalizada';
+
   await carregarCamposModulo();
   await carregarRegistrosModulo();
 
@@ -1431,12 +1603,12 @@ async function abrirModulo(mod) {
 }
 
 async function carregarCamposModulo() {
-  const res = await fetch(`/api/modulos/${moduloAtual.id}/campos`);
+  const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/campos`);
   moduloCampos = await res.json();
 }
 
 async function carregarRegistrosModulo() {
-  const res = await fetch(`/api/modulos/${moduloAtual.id}/registros`);
+  const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`);
   moduloRegistros = await res.json();
 }
 
@@ -1477,18 +1649,40 @@ function renderModuloDinamico() {
         <td>${escapeHtml(row[c.nome] || '')}</td>
       `).join('')}
       <td class="actions">
-        <button class="icon-btn edit" onclick="editarRegistroModulo(${idx})">✏️</button>
-        <button class="icon-btn delete" onclick="excluirRegistroModulo(${row.id})">🗑</button>
+        <div class="action-group">
+          <button class="icon-btn edit mod-edit" title="Editar" data-idx="${idx}">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/>
+              <path d="M14.06 4.94l3.75 3.75"/>
+            </svg>
+          </button>
+          <button class="icon-btn delete mod-delete" title="Excluir" data-id="${row.id}">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M8 6v14"/>
+              <path d="M16 6v14"/>
+              <path d="M5 6l1 16h12l1-16"/>
+              <path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
       </td>
     `;
 
     tbody.appendChild(tr);
   });
+
+  tbody.querySelectorAll('.mod-edit').forEach(btn => {
+    btn.onclick = (e) => editarRegistroModulo(Number(e.currentTarget.dataset.idx));
+  });
+  tbody.querySelectorAll('.mod-delete').forEach(btn => {
+    btn.onclick = (e) => excluirRegistroModulo(Number(e.currentTarget.dataset.id));
+  });
 }
 async function excluirRegistroModulo(id) {
   if (!confirm('Remover este registro?')) return;
 
-  await fetch(`/api/modulos/${moduloAtual.id}/registros/${id}`, {
+  await fetch(`${API_MODULOS}/${moduloAtual.id}/registros/${id}`, {
     method: 'DELETE'
   });
 
@@ -1496,16 +1690,101 @@ async function excluirRegistroModulo(id) {
   renderModuloDinamico();
 }
 
+function openNovoRegistroModulo() {
+  moduloEditId = null;
+  document.getElementById('moduloRegistroTitulo').textContent = 'Novo Registro';
+  renderFormularioModulo();
+  openModalById('moduloRegistroModal');
+}
 
-let newTabFields = [];
+function editarRegistroModulo(idx) {
+  const registro = moduloRegistros[idx];
+  if (!registro) return;
+  moduloEditId = registro.id;
+  document.getElementById('moduloRegistroTitulo').textContent = 'Editar Registro';
+  renderFormularioModulo(registro);
+  openModalById('moduloRegistroModal');
+}
+
+function closeModuloRegistroModal(e) {
+  if (!e || e.target.id === 'moduloRegistroModal') {
+    document.getElementById('moduloRegistroModal').classList.remove('show');
+  }
+}
+
+function renderFormularioModulo(valores = {}) {
+  const container = document.getElementById('moduloFormFields');
+  container.innerHTML = '';
+
+  moduloCampos.forEach(campo => {
+    const field = document.createElement('div');
+    field.className = 'form-full';
+
+    const label = document.createElement('label');
+    label.textContent = campo.nome;
+
+    const input = document.createElement('input');
+    const typeMap = {
+      numero: 'number',
+      data: 'date'
+    };
+
+    input.type = typeMap[campo.tipo] || 'text';
+    input.value = valores[campo.nome] || '';
+    input.dataset.field = campo.nome;
+    input.dataset.required = campo.obrigatorio ? 'true' : 'false';
+
+    field.appendChild(label);
+    field.appendChild(input);
+    container.appendChild(field);
+  });
+}
+
+async function salvarRegistroModulo() {
+  if (!moduloAtual?.id) {
+    alert('Selecione uma aba personalizada.');
+    return;
+  }
+
+  const inputs = [...document.querySelectorAll('#moduloFormFields [data-field]')];
+  const valores = {};
+
+  for (const input of inputs) {
+    const nome = input.dataset.field;
+    const valor = input.value?.trim();
+    if (input.dataset.required === 'true' && !valor) {
+      alert(`Preencha o campo obrigatório: ${nome}`);
+      return;
+    }
+    valores[nome] = valor || '';
+  }
+
+  const url = moduloEditId
+    ? `${API_MODULOS}/${moduloAtual.id}/registros/${moduloEditId}`
+    : `${API_MODULOS}/${moduloAtual.id}/registros`;
+  const method = moduloEditId ? 'PUT' : 'POST';
+
+  await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ valores })
+  });
+
+  closeModuloRegistroModal();
+  await carregarRegistrosModulo();
+  renderModuloDinamico();
+}
+
+
+let newTabFields = window.newTabFields;
 
 function openCreateTabModal() {
   newTabFields = [];
+  window.newTabFields = newTabFields;
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
+  document.getElementById('newTabDescription').value = '';
   openModalById('createTabModal');
-
-
 }
 
 function closeCreateTabModal(e) {
@@ -1529,11 +1808,12 @@ function addField() {
   row.innerHTML = `
     <input
       type="text"
+      class="field-name"
       placeholder="Nome do campo"
-      oninput="newTabFields[${idx}].nome = this.value"
+      oninput="window.newTabFields[${idx}].nome = this.value"
     />
 
-    <select onchange="newTabFields[${idx}].tipo = this.value">
+    <select class="field-type" onchange="window.newTabFields[${idx}].tipo = this.value">
       <option value="texto">Texto</option>
       <option value="numero">Número</option>
       <option value="data">Data</option>
@@ -1541,7 +1821,7 @@ function addField() {
     </select>
 
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:0;">
-      <input type="checkbox" onchange="newTabFields[${idx}].obrigatorio = this.checked">
+      <input class="field-required" type="checkbox" onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
       Obrigatório
     </label>
 
@@ -1570,7 +1850,7 @@ function removeField(idx) {
 
 
 async function loadDynamicTabs() {
-  const res = await fetch('/api/modulos');
+  const res = await fetch(API_MODULOS);
   const modulos = await res.json();
 
   const nav = document.querySelector('.nav');
@@ -1588,13 +1868,14 @@ async function loadDynamicTabs() {
 
 async function createNewTab() {
   const nome = document.getElementById('newTabName').value.trim();
+  const descricao = document.getElementById('newTabDescription').value.trim();
   if (!nome) return alert('Informe o nome da aba');
 
   // 1. cria módulo
-  const modRes = await fetch('/api/modulos', {
+  const modRes = await fetch(API_MODULOS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome })
+    body: JSON.stringify({ nome, descricao })
   });
 
   const modulo = await modRes.json();
@@ -1607,7 +1888,7 @@ async function createNewTab() {
     const tipo = fields[i].querySelector('.field-type').value;
     const obrigatorio = fields[i].querySelector('.field-required').checked;
 
-    await fetch(`/api/modulos/${modulo.id}/campos`, {
+    await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1626,39 +1907,42 @@ async function openModulo(modulo) {
   switchTab('modulo');
 
   document.getElementById('moduloTitulo').textContent = modulo.nome;
+  document.getElementById('moduloDescricao').textContent = modulo.descricao || 'Tabela personalizada';
 
-  const campos = await fetch(`/api/modulos/${modulo.id}/campos`).then(r => r.json());
-  const registros = await fetch(`/api/modulos/${modulo.id}/registros`).then(r => r.json());
+  const campos = await fetch(`${API_MODULOS}/${modulo.id}/campos`).then(r => r.json());
+  const registros = await fetch(`${API_MODULOS}/${modulo.id}/registros`).then(r => r.json());
 
   renderModuloTable(campos, registros);
 }
  async function salvarNovoModulo() {
   const nome = document.getElementById('newTabName').value.trim();
+  const descricao = document.getElementById('newTabDescription').value.trim();
 
   if (!nome) {
     alert('Informe o nome da aba.');
     return;
   }
 
-  if (!newTabFields.length) {
+  const fieldRows = [...document.querySelectorAll('#fieldsContainer .field-row')];
+
+  if (!fieldRows.length) {
     alert('Adicione ao menos um campo.');
     return;
   }
 
-  const res = await fetch('/api/modulos', {
+  const res = await fetch(API_MODULOS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome })
+    body: JSON.stringify({ nome, descricao })
   });
 
   const modulo = await res.json();
 
-const camposValidos = newTabFields
-  .filter(f => f && !f.__deleted)
-  .map(f => ({
-    nome: (f.nome || '').trim(),
-    tipo: f.tipo || 'texto',
-    obrigatorio: !!f.obrigatorio
+const camposValidos = fieldRows
+  .map(row => ({
+    nome: row.querySelector('.field-name')?.value.trim(),
+    tipo: row.querySelector('.field-type')?.value || 'texto',
+    obrigatorio: !!row.querySelector('.field-required')?.checked
   }))
   .filter(f => f.nome);
 
@@ -1670,7 +1954,7 @@ if (!camposValidos.length) {
 for (let i = 0; i < camposValidos.length; i++) {
   const f = camposValidos[i];
 
-  await fetch(`/api/modulos/${modulo.id}/campos`, {
+  await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1697,7 +1981,10 @@ function closeAllModals() {
 function openModalById(id) {
   closeAllModals();
   const el = document.getElementById(id);
-  if (el) el.classList.add('show');
+  if (el) {
+    el.classList.remove('hidden');
+    el.classList.add('show');
+  }
 }
 
 
@@ -1709,6 +1996,7 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('.export-wrapper')) {
     document.getElementById('exportMenuInv')?.classList.add('hidden');
     document.getElementById('exportMenuMq')?.classList.add('hidden');
+    document.getElementById('exportMenuMod')?.classList.add('hidden');
   }
 });
 
@@ -1720,10 +2008,12 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
   const inv = document.getElementById('exportMenuInv');
   const mq  = document.getElementById('exportMenuMq');
+  const mod = document.getElementById('exportMenuMod');
 
   if (!e.target.closest('.export-wrapper')) {
     inv?.classList.add('hidden');
     mq?.classList.add('hidden');
+    mod?.classList.add('hidden');
   }
 });
 
@@ -1751,6 +2041,7 @@ document.addEventListener('click', (e) => {
   window.exportMaquinasRelatorio = exportMaquinasRelatorio;
   window.exportInventario = exportInventario;
   window.exportMaquinas = exportMaquinas;
+  window.exportModulo = exportModulo;
   window.toggleExportMenu = toggleExportMenu;
   window.carregarLogoPrefeitura = carregarLogoPrefeitura;
   window.openImportModal = openImportModal;
@@ -1767,6 +2058,10 @@ window.addField = addField;
 window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
 window.removeField = removeField;
+window.openNovoRegistroModulo = openNovoRegistroModulo;
+window.editarRegistroModulo = editarRegistroModulo;
+window.closeModuloRegistroModal = closeModuloRegistroModal;
+window.salvarRegistroModulo = salvarRegistroModulo;
 
 
   /* ===========================
