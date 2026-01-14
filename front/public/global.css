@@ -383,6 +383,11 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   max-width: 720px;
 }
 
+.create-tab-card .form-grid {
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
 .modal-heading h2 {
   margin: 0;
   font-size: 20px;
@@ -396,7 +401,7 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 .create-tab-header {
-  margin-top: 16px;
+  margin-top: 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1190,22 +1195,19 @@ textarea {
 .btn-add-tab {
   margin-top: 12px;
   border-radius: 999px;
-  border-radius: 10px;
   cursor: pointer;
   border: 1px solid #e2e8f0;
   text-align: left;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   padding: 0;
-  width: 100%;
-  padding: 8px 12px;
   background: #f8fafc;
   color: #0f172a;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
@@ -1228,30 +1230,8 @@ textarea {
   justify-content: center;
   background: transparent;
   color: currentColor;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-
-.btn-add-tab:hover {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #1e3a8a;
-}
-
-.btn-add-tab:active {
-  background: #e2e8f0;
-}
-
-.btn-add-tab-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #e2e8f0;
-  color: #1e3a8a;
-  font-size: 14px;
-  font-weight: 700;
 }
 
 

@@ -36,9 +36,6 @@
       <a onclick="switchTab('maquinas')">Máquinas</a>
       <button class="btn-add-tab" onclick="openCreateTabModal()" aria-label="Criar nova aba">
         <span class="btn-add-tab-icon" aria-hidden="true">＋</span>
-      <button class="btn-add-tab" onclick="openCreateTabModal()">
-        <span class="btn-add-tab-icon" aria-hidden="true">＋</span>
-        <span>Nova aba</span>
       </button>
     </nav>
   </aside>
@@ -248,7 +245,6 @@ class="select" onchange="applyFilters()">
           <div>
             <h1 id="moduloTitulo">Módulo</h1>
             <div id="moduloDescricao" class="small">Tabela personalizada</div>
-            <div class="small">Tabela personalizada</div>
           </div>
 
           <div class="controls">
@@ -533,15 +529,21 @@ class="select" onchange="applyFilters()">
       </p>
     </div>
 
-    <label for="newTabName">Nome da Aba</label>
-    <input id="newTabName" placeholder="Ex: Almoxarifado" />
+    <div class="form-grid">
+      <div class="form-full">
+        <label for="newTabName">Nome da Aba</label>
+        <input id="newTabName" placeholder="Ex: Almoxarifado" />
+      </div>
 
-    <label for="newTabDescription">Descrição</label>
-    <textarea
-      id="newTabDescription"
-      rows="2"
-      placeholder="Ex: Controle de materiais e reposições"
-    ></textarea>
+      <div class="form-full">
+        <label for="newTabDescription">Descrição</label>
+        <textarea
+          id="newTabDescription"
+          rows="2"
+          placeholder="Ex: Controle de materiais e reposições"
+        ></textarea>
+      </div>
+    </div>
 
     <div class="create-tab-header">
       <label>Campos da Tabela</label>
