@@ -479,6 +479,15 @@ label {
   background: #166ad2;
 }
 
+.btn-salvar.danger {
+  background: #dc2626;
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.25);
+}
+
+.btn-salvar.danger:hover {
+  background: #b91c1c;
+}
+
 /* ====== FILTROS – NOVO DESIGN ====== */
 
 .filters {

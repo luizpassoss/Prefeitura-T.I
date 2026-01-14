@@ -23,6 +23,7 @@ let moduloAtual = null;
 let moduloCampos = [];
 let moduloRegistros = [];
 let moduloEditId = null;
+let moduloDeleteTarget = null;
 
   /* ===========================
      CONFIG
@@ -507,22 +508,10 @@ function exportInventarioRelatorio() {
 function exportInventarioPDF(data) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('landscape');
-
-  if (PREFEITURA_LOGO) {
-    doc.addImage(PREFEITURA_LOGO, 'PNG', 14, 14, 18, 18);
-  }
-
-  doc.setFontSize(14);
-  doc.text('PREFEITURA MUNICIPAL', 50, 18);
-  doc.setFontSize(10);
-  doc.text('Diretoria de Tecnologia da Informação', 50, 25);
- doc.setFontSize(10);
-  doc.text('Secretaria de governo', 50, 30);
-  doc.setFontSize(16);
-  doc.text('Relatório de Inventários', 148, 45, { align: 'center' });
+  drawHeader(doc, 'Relatório de Inventários', PREFEITURA_LOGO);
 
   doc.autoTable({
-    startY: 50,
+    startY: 130,
     head: [[ 'Categoria', 'Link', 'Velocidade', 'Telefone', 'Local', 'Endereço' ]],
     body: data.map(r => [
       r.categoria,
@@ -554,6 +543,7 @@ function exportInventarioPDF(data) {
     }
   });
 
+  drawFooter(doc);
   doc.save('Relatorio_Inventario_TI.pdf');
 }
 
@@ -565,7 +555,6 @@ function exportInventarioExcel(rows) {
     ['Prefeitura Municipal de São Francisco do Sul'],
     ['Secretaria Municipal de Tecnologia da Informação'],
     ['Relatório de Links e Conexões'],
-    [`Gerado em ${new Date().toLocaleString('pt-BR')}`],
     [],
     ['Categoria', 'Link de Internet', 'Velocidade', 'Telefone', 'Local', 'Endereço']
   ];
@@ -587,8 +576,7 @@ function exportInventarioExcel(rows) {
   ws['!merges'] = [
     { s:{r:0,c:0}, e:{r:0,c:5} },
     { s:{r:1,c:0}, e:{r:1,c:5} },
-    { s:{r:2,c:0}, e:{r:2,c:5} },
-    { s:{r:3,c:0}, e:{r:3,c:5} }
+    { s:{r:2,c:0}, e:{r:2,c:5} }
   ];
 
   // ===== COLUNAS =====
@@ -603,7 +591,7 @@ function exportInventarioExcel(rows) {
 
   // ===== FILTRO =====
   ws['!autofilter'] = {
-    ref: `A6:F${rows.length + 6}`
+    ref: `A5:F${rows.length + 5}`
   };
 
   XLSX.utils.book_append_sheet(wb, ws, 'Inventário TI');
@@ -613,7 +601,7 @@ function exportInventarioExcel(rows) {
     `Relatorio_Inventario_TI_${new Date().toISOString().slice(0,10)}.xlsx`
   );
   // Congelar cabeçalho
-ws['!freeze'] = { xSplit: 0, ySplit: 6 };
+  ws['!freeze'] = { xSplit: 0, ySplit: 5 };
 
 // Alinhamento vertical
 Object.keys(ws).forEach(cell => {
@@ -1015,22 +1003,10 @@ function exportMaquinasRelatorio() {
 function exportMaquinasPDF(data) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('landscape');
-
-  if (PREFEITURA_LOGO) {
-    doc.addImage(PREFEITURA_LOGO, 'PNG', 14, 14, 18, 18);
-  }
-
-  doc.setFontSize(14);
-  doc.text('PREFEITURA MUNICIPAL', 50, 18);
-  doc.setFontSize(10);
-  doc.text('Diretoria de Tecnologia da Informação', 50, 25);
- doc.setFontSize(10);
-  doc.text('Secretaria de governo', 50, 30);
-  doc.setFontSize(16);
-  doc.text('Relatório de Máquinas', 148, 45, { align: 'center' });
+  drawHeader(doc, 'Relatório de Máquinas', PREFEITURA_LOGO);
 
   doc.autoTable({
-    startY: 50,
+    startY: 130,
     head: [[ 'Máquina', 'Patrimônio', 'Local', 'Status', 'Descrição' ]],
     body: data.map(r => [
       r.nome,
@@ -1060,6 +1036,7 @@ function exportMaquinasPDF(data) {
     }
   });
 
+  drawFooter(doc);
   doc.save('Relatorio_Maquinas_TI.pdf');
 }
 
@@ -1071,7 +1048,6 @@ function exportMaquinasExcel(rows) {
     ['Prefeitura Municipal de São Francisco do Sul'],
     ['Secretaria Municipal de Tecnologia da Informação'],
     ['Relatório de Inventário de Máquinas'],
-    [`Gerado em ${new Date().toLocaleString('pt-BR')}`],
     [],
     ['Nome da Máquina', 'Patrimônio', 'Local', 'Status', 'Descrição']
   ];
@@ -1092,8 +1068,7 @@ function exportMaquinasExcel(rows) {
   ws['!merges'] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
     { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: 4 } },
-    { s: { r: 3, c: 0 }, e: { r: 3, c: 4 } }
+    { s: { r: 2, c: 0 }, e: { r: 2, c: 4 } }
   ];
 
   // ===== LARGURA DAS COLUNAS =====
@@ -1107,7 +1082,7 @@ function exportMaquinasExcel(rows) {
 
   // ===== AUTO FILTER =====
   ws['!autofilter'] = {
-    ref: `A6:E${rows.length + 6}`
+    ref: `A5:E${rows.length + 5}`
   };
 
   XLSX.utils.book_append_sheet(wb, ws, 'Máquinas');
@@ -1117,7 +1092,7 @@ function exportMaquinasExcel(rows) {
     `Relatorio_Maquinas_TI_${new Date().toISOString().slice(0, 10)}.xlsx`
   );
   // Congelar cabeçalho
-ws['!freeze'] = { xSplit: 0, ySplit: 6 };
+  ws['!freeze'] = { xSplit: 0, ySplit: 5 };
 
 // Alinhamento vertical
 Object.keys(ws).forEach(cell => {
@@ -1543,7 +1518,6 @@ function exportModuloExcel() {
     ['Prefeitura Municipal de São Francisco do Sul'],
     ['Secretaria Municipal de Tecnologia da Informação'],
     [`Relatório de ${moduloAtual?.nome || 'Módulo'}`],
-    [`Gerado em ${new Date().toLocaleString('pt-BR')}`],
     [],
     headers
   ];
@@ -1556,14 +1530,13 @@ function exportModuloExcel() {
   worksheet['!merges'] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
     { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } },
-    { s: { r: 3, c: 0 }, e: { r: 3, c: headers.length - 1 } }
+    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
   ];
   worksheet['!cols'] = headers.map(() => ({ wch: 24 }));
   worksheet['!autofilter'] = {
-    ref: `A6:${columnLetter(headers.length - 1)}${moduloRegistros.length + 6}`
+    ref: `A5:${columnLetter(headers.length - 1)}${moduloRegistros.length + 5}`
   };
-  worksheet['!freeze'] = { xSplit: 0, ySplit: 6 };
+  worksheet['!freeze'] = { xSplit: 0, ySplit: 5 };
 
   Object.keys(worksheet).forEach(cell => {
     if (!cell.startsWith('!')) {
@@ -1594,21 +1567,10 @@ function exportModuloPDF() {
     headers.map(h => row[h] || '')
   );
 
-  if (PREFEITURA_LOGO) {
-    doc.addImage(PREFEITURA_LOGO, 'PNG', 14, 14, 18, 18);
-  }
-
-  doc.setFontSize(14);
-  doc.text('PREFEITURA MUNICIPAL', 50, 18);
-  doc.setFontSize(10);
-  doc.text('Diretoria de Tecnologia da Informação', 50, 25);
-  doc.setFontSize(10);
-  doc.text('Secretaria de governo', 50, 30);
-  doc.setFontSize(16);
-  doc.text(`Relatório de ${moduloAtual?.nome || 'Módulo'}`, 148, 45, { align: 'center' });
+  drawHeader(doc, `Relatório de ${moduloAtual?.nome || 'Módulo'}`, PREFEITURA_LOGO);
 
   doc.autoTable({
-    startY: 50,
+    startY: 130,
     head: [headers],
     body: data,
     theme: 'grid',
@@ -1629,6 +1591,7 @@ function exportModuloPDF() {
     }
   });
 
+  drawFooter(doc);
   doc.save(`Relatorio_${moduloAtual?.nome || 'modulo'}_TI.pdf`);
 }
 
@@ -1673,7 +1636,7 @@ function renderAbasDinamicas() {
     deleteBtn.innerHTML = '✕';
     deleteBtn.onclick = async (e) => {
       e.stopPropagation();
-      await excluirModulo(mod);
+      openConfirmDeleteModulo(mod);
     };
 
     wrapper.appendChild(a);
@@ -1686,11 +1649,26 @@ function renderAbasDinamicas() {
   });
 }
 
-async function excluirModulo(mod) {
-  if (!confirm(`Excluir a aba "${mod.nome}"?`)) return;
+function openConfirmDeleteModulo(mod) {
+  moduloDeleteTarget = mod;
+  const text = document.getElementById('confirmDeleteModuloText');
+  if (text) {
+    text.textContent = `Tem certeza que deseja excluir a aba "${mod.nome}"?`;
+  }
+  openModalById('confirmDeleteModuloModal');
+}
+
+function closeConfirmDeleteModulo(e) {
+  if (!e || e.target.id === 'confirmDeleteModuloModal') {
+    document.getElementById('confirmDeleteModuloModal').classList.remove('show');
+  }
+}
+
+async function confirmDeleteModulo() {
+  if (!moduloDeleteTarget) return;
 
   try {
-    await fetch(`${API_MODULOS}/${mod.id}`, { method: 'DELETE' });
+    await fetch(`${API_MODULOS}/${moduloDeleteTarget.id}`, { method: 'DELETE' });
     await carregarModulos();
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1698,6 +1676,9 @@ async function excluirModulo(mod) {
   } catch (e) {
     console.error('Erro ao excluir módulo:', e);
     alert('Erro ao excluir a aba.');
+  } finally {
+    moduloDeleteTarget = null;
+    closeConfirmDeleteModulo();
   }
 }
 
@@ -1734,6 +1715,8 @@ function renderModuloDinamico() {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
 
+  const filtered = getModuloFiltrado();
+
   // HEADER
   thead.innerHTML = `
     <tr>
@@ -1745,7 +1728,7 @@ function renderModuloDinamico() {
   // BODY
   tbody.innerHTML = '';
 
-  if (!moduloRegistros.length) {
+  if (!filtered.length) {
     tbody.innerHTML = `
       <tr>
         <td colspan="${moduloCampos.length + 1}" style="padding:22px;color:#9fb6d9">
@@ -1755,7 +1738,7 @@ function renderModuloDinamico() {
     return;
   }
 
-  moduloRegistros.forEach((row, idx) => {
+  filtered.forEach(({ row, idx }) => {
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
@@ -1792,6 +1775,25 @@ function renderModuloDinamico() {
   tbody.querySelectorAll('.mod-delete').forEach(btn => {
     btn.onclick = (e) => excluirRegistroModulo(Number(e.currentTarget.dataset.id));
   });
+}
+
+function getModuloFiltrado() {
+  const q = (document.getElementById('moduloSearch')?.value || '').trim().toLowerCase();
+  if (!q) {
+    return moduloRegistros.map((row, idx) => ({ row, idx }));
+  }
+
+  return moduloRegistros
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) =>
+      moduloCampos.some(campo =>
+        (row[campo.nome] || '').toString().toLowerCase().includes(q)
+      )
+    );
+}
+
+function filtrarModulo() {
+  renderModuloDinamico();
 }
 async function excluirRegistroModulo(id) {
   if (!confirm('Remover este registro?')) return;
@@ -2176,6 +2178,10 @@ window.openNovoRegistroModulo = openNovoRegistroModulo;
 window.editarRegistroModulo = editarRegistroModulo;
 window.closeModuloRegistroModal = closeModuloRegistroModal;
 window.salvarRegistroModulo = salvarRegistroModulo;
+window.filtrarModulo = filtrarModulo;
+window.openConfirmDeleteModulo = openConfirmDeleteModulo;
+window.closeConfirmDeleteModulo = closeConfirmDeleteModulo;
+window.confirmDeleteModulo = confirmDeleteModulo;
 
 
   /* ===========================

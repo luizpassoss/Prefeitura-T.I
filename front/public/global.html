@@ -612,6 +612,22 @@ class="select" onchange="applyFilters()">
   </div>
 </div>
 
+<div id="confirmDeleteModuloModal" class="modal" onclick="closeConfirmDeleteModulo(event)">
+  <div class="card" onclick="event.stopPropagation()">
+    <div class="modal-heading">
+      <h2>Excluir aba personalizada</h2>
+      <p class="modal-subtitle" id="confirmDeleteModuloText">
+        Tem certeza que deseja excluir esta aba?
+      </p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeConfirmDeleteModulo()">Cancelar</button>
+      <button class="btn-salvar danger" onclick="confirmDeleteModulo()">Excluir</button>
+    </div>
+  </div>
+</div>
+
 
 
 </body>
