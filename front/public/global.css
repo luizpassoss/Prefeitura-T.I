@@ -1602,6 +1602,10 @@ td.actions {
   stroke: #dc2626;
 }
 
+.icon-btn.delete {
+  color: #dc2626;
+}
+
 .icon-btn.delete:hover {
   background: #fee2e2;
   border-color: #fca5a5;
@@ -1638,6 +1642,7 @@ body.theme-dark #importPreviewTable .icon-btn.delete {
   background: rgba(248, 113, 113, 0.18);
   border-color: rgba(248, 113, 113, 0.65);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+  color: #ffffff;
 }
 
 body.theme-dark #importPreviewTable .icon-btn.delete svg {
