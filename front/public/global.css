@@ -38,6 +38,62 @@
     border-radius: 6px;
 }
 
+.theme-toggle {
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  padding: 3px;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.theme-toggle:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16);
+}
+
+.theme-toggle-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.theme-toggle-thumb {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+  transform: translate(0, -50%);
+  transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+
+body.theme-dark .theme-toggle {
+  background: linear-gradient(135deg, #1b2432 0%, #0f172a 100%);
+  border-color: #2a364a;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+body.theme-dark .theme-toggle:hover {
+  border-color: #3b4b64;
+}
+
+body.theme-dark .theme-toggle-thumb {
+  transform: translate(18px, -50%);
+  background: #e2e8f0;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.45);
+}
+
 
 /* Reset e fontes */
 * {
@@ -52,6 +108,16 @@ body {
   font-size: 13px;
 }
 
+body.theme-dark {
+  --bg: #0b0f19;
+  --panel: #121826;
+  --muted: #9aa4b2;
+  --accent: #8bb3ff;
+  --border: #1f2a3a;
+  --pill-bg: #1b2432;
+  color: #e6edf7;
+}
+
 .app {
   display: flex;
   min-height: 100vh;
@@ -63,6 +129,8 @@ body {
   background: var(--panel);
   padding: 28px 20px;
   border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Sidebar Brand Minimalista */
@@ -160,6 +228,7 @@ body {
   display: flex;
   flex-direction: column;
   margin-top: 10px;
+  flex: 1;
 }
 
 .nav a {
@@ -243,6 +312,10 @@ h1 {
   margin: 0;
   color: #1a1f27e5;
   font-weight: 700;
+}
+
+body.theme-dark h1 {
+  color: #f8fafc;
 }
 
 /* Controls */
@@ -371,6 +444,201 @@ tbody td {
 
 tbody tr:hover td {
   background: #f0f7ff;
+}
+
+body.theme-dark .nav a {
+  color: #c7d2e3;
+}
+
+body.theme-dark .nav a.active {
+  background: rgba(59, 130, 246, 0.2);
+  color: #f8fafc;
+  border-left-color: rgba(59, 130, 246, 0.6);
+}
+
+body.theme-dark .table-wrap {
+  box-shadow: 0 10px 24px rgba(5, 10, 20, 0.45);
+}
+
+body.theme-dark thead th {
+  background: #182235;
+  color: #cbd5e1;
+  border-bottom: 1px solid #243049;
+}
+
+body.theme-dark tbody td {
+  color: #e2e8f0;
+  border-bottom: 1px solid #243049;
+}
+
+body.theme-dark tbody tr:hover td {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+body.theme-dark .filters-panel {
+  background: #0f1523;
+  border-color: #1f2a3a;
+}
+
+body.theme-dark .filters .input,
+body.theme-dark .filters .select {
+  background: #0f1523;
+  border-color: #2a364a;
+  color: #e2e8f0;
+}
+
+body.theme-dark .search-wrapper .search-input {
+  background: #0f1523;
+  border-color: #2a364a;
+  color: #e2e8f0;
+}
+
+body.theme-dark .search-wrapper .search-input::placeholder {
+  color: #8a97ab;
+}
+
+body.theme-dark input[type="text"],
+body.theme-dark select,
+body.theme-dark .input,
+body.theme-dark .select {
+  background-color: #0f1523;
+  border-color: #2a364a;
+  color: #e2e8f0;
+}
+
+body.theme-dark .form-card {
+  background: #121826;
+  border-color: #1f2a3a;
+  box-shadow: 0 18px 45px rgba(5, 10, 20, 0.55);
+}
+
+body.theme-dark .modal-title {
+  color: #f8fafc;
+}
+
+body.theme-dark .brand {
+  color: #e2e8f0;
+}
+
+body.theme-dark .brand::after {
+  opacity: 0.35;
+}
+
+body.theme-dark .btn {
+  background: #1f4dd6;
+  border-color: #1f2a3a;
+  box-shadow: 0 6px 16px rgba(5, 10, 20, 0.4);
+}
+
+body.theme-dark .btn:hover {
+  background: #1a3faa;
+}
+
+body.theme-dark .btn.secondary {
+  background: #1a2335;
+  color: #e2e8f0;
+}
+
+body.theme-dark .btn.secondary:hover {
+  background: #1f2a3f;
+}
+
+body.theme-dark .small,
+body.theme-dark .modal-subtitle,
+body.theme-dark label {
+  color: #a7b4c6;
+}
+
+body.theme-dark .modal-heading h2,
+body.theme-dark .modal-title {
+  color: #f1f5f9;
+}
+
+body.theme-dark .card,
+body.theme-dark .create-tab-card {
+  background: #121826;
+  border: 1px solid #1f2a3a;
+  color: #e2e8f0;
+  box-shadow: 0 18px 45px rgba(5, 10, 20, 0.55);
+}
+
+body.theme-dark .modal {
+  background: rgba(5, 10, 20, 0.65);
+}
+
+body.theme-dark .create-tab-card input,
+body.theme-dark .create-tab-card textarea,
+body.theme-dark textarea {
+  background-color: #0f1523;
+  border-color: #2a364a;
+  color: #e2e8f0;
+}
+
+body.theme-dark .create-tab-card textarea:focus,
+body.theme-dark .create-tab-card input:focus {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+body.theme-dark .btn-cancelar {
+  background: #1a2335;
+  border-color: #2a364a;
+  color: #d5deea;
+}
+
+body.theme-dark .btn-salvar {
+  background: #2563eb;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+
+body.theme-dark .btn-salvar:hover {
+  background: #1d4ed8;
+}
+
+body.theme-dark .btn-salvar.danger {
+  background: #dc2626;
+}
+
+body.theme-dark .desc-preview,
+body.theme-dark .desc-preview:hover {
+  color: #e2e8f0;
+}
+
+body.theme-dark .export-menu {
+  background: #121826;
+  border: 1px solid #1f2a3a;
+  box-shadow: 0 14px 30px rgba(5, 10, 20, 0.6);
+}
+
+body.theme-dark .export-menu button {
+  color: #e2e8f0;
+}
+
+body.theme-dark .export-menu button:hover {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+body.theme-dark .btn.export {
+  background: #1f2937;
+  color: #e2e8f0;
+}
+
+body.theme-dark .btn.export:hover {
+  background: #111827;
+}
+
+body.theme-dark tbody tr td:first-child .pill {
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+body.theme-dark .link-text {
+  color: #e2e8f0;
+}
+
+body.theme-dark .link-category {
+  background: #1b2432;
+  color: #c7d2fe;
+  border: 1px solid #2a364a;
 }
 
 /* Categorias coloridas */
@@ -565,7 +833,7 @@ label {
 
 .filters-panel {
   background: #f8fafc;
-  border: 1px solid #e6edf5;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 12px;
 }
@@ -580,6 +848,9 @@ label {
   padding: 8px 14px;
   border-radius: 10px;
   font-size: 14px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #1f2937;
 }
 
 .filters .btn {
