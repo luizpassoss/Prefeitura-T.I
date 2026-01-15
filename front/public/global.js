@@ -86,12 +86,13 @@ if (btnNovaAba) {
    =========================== */
 let selectedInvIds = new Set();
 let selectedMaqIds = new Set();
+let selectedModuloIds = new Set();
 
 function updateBulkUI() {
   const bulk = document.getElementById('bulkActions');
   const counter = document.getElementById('bulkCounter');
 
-  const count = selectedInvIds.size + selectedMaqIds.size;
+  const count = selectedInvIds.size + selectedMaqIds.size + selectedModuloIds.size;
 
   if (count > 0) {
     counter.textContent = `${count} selecionado${count > 1 ? 's' : ''}`;
@@ -1302,27 +1303,45 @@ if (telInput) {
 }
 async function deleteSelected() {
   const isInventario = selectedInvIds.size > 0;
+  const isMaquinas = !isInventario && selectedMaqIds.size > 0;
+  const isModulo = !isInventario && !isMaquinas && selectedModuloIds.size > 0;
   const ids = isInventario
     ? [...selectedInvIds]
-    : [...selectedMaqIds];
+    : isMaquinas
+      ? [...selectedMaqIds]
+      : [...selectedModuloIds];
 
   if (!ids.length) return;
 
   showConfirm(`Excluir ${ids.length} item(ns)?`, async () => {
     try {
+      if (isModulo && !moduloAtual?.id) {
+        showMessage('Selecione uma aba personalizada.');
+        return;
+      }
       for (const id of ids) {
         const url = isInventario
           ? `${API_URL}/${id}`
-          : `${API_MAQUINAS}/${id}`;
+          : isMaquinas
+            ? `${API_MAQUINAS}/${id}`
+            : `${API_MODULOS}/${moduloAtual.id}/registros/${id}`;
 
         await fetch(url, { method: 'DELETE' });
       }
 
       selectedInvIds.clear();
       selectedMaqIds.clear();
+      selectedModuloIds.clear();
       updateBulkUI();
 
-      isInventario ? fetchData() : fetchMachines();
+      if (isInventario) {
+        fetchData();
+      } else if (isMaquinas) {
+        fetchMachines();
+      } else if (isModulo) {
+        await carregarRegistrosModulo();
+        renderModuloDinamico();
+      }
 
     } catch (err) {
       console.error('Erro ao excluir selecionados:', err);
@@ -1874,6 +1893,9 @@ function renderModuloDinamico() {
   // HEADER
   thead.innerHTML = `
     <tr>
+      <th style="text-align:center;">
+        <input type="checkbox" id="chkAllMod">
+      </th>
       ${moduloCampos.map(c => `<th>${c.nome}</th>`).join('')}
       <th class="actions-header">Ações</th>
     </tr>
@@ -1885,10 +1907,13 @@ function renderModuloDinamico() {
   if (!filtered.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="${moduloCampos.length + 1}" style="padding:22px;color:#9fb6d9">
+        <td colspan="${moduloCampos.length + 2}" style="padding:22px;color:#9fb6d9">
           Nenhum registro encontrado.
         </td>
       </tr>`;
+    const chkAllMod = document.getElementById('chkAllMod');
+    if (chkAllMod) chkAllMod.checked = false;
+    updateBulkUI();
     return;
   }
 
@@ -1896,6 +1921,14 @@ function renderModuloDinamico() {
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
+      <td style="text-align:center;">
+        <input
+          type="checkbox"
+          class="chk-mod"
+          data-id="${row.id}"
+          ${selectedModuloIds.has(row.id) ? 'checked' : ''}
+        >
+      </td>
       ${moduloCampos.map(c => `
         <td>${renderModuloCell(c.nome, row[c.nome])}</td>
       `).join('')}
@@ -1928,6 +1961,44 @@ function renderModuloDinamico() {
   });
   tbody.querySelectorAll('.mod-delete').forEach(btn => {
     btn.onclick = (e) => excluirRegistroModulo(Number(e.currentTarget.dataset.id));
+  });
+
+  const chkAllMod = document.getElementById('chkAllMod');
+  if (chkAllMod) {
+    chkAllMod.onchange = (e) => {
+      selectedModuloIds.clear();
+
+      tbody.querySelectorAll('.chk-mod').forEach(chk => {
+        chk.checked = e.target.checked;
+        if (e.target.checked) {
+          selectedModuloIds.add(Number(chk.dataset.id));
+        }
+      });
+
+      updateBulkUI();
+    };
+
+    const total = tbody.querySelectorAll('.chk-mod').length;
+    chkAllMod.checked = total > 0 && selectedModuloIds.size === total;
+  }
+}
+
+const moduloTbody = document.getElementById('moduloTbody');
+if (moduloTbody) {
+  moduloTbody.addEventListener('change', (e) => {
+    if (!e.target.classList.contains('chk-mod')) return;
+
+    const id = Number(e.target.dataset.id);
+
+    if (e.target.checked) {
+      selectedModuloIds.add(id);
+    } else {
+      selectedModuloIds.delete(id);
+      const chkAllMod = document.getElementById('chkAllMod');
+      if (chkAllMod) chkAllMod.checked = false;
+    }
+
+    updateBulkUI();
   });
 }
 
@@ -1995,6 +2066,8 @@ async function excluirRegistroModulo(id) {
       method: 'DELETE'
     });
 
+    selectedModuloIds.delete(id);
+    updateBulkUI();
     await carregarRegistrosModulo();
     renderModuloDinamico();
   }, 'Confirmar exclusão');
@@ -2283,7 +2356,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } =
       <option value="select">Lista</option>
     </select>
 
-    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:0;">
+    <label class="field-required-label">
       <input class="field-required" type="checkbox" ${obrigatorio ? 'checked' : ''} onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
       Obrigatório
     </label>
