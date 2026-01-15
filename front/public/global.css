@@ -480,6 +480,13 @@ body.theme-dark .filters-panel {
   border-color: #1f2a3a;
 }
 
+body.theme-dark .filters .input,
+body.theme-dark .filters .select {
+  background: #0f1523;
+  border-color: #2a364a;
+  color: #e2e8f0;
+}
+
 body.theme-dark .search-wrapper .search-input {
   background: #0f1523;
   border-color: #2a364a;
@@ -622,6 +629,16 @@ body.theme-dark .btn.export:hover {
 
 body.theme-dark tbody tr td:first-child .pill {
   border-color: rgba(148, 163, 184, 0.35);
+}
+
+body.theme-dark .link-text {
+  color: #e2e8f0;
+}
+
+body.theme-dark .link-category {
+  background: #1b2432;
+  color: #c7d2fe;
+  border: 1px solid #2a364a;
 }
 
 /* Categorias coloridas */
@@ -816,7 +833,7 @@ label {
 
 .filters-panel {
   background: #f8fafc;
-  border: 1px solid #e6edf5;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 12px;
 }
@@ -831,6 +848,9 @@ label {
   padding: 8px 14px;
   border-radius: 10px;
   font-size: 14px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #1f2937;
 }
 
 .filters .btn {

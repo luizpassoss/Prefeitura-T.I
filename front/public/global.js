@@ -332,7 +332,7 @@ function getFiltered() {
   // PEGAR O SELECT APENAS SE EXISTIR (ABA INVENTÁRIO)
   const catEl = document.getElementById('filterCategoryInv');
   const cat = catEl ? catEl.value : "All";
-  const fieldFilter = (document.getElementById('filterFieldInv')?.value || 'all').toLowerCase();
+  const fieldFilter = (document.getElementById('filterFieldInv')?.value || 'link').toLowerCase();
   const valueFilter = (document.getElementById('filterValueInv')?.value || '').trim().toLowerCase();
   const localFilter = (document.getElementById('filterLocalInv')?.value || '').trim().toLowerCase();
   const velFilter = (document.getElementById('filterVelInv')?.value || '').trim().toLowerCase();
@@ -383,11 +383,6 @@ if (cat !== "All") {
         endereco: x.endereco,
         categoria: x.categoria
       };
-      if (fieldFilter === 'all') {
-        return Object.values(fields).some(val =>
-          (val || '').toString().toLowerCase().includes(valueFilter)
-        );
-      }
       return (fields[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
     });
   }
@@ -399,7 +394,7 @@ function clearInventoryFilters() {
   const catEl = document.getElementById('filterCategoryInv');
   if (catEl) catEl.value = 'All';
   const fieldEl = document.getElementById('filterFieldInv');
-  if (fieldEl) fieldEl.value = 'all';
+  if (fieldEl) fieldEl.value = 'link';
   const valueEl = document.getElementById('filterValueInv');
   if (valueEl) valueEl.value = '';
   const localEl = document.getElementById('filterLocalInv');
@@ -874,7 +869,7 @@ mtbody.addEventListener('click', (e) => {
  function applyMachineFilters() {
   const q = (document.getElementById('mq').value || '').trim().toLowerCase();
   const statusFilter = (document.getElementById('filterMachineStatus')?.value || 'All').toLowerCase();
-  const fieldFilter = (document.getElementById('filterMachineField')?.value || 'all').toLowerCase();
+  const fieldFilter = (document.getElementById('filterMachineField')?.value || 'nome_maquina').toLowerCase();
   const valueFilter = (document.getElementById('filterMachineValue')?.value || '').trim().toLowerCase();
   const localFilter = (document.getElementById('filterMachineLocal')?.value || '').trim().toLowerCase();
 
@@ -908,11 +903,6 @@ mtbody.addEventListener('click', (e) => {
         status: x.status,
         descricao: x.descricao
       };
-      if (fieldFilter === 'all') {
-        return Object.values(fields).some(val =>
-          (val || '').toString().toLowerCase().includes(valueFilter)
-        );
-      }
       return (fields[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
     });
   }
@@ -925,8 +915,8 @@ mtbody.addEventListener('click', (e) => {
     if (mqEl) mqEl.value = '';
     const statusEl = document.getElementById('filterMachineStatus');
     if (statusEl) statusEl.value = 'All';
-    const fieldEl = document.getElementById('filterMachineField');
-    if (fieldEl) fieldEl.value = 'all';
+  const fieldEl = document.getElementById('filterMachineField');
+  if (fieldEl) fieldEl.value = 'nome_maquina';
     const valueEl = document.getElementById('filterMachineValue');
     if (valueEl) valueEl.value = '';
     const localEl = document.getElementById('filterMachineLocal');
@@ -1980,19 +1970,18 @@ function renderModuloCell(fieldName, value) {
 
 function getModuloFiltrado() {
   const q = (document.getElementById('moduloSearch')?.value || '').trim().toLowerCase();
-  const fieldFilter = document.getElementById('moduloFilterField')?.value || 'all';
+  const fieldSelect = document.getElementById('moduloFilterField');
+  let fieldFilter = fieldSelect?.value || '';
+  if (!fieldFilter && fieldSelect?.options.length) {
+    fieldFilter = fieldSelect.options[0].value;
+  }
   const valueFilter = (document.getElementById('moduloFilterValue')?.value || '').trim().toLowerCase();
   if (!q) {
     let filtered = moduloRegistros.map((row, idx) => ({ row, idx }));
     if (valueFilter) {
-      filtered = filtered.filter(({ row }) => {
-        if (fieldFilter === 'all') {
-          return moduloCampos.some(campo =>
-            (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
-          );
-        }
-        return (row[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
-      });
+      filtered = filtered.filter(({ row }) =>
+        (row[fieldFilter] || '').toString().toLowerCase().includes(valueFilter)
+      );
     }
     return filtered;
   }
@@ -2005,14 +1994,9 @@ function getModuloFiltrado() {
       )
     );
   if (valueFilter) {
-    filtered = filtered.filter(({ row }) => {
-      if (fieldFilter === 'all') {
-        return moduloCampos.some(campo =>
-          (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
-        );
-      }
-      return (row[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
-    });
+    filtered = filtered.filter(({ row }) =>
+      (row[fieldFilter] || '').toString().toLowerCase().includes(valueFilter)
+    );
   }
   return filtered;
 }
@@ -2020,15 +2004,10 @@ function getModuloFiltrado() {
 function updateModuloFilterFields() {
   const select = document.getElementById('moduloFilterField');
   if (!select) return;
-  const currentValue = select.value || 'all';
+  const currentValue = select.value || '';
   const fieldNames = moduloCampos.map(campo => campo.nome);
 
   select.innerHTML = '';
-  const allOption = document.createElement('option');
-  allOption.value = 'all';
-  allOption.textContent = 'Todos os campos';
-  select.appendChild(allOption);
-
   fieldNames.forEach(nome => {
     const option = document.createElement('option');
     option.value = nome;
@@ -2038,6 +2017,8 @@ function updateModuloFilterFields() {
 
   if ([...select.options].some(opt => opt.value === currentValue)) {
     select.value = currentValue;
+  } else if (select.options.length) {
+    select.selectedIndex = 0;
   }
 }
 
@@ -2045,7 +2026,7 @@ function clearModuloFilters() {
   const searchEl = document.getElementById('moduloSearch');
   if (searchEl) searchEl.value = '';
   const fieldEl = document.getElementById('moduloFilterField');
-  if (fieldEl) fieldEl.value = 'all';
+  if (fieldEl && fieldEl.options.length) fieldEl.selectedIndex = 0;
   const valueEl = document.getElementById('moduloFilterValue');
   if (valueEl) valueEl.value = '';
   filtrarModulo();
