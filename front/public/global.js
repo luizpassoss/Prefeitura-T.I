@@ -1696,11 +1696,42 @@ function handleImportFile() {
     const wb = XLSX.read(e.target.result, { type: 'binary' });
     const sheet = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
+    const cleaned = data.map(row => (row || []).map(cell => (cell ?? '').toString().trim()));
+    const validHeaders = {
+      inventario: ['categoria', 'link', 'link de internet', 'velocidade', 'telefone', 'local', 'endereco', 'endereço', 'observacoes', 'observações'],
+      maquinas: ['nome', 'nome maquina', 'nome da maquina', 'maquina', 'máquina', 'patrimonio', 'patrimônio', 'local', 'status', 'descricao', 'descrição', 'observacoes', 'observações'],
+      modulo: (moduloCampos || []).map(c => normalizeHeader(c.nome))
+    };
 
-    importHeaders = (data[0] || []).map(h => (h ?? '').toString().trim());
-    importRows = data
-      .slice(1)
-      .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
+    const headerCandidates = cleaned.map((row, index) => {
+      const normalized = row.map(cell => normalizeHeader(cell));
+      const score = normalized.reduce((acc, cell) => {
+        if (!cell) return acc;
+        const list = validHeaders[importType] || [];
+        return list.includes(cell) ? acc + 1 : acc;
+      }, 0);
+      return { index, score, row, normalized };
+    });
+
+    const bestCandidate = headerCandidates
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)[0];
+
+    if (!bestCandidate) {
+      importHeaders = cleaned.find(row => row.some(cell => cell)) || [];
+      importRows = cleaned.slice(1).filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
+      renderImportPreview();
+      return;
+    }
+
+    importHeaders = bestCandidate.row;
+    importRows = cleaned
+      .slice(bestCandidate.index + 1)
+      .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''))
+      .filter(row => {
+        const normalizedRow = row.map(cell => normalizeHeader(cell));
+        return normalizedRow.join('|') !== bestCandidate.normalized.join('|');
+      });
 
     renderImportPreview();
   };
