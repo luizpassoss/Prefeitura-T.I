@@ -166,6 +166,52 @@ function updateBulkUI() {
     }
   }
 
+  function buildExcelSheet({ title, headers, rows, colWidths }) {
+    const wsData = [
+      [title],
+      headers,
+      ...rows
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const lastCol = XLSX.utils.encode_col(headers.length - 1);
+    const lastCell = XLSX.utils.encode_cell({ r: wsData.length - 1, c: headers.length - 1 });
+
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }
+    ];
+    ws['!cols'] = colWidths || headers.map(() => ({ wch: 22 }));
+
+    Object.keys(ws).forEach(cell => {
+      if (!cell.startsWith('!')) {
+        ws[cell].s = {
+          alignment: {
+            vertical: 'center',
+            horizontal: 'left',
+            wrapText: true
+          }
+        };
+      }
+    });
+
+    const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
+    applyRangeStyle(ws, `A1:${lastCol}1`, {
+      font: { bold: true },
+      alignment: { horizontal: 'center' },
+      fill: headerFill
+    });
+    applyRangeStyle(ws, `A2:${lastCol}2`, {
+      font: { bold: true },
+      alignment: { horizontal: 'center' },
+      fill: headerFill
+    });
+    applyRangeStyle(ws, `A1:${lastCell}`, {
+      border: XLSX_BORDER
+    });
+
+    return ws;
+  }
+
   function toggleFilters(panelId, button) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -704,116 +750,29 @@ function exportInventarioExcel(rows) {
   const wb = XLSX.utils.book_new();
 
   const headers = ['Descrição', 'Quantidade', 'Velocidade', 'Telefone', 'Local', 'Endereço', 'Observações'];
-  const wsData = [
-    ['Prefeitura Municipal de São Francisco do Sul'],
-    ['Secretaria Municipal de Tecnologia da Informação'],
-    ['Relatório de Links e Conexões'],
-    []
-  ];
-  const merges = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
-  ];
+  const rowsData = rows.map(r => ([
+    r.link,
+    1,
+    r.velocidade,
+    r.telefone,
+    r.local,
+    r.endereco,
+    ''
+  ]));
 
-  const grouped = rows.reduce((acc, row) => {
-    const key = row.categoria || 'Sem categoria';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(row);
-    return acc;
-  }, {});
-
-  Object.entries(grouped).forEach(([categoria, items]) => {
-    const startRow = wsData.length;
-    wsData.push([categoria.toUpperCase()]);
-    merges.push({
-      s: { r: startRow, c: 0 },
-      e: { r: startRow, c: headers.length - 1 }
-    });
-
-    wsData.push(headers);
-
-    items.forEach(r => {
-      wsData.push([
-        r.link,
-        1,
-        r.velocidade,
-        r.telefone,
-        r.local,
-        r.endereco,
-        ''
-      ]);
-    });
-
-    wsData.push(['TOTAL', items.length, '', '', '', '', '']);
-    wsData.push([]);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // ===== MERGES =====
-  ws['!merges'] = merges;
-
-  // ===== COLUNAS =====
-  ws['!cols'] = [
-    { wch: 54 },
-    { wch: 12 },
-    { wch: 16 },
-    { wch: 16 },
-    { wch: 18 },
-    { wch: 26 },
-    { wch: 28 }
-  ];
-
-  const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-  const sectionFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-
-  Object.keys(ws).forEach(cell => {
-    if (!cell.startsWith('!')) {
-      ws[cell].s = {
-        alignment: {
-          vertical: 'center',
-          horizontal: 'left',
-          wrapText: true
-        }
-      };
-    }
-  });
-
-  const lastRow = wsData.length - 1;
-  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: lastRow, c: headers.length - 1 })}`, {
-    border: XLSX_BORDER
-  });
-  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
-    font: { bold: true },
-    alignment: { horizontal: 'center' },
-    fill: headerFill
-  });
-
-  wsData.forEach((row, idx) => {
-    if (!row || row.length === 0) return;
-    if (row.length === 1 && idx > 2) {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        alignment: { horizontal: 'center' },
-        fill: sectionFill
-      });
-      return;
-    }
-    if (row[0] === 'TOTAL') {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        fill: headerFill
-      });
-      return;
-    }
-    if (row[0] === headers[0]) {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        alignment: { horizontal: 'center' },
-        fill: headerFill
-      });
-    }
+  const ws = buildExcelSheet({
+    title: 'PREFEITURA',
+    headers,
+    rows: rowsData,
+    colWidths: [
+      { wch: 54 },
+      { wch: 12 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 26 },
+      { wch: 28 }
+    ]
   });
 
   XLSX.utils.book_append_sheet(wb, ws, 'Inventário TI');
@@ -994,11 +953,30 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
   /* ===========================
      MODAL MÁQUINAS
      =========================== */
+  const MACHINE_PREFIXES = ['PMSFS-DT', 'SMSSFS-DT'];
+
+  function parseMachineName(nome = '') {
+    const trimmed = (nome || '').trim();
+    const match = MACHINE_PREFIXES.find(prefix => trimmed.startsWith(`${prefix}-`));
+    if (match) {
+      return { prefix: match, numero: trimmed.slice(match.length + 1) };
+    }
+    return { prefix: MACHINE_PREFIXES[0], numero: trimmed };
+  }
+
+  function buildMachineName() {
+    const prefix = document.getElementById('mNomePrefix')?.value || MACHINE_PREFIXES[0];
+    const numero = (document.getElementById('mNomeNumero')?.value || '').trim();
+    if (!numero) return '';
+    return `${prefix}-${numero}`;
+  }
+
   function openMachineModal(){
     machineEditIndex = -1;
     document.getElementById('machineModalTitle').innerText = 'Nova Máquina';
     
-    if(document.getElementById('mNome')) document.getElementById('mNome').value='';
+    if(document.getElementById('mNomePrefix')) document.getElementById('mNomePrefix').value = MACHINE_PREFIXES[0];
+    if(document.getElementById('mNomeNumero')) document.getElementById('mNomeNumero').value = '';
     if(document.getElementById('mPatrimonio')) document.getElementById('mPatrimonio').value='';
     if(document.getElementById('mLocal')) document.getElementById('mLocal').value='';
     if(document.getElementById('mDescricao')) document.getElementById('mDescricao').value='';
@@ -1024,7 +1002,9 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
     document.getElementById('machineModalTitle').innerText = 'Editar Máquina';
     document.getElementById('mStatus').value = it.status || 'Ativa';
 
-    if(document.getElementById('mNome')) document.getElementById('mNome').value = it.nome_maquina || '';
+    const parsedName = parseMachineName(it.nome_maquina || '');
+    if(document.getElementById('mNomePrefix')) document.getElementById('mNomePrefix').value = parsedName.prefix;
+    if(document.getElementById('mNomeNumero')) document.getElementById('mNomeNumero').value = parsedName.numero;
     if(document.getElementById('mPatrimonio')) document.getElementById('mPatrimonio').value = it.patrimonio || '';
     const localSelect = document.getElementById('mLocal');
 const localOutroInput = document.getElementById('mLocalOutro');
@@ -1063,7 +1043,7 @@ async function saveMachine(){
   }
 
   const item = {
-    nome_maquina: (document.getElementById('mNome')?.value || '').trim(),
+    nome_maquina: buildMachineName(),
     patrimonio: (document.getElementById('mPatrimonio')?.value || '').trim(),
     local,
     descricao: (document.getElementById('mDescricao')?.value || '').trim(),
@@ -1077,7 +1057,7 @@ if(!item.local){
 
 
   if(!item.nome_maquina){
-    showMessage("Preencha o nome da máquina.");
+    showMessage("Informe o número da máquina.");
     return;
   }
 
@@ -1280,116 +1260,29 @@ function exportMaquinasExcel(rows) {
   const wb = XLSX.utils.book_new();
 
   const headers = ['Máquina', 'Quantidade', 'Patrimônio', 'Local', 'Status', 'Descrição', 'Observações'];
-  const wsData = [
-    ['Prefeitura Municipal de São Francisco do Sul'],
-    ['Secretaria Municipal de Tecnologia da Informação'],
-    ['Relatório de Inventário de Máquinas'],
-    []
-  ];
-  const merges = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
-  ];
+  const rowsData = rows.map(r => ([
+    r.nome,
+    1,
+    r.patrimonio,
+    r.local,
+    r.status,
+    r.descricao,
+    ''
+  ]));
 
-  const grouped = rows.reduce((acc, row) => {
-    const key = row.status || 'Sem status';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(row);
-    return acc;
-  }, {});
-
-  Object.entries(grouped).forEach(([status, items]) => {
-    const startRow = wsData.length;
-    wsData.push([status.toUpperCase()]);
-    merges.push({
-      s: { r: startRow, c: 0 },
-      e: { r: startRow, c: headers.length - 1 }
-    });
-
-    wsData.push(headers);
-
-    items.forEach(r => {
-      wsData.push([
-        r.nome,
-        1,
-        r.patrimonio,
-        r.local,
-        r.status,
-        r.descricao,
-        ''
-      ]);
-    });
-
-    wsData.push(['TOTAL', items.length, '', '', '', '', '']);
-    wsData.push([]);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // ===== MERGES (Cabeçalho) =====
-  ws['!merges'] = merges;
-
-  // ===== LARGURA DAS COLUNAS =====
-  ws['!cols'] = [
-    { wch: 30 },
-    { wch: 12 },
-    { wch: 16 },
-    { wch: 20 },
-    { wch: 14 },
-    { wch: 40 },
-    { wch: 28 }
-  ];
-
-  const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-  const sectionFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-
-  Object.keys(ws).forEach(cell => {
-    if (!cell.startsWith('!')) {
-      ws[cell].s = {
-        alignment: {
-          vertical: 'center',
-          horizontal: 'left',
-          wrapText: true
-        }
-      };
-    }
-  });
-
-  const lastRow = wsData.length - 1;
-  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: lastRow, c: headers.length - 1 })}`, {
-    border: XLSX_BORDER
-  });
-  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
-    font: { bold: true },
-    alignment: { horizontal: 'center' },
-    fill: headerFill
-  });
-
-  wsData.forEach((row, idx) => {
-    if (!row || row.length === 0) return;
-    if (row.length === 1 && idx > 2) {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        alignment: { horizontal: 'center' },
-        fill: sectionFill
-      });
-      return;
-    }
-    if (row[0] === 'TOTAL') {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        fill: headerFill
-      });
-      return;
-    }
-    if (row[0] === headers[0]) {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        alignment: { horizontal: 'center' },
-        fill: headerFill
-      });
-    }
+  const ws = buildExcelSheet({
+    title: 'PREFEITURA',
+    headers,
+    rows: rowsData,
+    colWidths: [
+      { wch: 30 },
+      { wch: 12 },
+      { wch: 16 },
+      { wch: 20 },
+      { wch: 14 },
+      { wch: 40 },
+      { wch: 28 }
+    ]
   });
 
   XLSX.utils.book_append_sheet(wb, ws, 'Máquinas');
@@ -1823,52 +1716,14 @@ function exportModulo(tipo) {
 
 function exportModuloExcel() {
   const headers = moduloCampos.map(c => c.nome);
-  const wsData = [
-    ['Prefeitura Municipal de São Francisco do Sul'],
-    ['Secretaria Municipal de Tecnologia da Informação'],
-    [`Relatório de ${moduloAtual?.nome || 'Módulo'}`],
-    [],
-    headers
-  ];
+  const rows = moduloRegistros.map(row => (
+    headers.map(h => row[h] || '')
+  ));
 
-  moduloRegistros.forEach(row => {
-    wsData.push(headers.map(h => row[h] || ''));
-  });
-
-  const worksheet = XLSX.utils.aoa_to_sheet(wsData);
-  worksheet['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
-  ];
-  worksheet['!cols'] = headers.map(() => ({ wch: 22 }));
-  worksheet['!freeze'] = { xSplit: 0, ySplit: 5 };
-
-  Object.keys(worksheet).forEach(cell => {
-    if (!cell.startsWith('!')) {
-      worksheet[cell].s = {
-        alignment: {
-          vertical: 'center',
-          horizontal: 'left',
-          wrapText: true
-        }
-      };
-    }
-  });
-
-  const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-  applyRangeStyle(worksheet, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
-    font: { bold: true },
-    alignment: { horizontal: 'center' },
-    fill: headerFill
-  });
-  applyRangeStyle(worksheet, `A5:${XLSX.utils.encode_col(headers.length - 1)}5`, {
-    font: { bold: true },
-    alignment: { horizontal: 'center' },
-    fill: headerFill
-  });
-  applyRangeStyle(worksheet, `A1:${XLSX.utils.encode_cell({ r: wsData.length - 1, c: headers.length - 1 })}`, {
-    border: XLSX_BORDER
+  const worksheet = buildExcelSheet({
+    title: (moduloAtual?.nome || 'Prefeitura').toUpperCase(),
+    headers,
+    rows
   });
 
   const workbook = XLSX.utils.book_new();
