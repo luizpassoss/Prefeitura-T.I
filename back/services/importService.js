@@ -75,12 +75,7 @@ if (index === 0) {
         r.categoria &&
         !categoriasValidas.includes(r.categoria.toLowerCase())
       ) {
-        errors.push({
-          row: linha,
-          field: 'categoria',
-          message: `Categoria "${r.categoria}" não existe`
-        });
-        return;
+        r.categoria = null;
       }
 
       values.push([
