@@ -866,11 +866,9 @@ mtbody.addEventListener('click', (e) => {
   /* ===========================
      FILTROS MÁQUINAS
      =========================== */
- function applyMachineFilters() {
+  function applyMachineFilters() {
   const q = (document.getElementById('mq').value || '').trim().toLowerCase();
   const statusFilter = (document.getElementById('filterMachineStatus')?.value || 'All').toLowerCase();
-  const fieldFilter = (document.getElementById('filterMachineField')?.value || 'nome_maquina').toLowerCase();
-  const valueFilter = (document.getElementById('filterMachineValue')?.value || '').trim().toLowerCase();
   const localFilter = (document.getElementById('filterMachineLocal')?.value || '').trim().toLowerCase();
 
   let list = [...machineData];
@@ -894,34 +892,17 @@ mtbody.addEventListener('click', (e) => {
     list = list.filter(x => (x.local || '').toLowerCase().includes(localFilter));
   }
 
-  if (valueFilter) {
-    list = list.filter(x => {
-      const fields = {
-        nome_maquina: x.nome_maquina,
-        patrimonio: x.patrimonio,
-        local: x.local,
-        status: x.status,
-        descricao: x.descricao
-      };
-      return (fields[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
-    });
-  }
-
   renderMachines(list);
 }
 
   function clearMachineFilters(){
     const mqEl = document.getElementById('mq');
     if (mqEl) mqEl.value = '';
-    const statusEl = document.getElementById('filterMachineStatus');
-    if (statusEl) statusEl.value = 'All';
-  const fieldEl = document.getElementById('filterMachineField');
-  if (fieldEl) fieldEl.value = 'nome_maquina';
-    const valueEl = document.getElementById('filterMachineValue');
-    if (valueEl) valueEl.value = '';
-    const localEl = document.getElementById('filterMachineLocal');
-    if (localEl) localEl.value = '';
-    applyMachineFilters();
+  const statusEl = document.getElementById('filterMachineStatus');
+  if (statusEl) statusEl.value = 'All';
+  const localEl = document.getElementById('filterMachineLocal');
+  if (localEl) localEl.value = '';
+  applyMachineFilters();
   }
 
 

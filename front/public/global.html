@@ -239,14 +239,6 @@ class="select" onchange="applyFilters()">
           <option value="Manutenção">Manutenção</option>
           <option value="Inativa">Inativa</option>
         </select>
-        <select id="filterMachineField" class="select" onchange="applyMachineFilters()">
-          <option value="nome_maquina">Nome</option>
-          <option value="patrimonio">Patrimônio</option>
-          <option value="local">Local</option>
-          <option value="status">Status</option>
-          <option value="descricao">Descrição</option>
-        </select>
-        <input id="filterMachineValue" class="input" placeholder="Filtrar por valor" oninput="applyMachineFilters()" />
         <input id="filterMachineLocal" class="input" placeholder="Filtrar por local" oninput="applyMachineFilters()" />
         <button class="btn cancel" type="button" onclick="clearMachineFilters()">Limpar</button>
       </div>
