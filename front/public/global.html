@@ -451,7 +451,18 @@ class="select" onchange="applyFilters()">
 
       <div>
         <label>Nome da Máquina</label>
-        <input id="mNome" type="text">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="mNomePrefix" style="flex:0 0 140px;">
+            <option value="PMSFS-DT">PMSFS-DT</option>
+            <option value="SMSSFS-DT">SMSSFS-DT</option>
+          </select>
+          <input
+            id="mNomeNumero"
+            type="text"
+            placeholder="Número"
+            style="flex:1;"
+          >
+        </div>
       </div>
 
       <div>

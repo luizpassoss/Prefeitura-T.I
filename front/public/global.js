@@ -953,11 +953,30 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
   /* ===========================
      MODAL MÁQUINAS
      =========================== */
+  const MACHINE_PREFIXES = ['PMSFS-DT', 'SMSSFS-DT'];
+
+  function parseMachineName(nome = '') {
+    const trimmed = (nome || '').trim();
+    const match = MACHINE_PREFIXES.find(prefix => trimmed.startsWith(`${prefix}-`));
+    if (match) {
+      return { prefix: match, numero: trimmed.slice(match.length + 1) };
+    }
+    return { prefix: MACHINE_PREFIXES[0], numero: trimmed };
+  }
+
+  function buildMachineName() {
+    const prefix = document.getElementById('mNomePrefix')?.value || MACHINE_PREFIXES[0];
+    const numero = (document.getElementById('mNomeNumero')?.value || '').trim();
+    if (!numero) return '';
+    return `${prefix}-${numero}`;
+  }
+
   function openMachineModal(){
     machineEditIndex = -1;
     document.getElementById('machineModalTitle').innerText = 'Nova Máquina';
     
-    if(document.getElementById('mNome')) document.getElementById('mNome').value='';
+    if(document.getElementById('mNomePrefix')) document.getElementById('mNomePrefix').value = MACHINE_PREFIXES[0];
+    if(document.getElementById('mNomeNumero')) document.getElementById('mNomeNumero').value = '';
     if(document.getElementById('mPatrimonio')) document.getElementById('mPatrimonio').value='';
     if(document.getElementById('mLocal')) document.getElementById('mLocal').value='';
     if(document.getElementById('mDescricao')) document.getElementById('mDescricao').value='';
@@ -983,7 +1002,9 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
     document.getElementById('machineModalTitle').innerText = 'Editar Máquina';
     document.getElementById('mStatus').value = it.status || 'Ativa';
 
-    if(document.getElementById('mNome')) document.getElementById('mNome').value = it.nome_maquina || '';
+    const parsedName = parseMachineName(it.nome_maquina || '');
+    if(document.getElementById('mNomePrefix')) document.getElementById('mNomePrefix').value = parsedName.prefix;
+    if(document.getElementById('mNomeNumero')) document.getElementById('mNomeNumero').value = parsedName.numero;
     if(document.getElementById('mPatrimonio')) document.getElementById('mPatrimonio').value = it.patrimonio || '';
     const localSelect = document.getElementById('mLocal');
 const localOutroInput = document.getElementById('mLocalOutro');
@@ -1022,7 +1043,7 @@ async function saveMachine(){
   }
 
   const item = {
-    nome_maquina: (document.getElementById('mNome')?.value || '').trim(),
+    nome_maquina: buildMachineName(),
     patrimonio: (document.getElementById('mPatrimonio')?.value || '').trim(),
     local,
     descricao: (document.getElementById('mDescricao')?.value || '').trim(),
@@ -1036,7 +1057,7 @@ if(!item.local){
 
 
   if(!item.nome_maquina){
-    showMessage("Preencha o nome da máquina.");
+    showMessage("Informe o número da máquina.");
     return;
   }
 
