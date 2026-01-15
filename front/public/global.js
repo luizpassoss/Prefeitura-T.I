@@ -248,7 +248,7 @@ function updateBulkUI() {
     }
   }
 
-  function showMessage(message, title = 'Aviso') {
+function showMessage(message, title = 'Aviso') {
     const titleEl = document.getElementById('systemMessageTitle');
     const textEl = document.getElementById('systemMessageText');
     const modalEl = document.getElementById('systemMessageModal');
@@ -297,6 +297,16 @@ function updateBulkUI() {
     }
     confirmCallback = null;
     closeSystemConfirmModal();
+  }
+
+  function showImportWarning(message) {
+    const validationEl = document.getElementById('importValidation');
+    if (validationEl) {
+      validationEl.innerHTML = `<div>${message}</div>`;
+      validationEl.classList.remove('hidden');
+      return;
+    }
+    showMessage(message);
   }
 
   /* ===========================
@@ -1948,7 +1958,7 @@ async function confirmImport() {
   }
 
   if (!rows.length) {
-    showMessage('Nenhum dado para importar.');
+    showImportWarning('Nenhum dado para importar.');
     return;
   }
 
@@ -1967,7 +1977,7 @@ async function confirmImport() {
     const result = await res.json();
 
     if (result.errors?.length) {
-      showMessage(`Importação concluída com ${result.errors.length} erro(s).`);
+      showImportWarning(`Importação concluída com ${result.errors.length} erro(s).`);
       console.table(result.errors);
     } else {
       showMessage('Importação realizada com sucesso!');
@@ -1986,12 +1996,12 @@ await fetchMachines();
 
 async function importarRegistrosModulo() {
   if (!moduloAtual?.id) {
-    showMessage('Selecione uma aba personalizada antes de importar.');
+    showImportWarning('Selecione uma aba personalizada antes de importar.');
     return;
   }
 
   if (!importRows.length) {
-    showMessage('Nenhum dado para importar.');
+    showImportWarning('Nenhum dado para importar.');
     return;
   }
 
@@ -2008,8 +2018,7 @@ async function importarRegistrosModulo() {
 
   const hasMatch = camposMap.some(c => headerMap[c.key] !== undefined);
   if (!hasMatch) {
-    showMessage('Os cabeçalhos da planilha não correspondem aos campos do módulo.');
-    return;
+    showImportWarning('Os cabeçalhos da planilha não correspondem aos campos do módulo. Os dados serão importados em branco para os campos ausentes.');
   }
 
   let successCount = 0;
@@ -2023,6 +2032,8 @@ async function importarRegistrosModulo() {
       const idx = headerMap[campo.key];
       if (idx !== undefined) {
         valores[campo.nome] = row[idx];
+      } else {
+        valores[campo.nome] = '';
       }
     });
 
