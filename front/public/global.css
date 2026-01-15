@@ -420,6 +420,31 @@ body.theme-dark h1 {
   overflow-x: auto;
 }
 
+.loading-row {
+  text-align: center;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.loading-row .loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(148, 163, 184, 0.4);
+  border-top-color: #3b82f6;
+  margin-right: 8px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+body.theme-dark .loading-row {
+  color: #cbd5e1;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -512,6 +537,11 @@ body.theme-dark .filters .select:focus {
   border-color: #3b82f6;
   color: #e2e8f0;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+body.theme-dark .filter-count {
+  background: rgba(59, 130, 246, 0.2);
+  color: #e2e8f0;
 }
 
 body.theme-dark .search-wrapper .search-input {
@@ -832,6 +862,10 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   color: #64748b;
 }
 
+#descModalContent {
+  color: #1f2937;
+}
+
 .create-tab-header {
   margin-top: 18px;
   display: flex;
@@ -872,6 +906,25 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 .btn.secondary.filter-btn:hover {
   background: #e2e8f0;
   color: #334155;
+}
+
+.filter-count {
+  margin-left: 8px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #1f2937;
+}
+
+.filter-count.hidden {
+  display: none;
 }
 
 /* CAMPOS */
@@ -916,6 +969,12 @@ label {
 
 .btn-salvar:hover {
   background: #166ad2;
+}
+
+.btn-salvar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-salvar.danger {
@@ -1363,6 +1422,44 @@ body.theme-dark input[type="checkbox"]:checked {
   background: #b91c1c;
 }
 
+.undo-toast {
+  position: fixed;
+  bottom: 22px;
+  left: 22px;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+  z-index: 9999;
+}
+
+.undo-toast.hidden {
+  display: none;
+}
+
+.undo-toast button {
+  background: #2563eb;
+  border: none;
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.undo-toast button:hover {
+  background: #1d4ed8;
+}
+
+body.theme-dark .undo-toast {
+  background: #0f172a;
+  box-shadow: 0 18px 45px rgba(5, 10, 20, 0.55);
+}
+
 body.theme-dark .bulk-actions {
   background: #121826;
   border-color: #1f2a3a;
@@ -1730,6 +1827,38 @@ body.theme-dark .status-inativa .status-dot {
 .export-menu button:hover {
   background: #f3f4f6;
   transform: translateX(2px);
+}
+
+.import-validation {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #f59e0b;
+  background: rgba(251, 191, 36, 0.1);
+  color: #92400e;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.import-validation.hidden {
+  display: none;
+}
+
+.import-error {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #991b1b;
+}
+
+body.theme-dark .import-validation {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.08);
+  color: #fcd34d;
+}
+
+body.theme-dark .import-error {
+  background: rgba(248, 113, 113, 0.14) !important;
+  border-color: rgba(248, 113, 113, 0.5) !important;
+  color: #fecaca;
 }
 
 /* Ícones */
