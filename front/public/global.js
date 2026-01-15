@@ -1709,7 +1709,7 @@ function handleImportFile() {
     });
 
     const bestCandidate = headerCandidates
-      .filter(item => item.score > 0 && item.nonEmptyCount > 1)
+      .filter(item => item.score > 0 && item.nonEmptyCount > 0)
       .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
 
     if (!bestCandidate) {
@@ -1982,8 +1982,7 @@ function columnLetter(index) {
 async function confirmImport() {
   const validation = validateImportRows();
   if (validation.issues.length || validation.errorCount > 0) {
-    showMessage('Corrija os campos obrigatórios antes de importar.');
-    return;
+    showImportWarning('Existem campos obrigatórios vazios. Você pode importar e ajustar depois.');
   }
   const rows = mapImportRows();
 
