@@ -332,7 +332,6 @@ function getFiltered() {
   // PEGAR O SELECT APENAS SE EXISTIR (ABA INVENTÁRIO)
   const catEl = document.getElementById('filterCategoryInv');
   const cat = catEl ? catEl.value : "All";
-  const fieldFilter = (document.getElementById('filterFieldInv')?.value || 'link').toLowerCase();
   const valueFilter = (document.getElementById('filterValueInv')?.value || '').trim().toLowerCase();
   const localFilter = (document.getElementById('filterLocalInv')?.value || '').trim().toLowerCase();
   const velFilter = (document.getElementById('filterVelInv')?.value || '').trim().toLowerCase();
@@ -383,7 +382,9 @@ if (cat !== "All") {
         endereco: x.endereco,
         categoria: x.categoria
       };
-      return (fields[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
+      return Object.values(fields).some(val =>
+        (val || '').toString().toLowerCase().includes(valueFilter)
+      );
     });
   }
 
@@ -393,8 +394,6 @@ if (cat !== "All") {
 function clearInventoryFilters() {
   const catEl = document.getElementById('filterCategoryInv');
   if (catEl) catEl.value = 'All';
-  const fieldEl = document.getElementById('filterFieldInv');
-  if (fieldEl) fieldEl.value = 'link';
   const valueEl = document.getElementById('filterValueInv');
   if (valueEl) valueEl.value = '';
   const localEl = document.getElementById('filterLocalInv');
@@ -1870,8 +1869,6 @@ function renderModuloDinamico() {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
 
-  updateModuloFilterFields();
-
   const filtered = getModuloFiltrado();
 
   // HEADER
@@ -1951,17 +1948,14 @@ function renderModuloCell(fieldName, value) {
 
 function getModuloFiltrado() {
   const q = (document.getElementById('moduloSearch')?.value || '').trim().toLowerCase();
-  const fieldSelect = document.getElementById('moduloFilterField');
-  let fieldFilter = fieldSelect?.value || '';
-  if (!fieldFilter && fieldSelect?.options.length) {
-    fieldFilter = fieldSelect.options[0].value;
-  }
   const valueFilter = (document.getElementById('moduloFilterValue')?.value || '').trim().toLowerCase();
   if (!q) {
     let filtered = moduloRegistros.map((row, idx) => ({ row, idx }));
     if (valueFilter) {
       filtered = filtered.filter(({ row }) =>
-        (row[fieldFilter] || '').toString().toLowerCase().includes(valueFilter)
+        moduloCampos.some(campo =>
+          (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
+        )
       );
     }
     return filtered;
@@ -1976,38 +1970,17 @@ function getModuloFiltrado() {
     );
   if (valueFilter) {
     filtered = filtered.filter(({ row }) =>
-      (row[fieldFilter] || '').toString().toLowerCase().includes(valueFilter)
+      moduloCampos.some(campo =>
+        (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
+      )
     );
   }
   return filtered;
 }
 
-function updateModuloFilterFields() {
-  const select = document.getElementById('moduloFilterField');
-  if (!select) return;
-  const currentValue = select.value || '';
-  const fieldNames = moduloCampos.map(campo => campo.nome);
-
-  select.innerHTML = '';
-  fieldNames.forEach(nome => {
-    const option = document.createElement('option');
-    option.value = nome;
-    option.textContent = nome;
-    select.appendChild(option);
-  });
-
-  if ([...select.options].some(opt => opt.value === currentValue)) {
-    select.value = currentValue;
-  } else if (select.options.length) {
-    select.selectedIndex = 0;
-  }
-}
-
 function clearModuloFilters() {
   const searchEl = document.getElementById('moduloSearch');
   if (searchEl) searchEl.value = '';
-  const fieldEl = document.getElementById('moduloFilterField');
-  if (fieldEl && fieldEl.options.length) fieldEl.selectedIndex = 0;
   const valueEl = document.getElementById('moduloFilterValue');
   if (valueEl) valueEl.value = '';
   filtrarModulo();

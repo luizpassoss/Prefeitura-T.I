@@ -127,14 +127,6 @@ class="select" onchange="applyFilters()">
             <option value="Assistência Cultural">Assistência Cultural</option>
             <option value="Fundacao Cultural">Fundação Cultural</option>
           </select>
-          <select id="filterFieldInv" class="select" onchange="applyFilters()">
-            <option value="link">Link de Internet</option>
-            <option value="velocidade">Velocidade</option>
-            <option value="telefone">Telefone</option>
-            <option value="local">Local</option>
-            <option value="endereco">Endereço</option>
-            <option value="categoria">Categoria</option>
-          </select>
           <input id="filterValueInv" class="input" placeholder="Filtrar por valor" oninput="applyFilters()" />
           <input id="filterLocalInv" class="input" placeholder="Filtrar por local" oninput="applyFilters()" />
           <input id="filterVelInv" class="input" placeholder="Filtrar por velocidade" oninput="applyFilters()" />
@@ -332,8 +324,6 @@ class="select" onchange="applyFilters()">
         </div>
 
         <div id="moduleFilters" class="filters filters-panel hidden">
-          <select id="moduloFilterField" class="select" onchange="filtrarModulo()">
-          </select>
           <input id="moduloFilterValue" class="input" placeholder="Filtrar por valor" oninput="filtrarModulo()" />
           <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar</button>
         </div>
