@@ -1634,6 +1634,11 @@ function openImportModal(type) {
   document.getElementById('importFile').value = '';
   const fileName = document.getElementById('importFileName');
   if (fileName) fileName.textContent = 'Nenhum arquivo selecionado';
+  const validationEl = document.getElementById('importValidation');
+  if (validationEl) {
+    validationEl.classList.add('hidden');
+    validationEl.innerHTML = '';
+  }
   document.getElementById('importStepUpload')?.classList.remove('hidden');
   document.getElementById('importStepPreview')?.classList.add('hidden');
   const actionBtn = document.getElementById('importActionBtn');

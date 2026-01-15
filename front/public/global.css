@@ -876,12 +876,13 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 .file-input-button:hover {
   background: #e2e8f0;
   border-color: #94a3b8;
-  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
 }
 
 .file-input-name {
   font-size: 13px;
   color: #475569;
+  min-width: 180px;
 }
 
 body.theme-dark .file-input-button {
@@ -1631,6 +1632,17 @@ body.theme-dark .icon-btn.delete {
 body.theme-dark .icon-btn.delete:hover {
   background: rgba(248, 113, 113, 0.15);
   border-color: rgba(248, 113, 113, 0.65);
+}
+
+body.theme-dark #importPreviewTable .icon-btn.delete {
+  background: rgba(248, 113, 113, 0.18);
+  border-color: rgba(248, 113, 113, 0.65);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+}
+
+body.theme-dark #importPreviewTable .icon-btn.delete:hover {
+  background: rgba(248, 113, 113, 0.28);
+  border-color: rgba(248, 113, 113, 0.85);
 }
 
 
