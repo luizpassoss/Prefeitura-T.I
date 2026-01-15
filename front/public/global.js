@@ -1944,6 +1944,11 @@ function columnLetter(index) {
   return result;
 }
 async function confirmImport() {
+  const validation = validateImportRows();
+  if (validation.issues.length || validation.errorCount > 0) {
+    showMessage('Corrija os campos obrigatórios antes de importar.');
+    return;
+  }
   const rows = mapImportRows();
 
   if (importType === 'modulo') {
