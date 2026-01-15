@@ -435,6 +435,18 @@ thead th.actions-header {
   text-align: center;
 }
 
+thead th.checkbox-cell,
+tbody td.checkbox-cell {
+  width: 36px;
+  text-align: center;
+}
+
+thead th.checkbox-cell input,
+tbody td.checkbox-cell input {
+  margin: 0;
+  vertical-align: middle;
+}
+
 tbody td {
   padding: 16px 14px;
   border-bottom: 1px solid #e6edf5;

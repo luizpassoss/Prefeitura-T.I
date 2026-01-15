@@ -766,7 +766,7 @@ function exportInventarioExcel(rows) {
   ];
 
   const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-  const sectionFill = { patternType: 'solid', fgColor: { rgb: 'FFE5E7EB' } };
+  const sectionFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
 
   Object.keys(ws).forEach(cell => {
     if (!cell.startsWith('!')) {
@@ -786,7 +786,8 @@ function exportInventarioExcel(rows) {
   });
   applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
     font: { bold: true },
-    alignment: { horizontal: 'center' }
+    alignment: { horizontal: 'center' },
+    fill: headerFill
   });
 
   wsData.forEach((row, idx) => {
@@ -1341,7 +1342,7 @@ function exportMaquinasExcel(rows) {
   ];
 
   const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-  const sectionFill = { patternType: 'solid', fgColor: { rgb: 'FFE5E7EB' } };
+  const sectionFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
 
   Object.keys(ws).forEach(cell => {
     if (!cell.startsWith('!')) {
@@ -1361,7 +1362,8 @@ function exportMaquinasExcel(rows) {
   });
   applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
     font: { bold: true },
-    alignment: { horizontal: 'center' }
+    alignment: { horizontal: 'center' },
+    fill: headerFill
   });
 
   wsData.forEach((row, idx) => {
@@ -1857,7 +1859,8 @@ function exportModuloExcel() {
   const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
   applyRangeStyle(worksheet, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
     font: { bold: true },
-    alignment: { horizontal: 'center' }
+    alignment: { horizontal: 'center' },
+    fill: headerFill
   });
   applyRangeStyle(worksheet, `A5:${XLSX.utils.encode_col(headers.length - 1)}5`, {
     font: { bold: true },
@@ -2044,7 +2047,7 @@ function renderModuloDinamico() {
   // HEADER
   thead.innerHTML = `
     <tr>
-      <th style="text-align:center;">
+      <th class="checkbox-cell">
         <input type="checkbox" id="chkAllMod">
       </th>
       ${moduloCampos.map(c => `<th>${c.nome}</th>`).join('')}
@@ -2072,7 +2075,7 @@ function renderModuloDinamico() {
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
-      <td style="text-align:center;">
+      <td class="checkbox-cell">
         <input
           type="checkbox"
           class="chk-mod"
