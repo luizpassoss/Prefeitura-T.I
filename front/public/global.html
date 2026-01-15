@@ -73,6 +73,7 @@
                 <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
               Filtros
+              <span class="filter-count" data-filter-badge="inventory" aria-label="Filtros ativos"></span>
             </button>
             <button class="btn secondary import-btn" onclick="openImportModal('inventario')">
               <span class="icon excel-icon" aria-hidden="true"></span>
@@ -183,6 +184,7 @@ class="select" onchange="applyFilters()">
             <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
           Filtros
+          <span class="filter-count" data-filter-badge="machines" aria-label="Filtros ativos"></span>
         </button>
         <button class="btn secondary import-btn" onclick="openImportModal('maquinas')">
           <span class="icon excel-icon" aria-hidden="true"></span>
@@ -287,6 +289,7 @@ class="select" onchange="applyFilters()">
                 <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
               Filtros
+              <span class="filter-count" data-filter-badge="modules" aria-label="Filtros ativos"></span>
             </button>
             <button class="btn secondary import-btn" onclick="openImportModal('modulo')">
               <span class="icon excel-icon" aria-hidden="true"></span>
@@ -362,7 +365,7 @@ class="select" onchange="applyFilters()">
       <!-- Link -->
       <div>
         <label>Link de Internet</label>
-        <select id="inpLink">
+        <select id="inpLink" data-autofocus>
           <option value="Link Dedicado">Link Dedicado</option>
           <option value="Interconexão (CONCENTRADOR)">Interconexão (CONCENTRADOR)</option>
           <option value="Interconexão">Interconexão</option>
@@ -451,7 +454,19 @@ class="select" onchange="applyFilters()">
 
       <div>
         <label>Nome da Máquina</label>
-        <input id="mNome" type="text">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="mNomePrefix" style="flex:0 0 140px;">
+            <option value="PMSFS-DT">PMSFS-DT</option>
+            <option value="SMSSFS-DT">SMSSFS-DT</option>
+          </select>
+        <input
+            id="mNomeNumero"
+            type="text"
+            placeholder="Número"
+            style="flex:1;"
+            data-autofocus
+          >
+        </div>
       </div>
 
       <div>
@@ -515,6 +530,10 @@ class="select" onchange="applyFilters()">
     Excluir selecionados
   </button>
 </div>
+<div id="undoToast" class="undo-toast hidden" role="status" aria-live="polite">
+  <span id="undoToastText"></span>
+  <button id="undoToastButton" type="button">Desfazer</button>
+</div>
 <!-- MODAL DESCRIÇÃO COMPLETA -->
 <div id="descModal" class="modal" onclick="closeDescModal(event)">
   <div class="card" style="max-width: 600px" onclick="event.stopPropagation()">
@@ -526,7 +545,6 @@ class="select" onchange="applyFilters()">
         white-space: pre-wrap;
         line-height: 1.6;
         font-size: 14px;
-        color: #1f2937;
         margin-top: 12px;
       "
     ></div>
@@ -556,6 +574,7 @@ class="select" onchange="applyFilters()">
 
     <!-- STEP 2: PREVIEW -->
     <div id="importStepPreview" class="hidden">
+      <div id="importValidation" class="import-validation hidden"></div>
 
       <div class="table-wrap" style="margin-top:20px">
         <table id="importPreviewTable">
@@ -593,7 +612,7 @@ class="select" onchange="applyFilters()">
     <div class="form-grid">
       <div class="form-full">
         <label for="newTabName">Nome da Aba</label>
-        <input id="newTabName" placeholder="Ex: Almoxarifado" />
+        <input id="newTabName" placeholder="Ex: Almoxarifado" data-autofocus />
       </div>
 
       <div class="form-full">
