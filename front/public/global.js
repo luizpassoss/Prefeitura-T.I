@@ -2000,8 +2000,8 @@ async function confirmImport() {
 
   const url =
     importType === 'inventario'
-      ? '/api/import/inventario'
-      : '/api/import/maquinas';
+      ? `${API_BASE}/import/inventario`
+      : `${API_BASE}/import/maquinas`;
 
   try {
     const res = await fetch(url, {
