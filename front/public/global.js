@@ -86,12 +86,13 @@ if (btnNovaAba) {
    =========================== */
 let selectedInvIds = new Set();
 let selectedMaqIds = new Set();
+let selectedModuloIds = new Set();
 
 function updateBulkUI() {
   const bulk = document.getElementById('bulkActions');
   const counter = document.getElementById('bulkCounter');
 
-  const count = selectedInvIds.size + selectedMaqIds.size;
+  const count = selectedInvIds.size + selectedMaqIds.size + selectedModuloIds.size;
 
   if (count > 0) {
     counter.textContent = `${count} selecionado${count > 1 ? 's' : ''}`;
@@ -136,6 +137,34 @@ function updateBulkUI() {
   function showModal(el){ el.classList.add('show'); }
   function hideModal(el){ el.classList.remove('show'); }
   let confirmCallback = null;
+  const XLSX_BORDER = {
+    top: { style: 'thin', color: { rgb: 'FF000000' } },
+    bottom: { style: 'thin', color: { rgb: 'FF000000' } },
+    left: { style: 'thin', color: { rgb: 'FF000000' } },
+    right: { style: 'thin', color: { rgb: 'FF000000' } }
+  };
+
+  function mergeStyle(base = {}, next = {}) {
+    return {
+      ...base,
+      ...next,
+      alignment: { ...(base.alignment || {}), ...(next.alignment || {}) },
+      font: { ...(base.font || {}), ...(next.font || {}) },
+      fill: { ...(base.fill || {}), ...(next.fill || {}) },
+      border: { ...(base.border || {}), ...(next.border || {}) }
+    };
+  }
+
+  function applyRangeStyle(ws, range, style) {
+    const decoded = XLSX.utils.decode_range(range);
+    for (let r = decoded.s.r; r <= decoded.e.r; r += 1) {
+      for (let c = decoded.s.c; c <= decoded.e.c; c += 1) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (!ws[cellRef]) continue;
+        ws[cellRef].s = mergeStyle(ws[cellRef].s || {}, style);
+      }
+    }
+  }
 
   function toggleFilters(panelId, button) {
     const panel = document.getElementById(panelId);
@@ -641,9 +670,9 @@ function exportInventarioPDF(data) {
     theme: 'grid',
 
     styles: {
-      fontSize: 9,
+      fontSize: 8,
       textColor: [75, 85, 99],
-      cellPadding: 4,
+      cellPadding: 3,
       lineColor: [229, 231, 235],
       lineWidth: 0.5,
       halign: 'center'
@@ -660,9 +689,9 @@ function exportInventarioPDF(data) {
       fillColor: [249, 250, 251]
     },
     columnStyles: {
-      1: { halign: 'left', cellWidth: 62 },
-      4: { halign: 'left', cellWidth: 36 },
-      5: { halign: 'left', cellWidth: 62 }
+      1: { halign: 'left', cellWidth: 54 },
+      4: { halign: 'left', cellWidth: 30 },
+      5: { halign: 'left', cellWidth: 54 }
     }
   });
 
@@ -674,48 +703,118 @@ function exportInventarioPDF(data) {
 function exportInventarioExcel(rows) {
   const wb = XLSX.utils.book_new();
 
+  const headers = ['Descrição', 'Quantidade', 'Velocidade', 'Telefone', 'Local', 'Endereço', 'Observações'];
   const wsData = [
     ['Prefeitura Municipal de São Francisco do Sul'],
     ['Secretaria Municipal de Tecnologia da Informação'],
     ['Relatório de Links e Conexões'],
-    [],
-    ['Categoria', 'Link de Internet', 'Velocidade', 'Telefone', 'Local', 'Endereço']
+    []
+  ];
+  const merges = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
   ];
 
-  rows.forEach(r => {
-    wsData.push([
-      r.categoria,
-      r.link,
-      r.velocidade,
-      r.telefone,
-      r.local,
-      r.endereco
-    ]);
+  const grouped = rows.reduce((acc, row) => {
+    const key = row.categoria || 'Sem categoria';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(row);
+    return acc;
+  }, {});
+
+  Object.entries(grouped).forEach(([categoria, items]) => {
+    const startRow = wsData.length;
+    wsData.push([categoria.toUpperCase()]);
+    merges.push({
+      s: { r: startRow, c: 0 },
+      e: { r: startRow, c: headers.length - 1 }
+    });
+
+    wsData.push(headers);
+
+    items.forEach(r => {
+      wsData.push([
+        r.link,
+        1,
+        r.velocidade,
+        r.telefone,
+        r.local,
+        r.endereco,
+        ''
+      ]);
+    });
+
+    wsData.push(['TOTAL', items.length, '', '', '', '', '']);
+    wsData.push([]);
   });
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   // ===== MERGES =====
-  ws['!merges'] = [
-    { s:{r:0,c:0}, e:{r:0,c:5} },
-    { s:{r:1,c:0}, e:{r:1,c:5} },
-    { s:{r:2,c:0}, e:{r:2,c:5} }
-  ];
+  ws['!merges'] = merges;
 
   // ===== COLUNAS =====
   ws['!cols'] = [
+    { wch: 54 },
+    { wch: 12 },
+    { wch: 16 },
+    { wch: 16 },
     { wch: 18 },
-    { wch: 36 },
-    { wch: 18 },
-    { wch: 18 },
-    { wch: 32 },
-    { wch: 48 }
+    { wch: 26 },
+    { wch: 28 }
   ];
 
-  // ===== FILTRO =====
-  ws['!autofilter'] = {
-    ref: `A5:F${rows.length + 5}`
-  };
+  const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
+  const sectionFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
+
+  Object.keys(ws).forEach(cell => {
+    if (!cell.startsWith('!')) {
+      ws[cell].s = {
+        alignment: {
+          vertical: 'center',
+          horizontal: 'left',
+          wrapText: true
+        }
+      };
+    }
+  });
+
+  const lastRow = wsData.length - 1;
+  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: lastRow, c: headers.length - 1 })}`, {
+    border: XLSX_BORDER
+  });
+  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
+    font: { bold: true },
+    alignment: { horizontal: 'center' },
+    fill: headerFill
+  });
+
+  wsData.forEach((row, idx) => {
+    if (!row || row.length === 0) return;
+    if (row.length === 1 && idx > 2) {
+      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
+        font: { bold: true },
+        alignment: { horizontal: 'center' },
+        fill: sectionFill
+      });
+      return;
+    }
+    if (row[0] === 'TOTAL') {
+      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
+        font: { bold: true },
+        fill: headerFill
+      });
+      return;
+    }
+    if (row[0] === headers[0]) {
+      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
+        font: { bold: true },
+        alignment: { horizontal: 'center' },
+        fill: headerFill
+      });
+    }
+  });
 
   XLSX.utils.book_append_sheet(wb, ws, 'Inventário TI');
 
@@ -723,22 +822,6 @@ function exportInventarioExcel(rows) {
     wb,
     `Relatorio_Inventario_TI_${new Date().toISOString().slice(0,10)}.xlsx`
   );
-  // Congelar cabeçalho
-  ws['!freeze'] = { xSplit: 0, ySplit: 5 };
-
-// Alinhamento vertical
-Object.keys(ws).forEach(cell => {
-  if (!cell.startsWith('!')) {
-    ws[cell].s = {
-      alignment: {
-        vertical: 'center',
-        horizontal: 'left',
-        wrapText: true
-      }
-    };
-  }
-});
-
 }
 
   /* ===========================
@@ -1163,9 +1246,9 @@ function exportMaquinasPDF(data) {
     theme: 'grid',
 
     styles: {
-      fontSize: 9,
+      fontSize: 8,
       textColor: [75, 85, 99],
-      cellPadding: 4,
+      cellPadding: 3,
       lineColor: [229, 231, 235],
       lineWidth: 0.5,
       halign: 'center'
@@ -1182,9 +1265,9 @@ function exportMaquinasPDF(data) {
       fillColor: [249, 250, 251]
     },
     columnStyles: {
-      0: { halign: 'left', cellWidth: 48 },
-      2: { halign: 'left', cellWidth: 40 },
-      4: { halign: 'left', cellWidth: 80 }
+      0: { halign: 'left', cellWidth: 42 },
+      2: { halign: 'left', cellWidth: 34 },
+      4: { halign: 'left', cellWidth: 70 }
     }
   });
 
@@ -1196,46 +1279,118 @@ function exportMaquinasPDF(data) {
 function exportMaquinasExcel(rows) {
   const wb = XLSX.utils.book_new();
 
+  const headers = ['Máquina', 'Quantidade', 'Patrimônio', 'Local', 'Status', 'Descrição', 'Observações'];
   const wsData = [
     ['Prefeitura Municipal de São Francisco do Sul'],
     ['Secretaria Municipal de Tecnologia da Informação'],
     ['Relatório de Inventário de Máquinas'],
-    [],
-    ['Nome da Máquina', 'Patrimônio', 'Local', 'Status', 'Descrição']
+    []
+  ];
+  const merges = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
   ];
 
-  rows.forEach(r => {
-    wsData.push([
-      r.nome,
-      r.patrimonio,
-      r.local,
-      r.status,
-      r.descricao
-    ]);
+  const grouped = rows.reduce((acc, row) => {
+    const key = row.status || 'Sem status';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(row);
+    return acc;
+  }, {});
+
+  Object.entries(grouped).forEach(([status, items]) => {
+    const startRow = wsData.length;
+    wsData.push([status.toUpperCase()]);
+    merges.push({
+      s: { r: startRow, c: 0 },
+      e: { r: startRow, c: headers.length - 1 }
+    });
+
+    wsData.push(headers);
+
+    items.forEach(r => {
+      wsData.push([
+        r.nome,
+        1,
+        r.patrimonio,
+        r.local,
+        r.status,
+        r.descricao,
+        ''
+      ]);
+    });
+
+    wsData.push(['TOTAL', items.length, '', '', '', '', '']);
+    wsData.push([]);
   });
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   // ===== MERGES (Cabeçalho) =====
-  ws['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: 4 } }
-  ];
+  ws['!merges'] = merges;
 
   // ===== LARGURA DAS COLUNAS =====
   ws['!cols'] = [
-    { wch: 28 }, // Nome
-    { wch: 18 }, // Patrimônio
-    { wch: 30 }, // Local
-    { wch: 16 }, // Status
-    { wch: 50 }  // Descrição
+    { wch: 30 },
+    { wch: 12 },
+    { wch: 16 },
+    { wch: 20 },
+    { wch: 14 },
+    { wch: 40 },
+    { wch: 28 }
   ];
 
-  // ===== AUTO FILTER =====
-  ws['!autofilter'] = {
-    ref: `A5:E${rows.length + 5}`
-  };
+  const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
+  const sectionFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
+
+  Object.keys(ws).forEach(cell => {
+    if (!cell.startsWith('!')) {
+      ws[cell].s = {
+        alignment: {
+          vertical: 'center',
+          horizontal: 'left',
+          wrapText: true
+        }
+      };
+    }
+  });
+
+  const lastRow = wsData.length - 1;
+  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: lastRow, c: headers.length - 1 })}`, {
+    border: XLSX_BORDER
+  });
+  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
+    font: { bold: true },
+    alignment: { horizontal: 'center' },
+    fill: headerFill
+  });
+
+  wsData.forEach((row, idx) => {
+    if (!row || row.length === 0) return;
+    if (row.length === 1 && idx > 2) {
+      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
+        font: { bold: true },
+        alignment: { horizontal: 'center' },
+        fill: sectionFill
+      });
+      return;
+    }
+    if (row[0] === 'TOTAL') {
+      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
+        font: { bold: true },
+        fill: headerFill
+      });
+      return;
+    }
+    if (row[0] === headers[0]) {
+      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
+        font: { bold: true },
+        alignment: { horizontal: 'center' },
+        fill: headerFill
+      });
+    }
+  });
 
   XLSX.utils.book_append_sheet(wb, ws, 'Máquinas');
 
@@ -1243,22 +1398,6 @@ function exportMaquinasExcel(rows) {
     wb,
     `Relatorio_Maquinas_TI_${new Date().toISOString().slice(0, 10)}.xlsx`
   );
-  // Congelar cabeçalho
-  ws['!freeze'] = { xSplit: 0, ySplit: 5 };
-
-// Alinhamento vertical
-Object.keys(ws).forEach(cell => {
-  if (!cell.startsWith('!')) {
-    ws[cell].s = {
-      alignment: {
-        vertical: 'center',
-        horizontal: 'left',
-        wrapText: true
-      }
-    };
-  }
-});
-
 }
 
 
@@ -1302,27 +1441,45 @@ if (telInput) {
 }
 async function deleteSelected() {
   const isInventario = selectedInvIds.size > 0;
+  const isMaquinas = !isInventario && selectedMaqIds.size > 0;
+  const isModulo = !isInventario && !isMaquinas && selectedModuloIds.size > 0;
   const ids = isInventario
     ? [...selectedInvIds]
-    : [...selectedMaqIds];
+    : isMaquinas
+      ? [...selectedMaqIds]
+      : [...selectedModuloIds];
 
   if (!ids.length) return;
 
   showConfirm(`Excluir ${ids.length} item(ns)?`, async () => {
     try {
+      if (isModulo && !moduloAtual?.id) {
+        showMessage('Selecione uma aba personalizada.');
+        return;
+      }
       for (const id of ids) {
         const url = isInventario
           ? `${API_URL}/${id}`
-          : `${API_MAQUINAS}/${id}`;
+          : isMaquinas
+            ? `${API_MAQUINAS}/${id}`
+            : `${API_MODULOS}/${moduloAtual.id}/registros/${id}`;
 
         await fetch(url, { method: 'DELETE' });
       }
 
       selectedInvIds.clear();
       selectedMaqIds.clear();
+      selectedModuloIds.clear();
       updateBulkUI();
 
-      isInventario ? fetchData() : fetchMachines();
+      if (isInventario) {
+        fetchData();
+      } else if (isMaquinas) {
+        fetchMachines();
+      } else if (isModulo) {
+        await carregarRegistrosModulo();
+        renderModuloDinamico();
+      }
 
     } catch (err) {
       console.error('Erro ao excluir selecionados:', err);
@@ -1684,10 +1841,7 @@ function exportModuloExcel() {
     { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
     { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
   ];
-  worksheet['!cols'] = headers.map(() => ({ wch: 24 }));
-  worksheet['!autofilter'] = {
-    ref: `A5:${columnLetter(headers.length - 1)}${moduloRegistros.length + 5}`
-  };
+  worksheet['!cols'] = headers.map(() => ({ wch: 22 }));
   worksheet['!freeze'] = { xSplit: 0, ySplit: 5 };
 
   Object.keys(worksheet).forEach(cell => {
@@ -1700,6 +1854,21 @@ function exportModuloExcel() {
         }
       };
     }
+  });
+
+  const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
+  applyRangeStyle(worksheet, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
+    font: { bold: true },
+    alignment: { horizontal: 'center' },
+    fill: headerFill
+  });
+  applyRangeStyle(worksheet, `A5:${XLSX.utils.encode_col(headers.length - 1)}5`, {
+    font: { bold: true },
+    alignment: { horizontal: 'center' },
+    fill: headerFill
+  });
+  applyRangeStyle(worksheet, `A1:${XLSX.utils.encode_cell({ r: wsData.length - 1, c: headers.length - 1 })}`, {
+    border: XLSX_BORDER
   });
 
   const workbook = XLSX.utils.book_new();
@@ -1727,12 +1896,13 @@ function exportModuloPDF() {
     body: data,
     theme: 'grid',
     styles: {
-      fontSize: 9,
+      fontSize: 8,
       textColor: [75, 85, 99],
-      cellPadding: 4,
+      cellPadding: 3,
       lineColor: [229, 231, 235],
       lineWidth: 0.5,
-      halign: 'center'
+      halign: 'center',
+      cellWidth: 'wrap'
     },
     headStyles: {
       fillColor: [15, 23, 42],
@@ -1774,6 +1944,7 @@ function renderAbasDinamicas() {
 
     const a = document.createElement('a');
     a.className = 'tab-dinamica';
+    a.dataset.moduloId = mod.id;
     a.textContent = mod.nome;
 
    a.onclick = () => {
@@ -1840,7 +2011,9 @@ async function abrirModulo(mod) {
   moduloAtual = mod;
 
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('.nav a, .nav .tab-dinamica').forEach(a => a.classList.remove('active'));
+  const activeTab = document.querySelector(`.nav [data-modulo-id="${mod.id}"]`);
+  if (activeTab) activeTab.classList.add('active');
 
   document.getElementById('moduloTitulo').textContent = mod.nome;
   document.getElementById('moduloDescricao').textContent = mod.descricao || 'Tabela personalizada';
@@ -1874,6 +2047,9 @@ function renderModuloDinamico() {
   // HEADER
   thead.innerHTML = `
     <tr>
+      <th class="checkbox-cell">
+        <input type="checkbox" id="chkAllMod">
+      </th>
       ${moduloCampos.map(c => `<th>${c.nome}</th>`).join('')}
       <th class="actions-header">Ações</th>
     </tr>
@@ -1885,10 +2061,13 @@ function renderModuloDinamico() {
   if (!filtered.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="${moduloCampos.length + 1}" style="padding:22px;color:#9fb6d9">
+        <td colspan="${moduloCampos.length + 2}" style="padding:22px;color:#9fb6d9">
           Nenhum registro encontrado.
         </td>
       </tr>`;
+    const chkAllMod = document.getElementById('chkAllMod');
+    if (chkAllMod) chkAllMod.checked = false;
+    updateBulkUI();
     return;
   }
 
@@ -1896,6 +2075,14 @@ function renderModuloDinamico() {
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
+      <td class="checkbox-cell">
+        <input
+          type="checkbox"
+          class="chk-mod"
+          data-id="${row.id}"
+          ${selectedModuloIds.has(row.id) ? 'checked' : ''}
+        >
+      </td>
       ${moduloCampos.map(c => `
         <td>${renderModuloCell(c.nome, row[c.nome])}</td>
       `).join('')}
@@ -1929,10 +2116,49 @@ function renderModuloDinamico() {
   tbody.querySelectorAll('.mod-delete').forEach(btn => {
     btn.onclick = (e) => excluirRegistroModulo(Number(e.currentTarget.dataset.id));
   });
+
+  const chkAllMod = document.getElementById('chkAllMod');
+  if (chkAllMod) {
+    chkAllMod.onchange = (e) => {
+      selectedModuloIds.clear();
+
+      tbody.querySelectorAll('.chk-mod').forEach(chk => {
+        chk.checked = e.target.checked;
+        if (e.target.checked) {
+          selectedModuloIds.add(Number(chk.dataset.id));
+        }
+      });
+
+      updateBulkUI();
+    };
+
+    const total = tbody.querySelectorAll('.chk-mod').length;
+    chkAllMod.checked = total > 0 && selectedModuloIds.size === total;
+  }
+}
+
+const moduloTbody = document.getElementById('moduloTbody');
+if (moduloTbody) {
+  moduloTbody.addEventListener('change', (e) => {
+    if (!e.target.classList.contains('chk-mod')) return;
+
+    const id = Number(e.target.dataset.id);
+
+    if (e.target.checked) {
+      selectedModuloIds.add(id);
+    } else {
+      selectedModuloIds.delete(id);
+      const chkAllMod = document.getElementById('chkAllMod');
+      if (chkAllMod) chkAllMod.checked = false;
+    }
+
+    updateBulkUI();
+  });
 }
 
 function renderModuloCell(fieldName, value) {
   const label = (value ?? '').toString();
+  const formatted = formatDateForTable(label);
   const normalizedField = (fieldName || '').toString().toLowerCase();
   if (normalizedField.includes('status')) {
     const display = label || 'Ativa';
@@ -1943,7 +2169,13 @@ function renderModuloCell(fieldName, value) {
       </div>
     `;
   }
-  return escapeHtml(label);
+  return escapeHtml(formatted);
+}
+
+function formatDateForTable(value) {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T|\s)/);
+  if (!match) return value;
+  return `${match[3]}/${match[2]}/${match[1]}`;
 }
 
 function getModuloFiltrado() {
@@ -1995,6 +2227,8 @@ async function excluirRegistroModulo(id) {
       method: 'DELETE'
     });
 
+    selectedModuloIds.delete(id);
+    updateBulkUI();
     await carregarRegistrosModulo();
     renderModuloDinamico();
   }, 'Confirmar exclusão');
@@ -2283,7 +2517,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } =
       <option value="select">Lista</option>
     </select>
 
-    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#334155;margin:0;">
+    <label class="field-required-label">
       <input class="field-required" type="checkbox" ${obrigatorio ? 'checked' : ''} onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
       Obrigatório
     </label>
@@ -2331,6 +2565,8 @@ async function loadDynamicTabs() {
     if (document.getElementById(`tab-${m.id}`)) return;
 
     const a = document.createElement('a');
+    a.className = 'tab-dinamica';
+    a.dataset.moduloId = m.id;
     a.textContent = m.nome;
     a.onclick = () => abrirModulo(m);
 
