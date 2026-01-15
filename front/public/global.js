@@ -1698,28 +1698,33 @@ function handleImportFile() {
     const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
     const cleaned = data.map(row => (row || []).map(cell => (cell ?? '').toString().trim()));
     const validHeaders = {
-      inventario: ['categoria', 'link', 'link de internet', 'velocidade', 'telefone', 'local', 'endereco', 'endereço', 'observacoes', 'observações'],
-      maquinas: ['nome', 'nome maquina', 'nome da maquina', 'maquina', 'máquina', 'patrimonio', 'patrimônio', 'local', 'status', 'descricao', 'descrição', 'observacoes', 'observações'],
+      inventario: ['categoria', 'link', 'link de internet', 'descricao', 'descrição', 'quantidade', 'velocidade', 'telefone', 'local', 'endereco', 'endereço', 'observacoes', 'observações'],
+      maquinas: ['nome', 'maquina', 'máquina', 'nome maquina', 'nome da maquina', 'patrimonio', 'patrimônio', 'local', 'status', 'descricao', 'descrição', 'observacoes', 'observações'],
       modulo: (moduloCampos || []).map(c => normalizeHeader(c.nome))
     };
 
     const headerCandidates = cleaned.map((row, index) => {
       const normalized = row.map(cell => normalizeHeader(cell));
+      const nonEmptyCount = normalized.filter(cell => cell).length;
       const score = normalized.reduce((acc, cell) => {
         if (!cell) return acc;
         const list = validHeaders[importType] || [];
         return list.includes(cell) ? acc + 1 : acc;
       }, 0);
-      return { index, score, row, normalized };
+      return { index, score, row, normalized, nonEmptyCount };
     });
 
     const bestCandidate = headerCandidates
-      .filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score)[0];
+      .filter(item => item.score > 0 && item.nonEmptyCount > 1)
+      .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
 
     if (!bestCandidate) {
-      importHeaders = cleaned.find(row => row.some(cell => cell)) || [];
-      importRows = cleaned.slice(1).filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
+      const fallbackIndex = cleaned.findIndex(row => row.filter(cell => cell).length > 1);
+      const headerIndex = fallbackIndex >= 0 ? fallbackIndex : cleaned.findIndex(row => row.some(cell => cell));
+      importHeaders = headerIndex >= 0 ? cleaned[headerIndex] : [];
+      importRows = cleaned
+        .slice((headerIndex >= 0 ? headerIndex + 1 : 0))
+        .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
       renderImportPreview();
       return;
     }
@@ -1743,7 +1748,7 @@ function getImportSchema() {
   if (importType === 'inventario') {
     return {
       required: [
-        { label: 'Link', keys: ['link', 'link de internet', 'internet'], fallbackIndex: 1 },
+        { label: 'Link', keys: ['link', 'link de internet', 'internet', 'descricao', 'descrição'], fallbackIndex: 0 },
         { label: 'Local', keys: ['local'], fallbackIndex: 4 }
       ]
     };
@@ -1934,7 +1939,7 @@ function mapImportRows() {
   if (importType === 'inventario') {
     return importRows.map(r => ({
       categoria: getValue(r, ['categoria'], 0),
-      link: getValue(r, ['link', 'link de internet', 'internet'], 1),
+      link: getValue(r, ['link', 'link de internet', 'internet', 'descricao', 'descrição'], 0),
       velocidade: getValue(r, ['velocidade', 'velocidade dl/ul', 'download', 'upload'], 2),
       telefone: getValue(r, ['telefone', 'contato'], 3),
       local: getValue(r, ['local'], 4),
