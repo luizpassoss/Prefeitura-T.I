@@ -71,6 +71,7 @@ if (btnNovaAba) {
   const savedTheme = localStorage.getItem('ti-theme');
   const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+  updateFilterBadges();
 
 
   /* ===========================
@@ -108,6 +109,7 @@ function updateBulkUI() {
      =========================== */
   async function fetchData(){
     try{
+      setTableLoading('tbody', true, 7);
       const res = await fetch(API_URL);
       data = await res.json();
       applyFilters();
@@ -120,6 +122,7 @@ function updateBulkUI() {
 
   async function fetchMachines(){
     try{
+      setTableLoading('mtbody', true, 7);
       const res = await fetch(API_MAQUINAS);
       machineData = await res.json();
       applyMachineFilters();
@@ -164,6 +167,75 @@ function updateBulkUI() {
         ws[cellRef].s = mergeStyle(ws[cellRef].s || {}, style);
       }
     }
+  }
+
+  function setTableLoading(tbodyId, isLoading, colspan, message = 'Carregando registros...') {
+    const tbodyEl = document.getElementById(tbodyId);
+    if (!tbodyEl) return;
+    if (isLoading) {
+      tbodyEl.innerHTML = `
+        <tr class="loading-row">
+          <td colspan="${colspan}">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            ${message}
+          </td>
+        </tr>
+      `;
+    }
+  }
+
+  function focusFirstField(modalEl) {
+    if (!modalEl) return;
+    requestAnimationFrame(() => {
+      const target = modalEl.querySelector('[data-autofocus], input, select, textarea, button');
+      if (target) target.focus();
+    });
+  }
+
+  function buildExcelSheet({ title, headers, rows, colWidths }) {
+    const wsData = [
+      [title],
+      headers,
+      ...rows
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const lastCol = XLSX.utils.encode_col(headers.length - 1);
+    const lastCell = XLSX.utils.encode_cell({ r: wsData.length - 1, c: headers.length - 1 });
+
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }
+    ];
+    ws['!cols'] = colWidths || headers.map(() => ({ wch: 22 }));
+
+    Object.keys(ws).forEach(cell => {
+      if (!cell.startsWith('!')) {
+        ws[cell].s = {
+          alignment: {
+            vertical: 'center',
+            horizontal: 'left',
+            wrapText: true
+          }
+        };
+      }
+    });
+
+    const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
+    applyRangeStyle(ws, `A1:${lastCol}1`, {
+      font: { bold: true },
+      alignment: { horizontal: 'center' },
+      fill: headerFill
+    });
+    applyRangeStyle(ws, `A2:${lastCol}2`, {
+      font: { bold: true },
+      alignment: { horizontal: 'center' },
+      fill: headerFill
+    });
+    applyRangeStyle(ws, `A1:${lastCell}`, {
+      border: XLSX_BORDER
+    });
+
+    return ws;
   }
 
   function toggleFilters(panelId, button) {
@@ -233,7 +305,7 @@ function updateBulkUI() {
   function renderTable(list){
     tbody.innerHTML = '';
     if(!list || list.length === 0){
-      tbody.innerHTML = '<tr><td colspan="6" style="padding:22px;color:#9fb6d9">Nenhum registro encontrado.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:22px;color:#9fb6d9">Nenhum registro encontrado.</td></tr>';
       updateBulkUI();
       return;
     }
@@ -420,6 +492,41 @@ if (cat !== "All") {
   return list;
 }
 
+function updateFilterBadge(type, count) {
+  const badge = document.querySelector(`[data-filter-badge="${type}"]`);
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = String(count);
+    badge.classList.remove('hidden');
+  } else {
+    badge.textContent = '';
+    badge.classList.add('hidden');
+  }
+}
+
+function updateFilterBadges() {
+  const q = (document.getElementById('q')?.value || '').trim();
+  const cat = (document.getElementById('filterCategoryInv')?.value || 'All');
+  const value = (document.getElementById('filterValueInv')?.value || '').trim();
+  const local = (document.getElementById('filterLocalInv')?.value || '').trim();
+  const vel = (document.getElementById('filterVelInv')?.value || '').trim();
+  const tel = (document.getElementById('filterTelInv')?.value || '').trim();
+  const invCount = [q, value, local, vel, tel].filter(Boolean).length + (cat !== 'All' ? 1 : 0);
+
+  const mq = (document.getElementById('mq')?.value || '').trim();
+  const status = (document.getElementById('filterMachineStatus')?.value || 'All');
+  const mqLocal = (document.getElementById('filterMachineLocal')?.value || '').trim();
+  const mqCount = [mq, mqLocal].filter(Boolean).length + (status !== 'All' ? 1 : 0);
+
+  const modSearch = (document.getElementById('moduloSearch')?.value || '').trim();
+  const modValue = (document.getElementById('moduloFilterValue')?.value || '').trim();
+  const modCount = [modSearch, modValue].filter(Boolean).length;
+
+  updateFilterBadge('inventory', invCount);
+  updateFilterBadge('machines', mqCount);
+  updateFilterBadge('modules', modCount);
+}
+
 function clearInventoryFilters() {
   const catEl = document.getElementById('filterCategoryInv');
   if (catEl) catEl.value = 'All';
@@ -455,7 +562,10 @@ async function carregarLogoPrefeitura() {
 }
 
 
-  function applyFilters(){ renderTable(getFiltered()); }
+  function applyFilters(){
+    renderTable(getFiltered());
+    updateFilterBadges();
+  }
   function renderPills({q, cat, tel, vmin, vmax}){
     pillsArea.innerHTML = '';
     if(cat && cat!=='All') pillsArea.append(createPill('Categoria', cat));
@@ -476,6 +586,7 @@ async function carregarLogoPrefeitura() {
     document.getElementById('modalTitle').innerText = 'Novo Registro';
     resetModal();
     showModal(modal);
+    focusFirstField(modal);
   }
   function closeModal(){ hideModal(modal); }
   function closeModalIfClicked(e){ if(e.target === modal) closeModal(); }
@@ -520,6 +631,7 @@ async function carregarLogoPrefeitura() {
     document.getElementById('inpEnd').value = it.endereco||'';
 
     showModal(modal);
+    focusFirstField(modal);
   }
 const mLocalSelect = document.getElementById('mLocal');
 const mLocalOutro = document.getElementById('mLocalOutro');
@@ -584,11 +696,23 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
   }
 
   async function removeItem(idx){
+    const item = data[idx];
+    const deletedItem = item ? {
+      categoria: item.categoria || '',
+      link: item.link || '',
+      velocidade: item.velocidade || '',
+      telefone: item.telefone || '',
+      local: item.local || '',
+      endereco: item.endereco || ''
+    } : null;
     showConfirm('Remover este registro?', async () => {
       try {
         const id = data[idx].id;
         await fetch(`${API_URL}/${id}`, { method:'DELETE' });
         await fetchData();
+        if (deletedItem) {
+          showUndoToast({ type: 'inventario', items: [deletedItem] });
+        }
       } catch(err){
         console.error('Erro remover item:', err);
         showMessage('Erro ao remover item.');
@@ -704,116 +828,29 @@ function exportInventarioExcel(rows) {
   const wb = XLSX.utils.book_new();
 
   const headers = ['Descrição', 'Quantidade', 'Velocidade', 'Telefone', 'Local', 'Endereço', 'Observações'];
-  const wsData = [
-    ['Prefeitura Municipal de São Francisco do Sul'],
-    ['Secretaria Municipal de Tecnologia da Informação'],
-    ['Relatório de Links e Conexões'],
-    []
-  ];
-  const merges = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
-  ];
+  const rowsData = rows.map(r => ([
+    r.link,
+    1,
+    r.velocidade,
+    r.telefone,
+    r.local,
+    r.endereco,
+    ''
+  ]));
 
-  const grouped = rows.reduce((acc, row) => {
-    const key = row.categoria || 'Sem categoria';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(row);
-    return acc;
-  }, {});
-
-  Object.entries(grouped).forEach(([categoria, items]) => {
-    const startRow = wsData.length;
-    wsData.push([categoria.toUpperCase()]);
-    merges.push({
-      s: { r: startRow, c: 0 },
-      e: { r: startRow, c: headers.length - 1 }
-    });
-
-    wsData.push(headers);
-
-    items.forEach(r => {
-      wsData.push([
-        r.link,
-        1,
-        r.velocidade,
-        r.telefone,
-        r.local,
-        r.endereco,
-        ''
-      ]);
-    });
-
-    wsData.push(['TOTAL', items.length, '', '', '', '', '']);
-    wsData.push([]);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // ===== MERGES =====
-  ws['!merges'] = merges;
-
-  // ===== COLUNAS =====
-  ws['!cols'] = [
-    { wch: 54 },
-    { wch: 12 },
-    { wch: 16 },
-    { wch: 16 },
-    { wch: 18 },
-    { wch: 26 },
-    { wch: 28 }
-  ];
-
-  const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-  const sectionFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-
-  Object.keys(ws).forEach(cell => {
-    if (!cell.startsWith('!')) {
-      ws[cell].s = {
-        alignment: {
-          vertical: 'center',
-          horizontal: 'left',
-          wrapText: true
-        }
-      };
-    }
-  });
-
-  const lastRow = wsData.length - 1;
-  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: lastRow, c: headers.length - 1 })}`, {
-    border: XLSX_BORDER
-  });
-  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
-    font: { bold: true },
-    alignment: { horizontal: 'center' },
-    fill: headerFill
-  });
-
-  wsData.forEach((row, idx) => {
-    if (!row || row.length === 0) return;
-    if (row.length === 1 && idx > 2) {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        alignment: { horizontal: 'center' },
-        fill: sectionFill
-      });
-      return;
-    }
-    if (row[0] === 'TOTAL') {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        fill: headerFill
-      });
-      return;
-    }
-    if (row[0] === headers[0]) {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        alignment: { horizontal: 'center' },
-        fill: headerFill
-      });
-    }
+  const ws = buildExcelSheet({
+    title: 'PREFEITURA',
+    headers,
+    rows: rowsData,
+    colWidths: [
+      { wch: 54 },
+      { wch: 12 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 26 },
+      { wch: 28 }
+    ]
   });
 
   XLSX.utils.book_append_sheet(wb, ws, 'Inventário TI');
@@ -830,7 +867,7 @@ function exportInventarioExcel(rows) {
   function renderMachines(list){
     mtbody.innerHTML = '';
     if(!list || list.length===0){
-      mtbody.innerHTML = `<tr><td colspan="5" style="padding:22px;color:#9fb6d9">Nenhuma máquina encontrada.</td></tr>`;
+      mtbody.innerHTML = `<tr><td colspan="7" style="padding:22px;color:#9fb6d9">Nenhuma máquina encontrada.</td></tr>`;
       return;
     }
 
@@ -975,6 +1012,7 @@ mtbody.addEventListener('click', (e) => {
   }
 
   renderMachines(list);
+  updateFilterBadges();
 }
 
   function clearMachineFilters(){
@@ -994,11 +1032,30 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
   /* ===========================
      MODAL MÁQUINAS
      =========================== */
+  const MACHINE_PREFIXES = ['PMSFS-DT', 'SMSSFS-DT'];
+
+  function parseMachineName(nome = '') {
+    const trimmed = (nome || '').trim();
+    const match = MACHINE_PREFIXES.find(prefix => trimmed.startsWith(`${prefix}-`));
+    if (match) {
+      return { prefix: match, numero: trimmed.slice(match.length + 1) };
+    }
+    return { prefix: MACHINE_PREFIXES[0], numero: trimmed };
+  }
+
+  function buildMachineName() {
+    const prefix = document.getElementById('mNomePrefix')?.value || MACHINE_PREFIXES[0];
+    const numero = (document.getElementById('mNomeNumero')?.value || '').trim();
+    if (!numero) return '';
+    return `${prefix}-${numero}`;
+  }
+
   function openMachineModal(){
     machineEditIndex = -1;
     document.getElementById('machineModalTitle').innerText = 'Nova Máquina';
     
-    if(document.getElementById('mNome')) document.getElementById('mNome').value='';
+    if(document.getElementById('mNomePrefix')) document.getElementById('mNomePrefix').value = MACHINE_PREFIXES[0];
+    if(document.getElementById('mNomeNumero')) document.getElementById('mNomeNumero').value = '';
     if(document.getElementById('mPatrimonio')) document.getElementById('mPatrimonio').value='';
     if(document.getElementById('mLocal')) document.getElementById('mLocal').value='';
     if(document.getElementById('mDescricao')) document.getElementById('mDescricao').value='';
@@ -1008,6 +1065,7 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
 
 
     showModal(machineModal);
+    focusFirstField(machineModal);
   }
   function closeMachineModal(){ hideModal(machineModal); }
   function closeMachineModalIfClicked(e) {
@@ -1024,7 +1082,9 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
     document.getElementById('machineModalTitle').innerText = 'Editar Máquina';
     document.getElementById('mStatus').value = it.status || 'Ativa';
 
-    if(document.getElementById('mNome')) document.getElementById('mNome').value = it.nome_maquina || '';
+    const parsedName = parseMachineName(it.nome_maquina || '');
+    if(document.getElementById('mNomePrefix')) document.getElementById('mNomePrefix').value = parsedName.prefix;
+    if(document.getElementById('mNomeNumero')) document.getElementById('mNomeNumero').value = parsedName.numero;
     if(document.getElementById('mPatrimonio')) document.getElementById('mPatrimonio').value = it.patrimonio || '';
     const localSelect = document.getElementById('mLocal');
 const localOutroInput = document.getElementById('mLocalOutro');
@@ -1049,6 +1109,7 @@ if (localSelect && [...localSelect.options].some(o => o.value === it.local)) {
 }
 
     showModal(machineModal);
+    focusFirstField(machineModal);
   }
 
   /* ===========================
@@ -1063,7 +1124,7 @@ async function saveMachine(){
   }
 
   const item = {
-    nome_maquina: (document.getElementById('mNome')?.value || '').trim(),
+    nome_maquina: buildMachineName(),
     patrimonio: (document.getElementById('mPatrimonio')?.value || '').trim(),
     local,
     descricao: (document.getElementById('mDescricao')?.value || '').trim(),
@@ -1077,7 +1138,7 @@ if(!item.local){
 
 
   if(!item.nome_maquina){
-    showMessage("Preencha o nome da máquina.");
+    showMessage("Informe o número da máquina.");
     return;
   }
 
@@ -1114,11 +1175,22 @@ if(!item.local){
 
 
   async function deleteMachine(idx){
+    const item = machineData[idx];
+    const deletedItem = item ? {
+      nome_maquina: item.nome_maquina || '',
+      patrimonio: item.patrimonio || '',
+      local: item.local || '',
+      descricao: item.descricao || '',
+      status: item.status || 'Ativa'
+    } : null;
     showConfirm('Remover esta máquina?', async () => {
       try{
         const id = machineData[idx].id;
         await fetch(`${API_MAQUINAS}/${id}`, { method:'DELETE' });
         await fetchMachines();
+        if (deletedItem) {
+          showUndoToast({ type: 'maquinas', items: [deletedItem] });
+        }
       } catch(err){
         console.error('Erro deletar máquina:', err);
         showMessage('Erro ao deletar máquina.');
@@ -1280,116 +1352,29 @@ function exportMaquinasExcel(rows) {
   const wb = XLSX.utils.book_new();
 
   const headers = ['Máquina', 'Quantidade', 'Patrimônio', 'Local', 'Status', 'Descrição', 'Observações'];
-  const wsData = [
-    ['Prefeitura Municipal de São Francisco do Sul'],
-    ['Secretaria Municipal de Tecnologia da Informação'],
-    ['Relatório de Inventário de Máquinas'],
-    []
-  ];
-  const merges = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
-  ];
+  const rowsData = rows.map(r => ([
+    r.nome,
+    1,
+    r.patrimonio,
+    r.local,
+    r.status,
+    r.descricao,
+    ''
+  ]));
 
-  const grouped = rows.reduce((acc, row) => {
-    const key = row.status || 'Sem status';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(row);
-    return acc;
-  }, {});
-
-  Object.entries(grouped).forEach(([status, items]) => {
-    const startRow = wsData.length;
-    wsData.push([status.toUpperCase()]);
-    merges.push({
-      s: { r: startRow, c: 0 },
-      e: { r: startRow, c: headers.length - 1 }
-    });
-
-    wsData.push(headers);
-
-    items.forEach(r => {
-      wsData.push([
-        r.nome,
-        1,
-        r.patrimonio,
-        r.local,
-        r.status,
-        r.descricao,
-        ''
-      ]);
-    });
-
-    wsData.push(['TOTAL', items.length, '', '', '', '', '']);
-    wsData.push([]);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // ===== MERGES (Cabeçalho) =====
-  ws['!merges'] = merges;
-
-  // ===== LARGURA DAS COLUNAS =====
-  ws['!cols'] = [
-    { wch: 30 },
-    { wch: 12 },
-    { wch: 16 },
-    { wch: 20 },
-    { wch: 14 },
-    { wch: 40 },
-    { wch: 28 }
-  ];
-
-  const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-  const sectionFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-
-  Object.keys(ws).forEach(cell => {
-    if (!cell.startsWith('!')) {
-      ws[cell].s = {
-        alignment: {
-          vertical: 'center',
-          horizontal: 'left',
-          wrapText: true
-        }
-      };
-    }
-  });
-
-  const lastRow = wsData.length - 1;
-  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: lastRow, c: headers.length - 1 })}`, {
-    border: XLSX_BORDER
-  });
-  applyRangeStyle(ws, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
-    font: { bold: true },
-    alignment: { horizontal: 'center' },
-    fill: headerFill
-  });
-
-  wsData.forEach((row, idx) => {
-    if (!row || row.length === 0) return;
-    if (row.length === 1 && idx > 2) {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        alignment: { horizontal: 'center' },
-        fill: sectionFill
-      });
-      return;
-    }
-    if (row[0] === 'TOTAL') {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        fill: headerFill
-      });
-      return;
-    }
-    if (row[0] === headers[0]) {
-      applyRangeStyle(ws, `A${idx + 1}:${XLSX.utils.encode_col(headers.length - 1)}${idx + 1}`, {
-        font: { bold: true },
-        alignment: { horizontal: 'center' },
-        fill: headerFill
-      });
-    }
+  const ws = buildExcelSheet({
+    title: 'PREFEITURA',
+    headers,
+    rows: rowsData,
+    colWidths: [
+      { wch: 30 },
+      { wch: 12 },
+      { wch: 16 },
+      { wch: 20 },
+      { wch: 14 },
+      { wch: 40 },
+      { wch: 28 }
+    ]
   });
 
   XLSX.utils.book_append_sheet(wb, ws, 'Máquinas');
@@ -1439,6 +1424,74 @@ if (telInput) {
     this.value = v;
   });
 }
+
+let undoState = { timer: null, payload: null };
+
+function hideUndoToast() {
+  const toast = document.getElementById('undoToast');
+  if (toast) toast.classList.add('hidden');
+  if (undoState.timer) clearTimeout(undoState.timer);
+  undoState = { timer: null, payload: null };
+}
+
+async function restoreDeletedItems(payload) {
+  if (!payload) return;
+  try {
+    if (payload.type === 'inventario') {
+      await Promise.all(payload.items.map(item =>
+        fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(item)
+        })
+      ));
+      await fetchData();
+    } else if (payload.type === 'maquinas') {
+      await Promise.all(payload.items.map(item =>
+        fetch(API_MAQUINAS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(item)
+        })
+      ));
+      await fetchMachines();
+    } else if (payload.type === 'modulo') {
+      await Promise.all(payload.items.map(item =>
+        fetch(`${API_MODULOS}/${payload.moduloId}/registros`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ valores: item })
+        })
+      ));
+      await carregarRegistrosModulo();
+      renderModuloDinamico();
+    }
+    showMessage('Exclusão desfeita com sucesso.');
+  } catch (err) {
+    console.error('Erro ao desfazer exclusão:', err);
+    showMessage('Não foi possível desfazer a exclusão.');
+  } finally {
+    hideUndoToast();
+  }
+}
+
+function showUndoToast(payload) {
+  const toast = document.getElementById('undoToast');
+  const text = document.getElementById('undoToastText');
+  const button = document.getElementById('undoToastButton');
+  if (!toast || !text || !button) return;
+
+  const count = payload.items.length;
+  text.textContent = `${count} item${count > 1 ? 's' : ''} excluído${count > 1 ? 's' : ''}.`;
+  button.onclick = () => restoreDeletedItems(payload);
+
+  toast.classList.remove('hidden');
+  if (undoState.timer) clearTimeout(undoState.timer);
+  undoState = {
+    payload,
+    timer: setTimeout(() => hideUndoToast(), 6000)
+  };
+}
 async function deleteSelected() {
   const isInventario = selectedInvIds.size > 0;
   const isMaquinas = !isInventario && selectedMaqIds.size > 0;
@@ -1450,6 +1503,33 @@ async function deleteSelected() {
       : [...selectedModuloIds];
 
   if (!ids.length) return;
+
+  const deletedItems = isInventario
+    ? data.filter(item => ids.includes(item.id)).map(item => ({
+      categoria: item.categoria || '',
+      link: item.link || '',
+      velocidade: item.velocidade || '',
+      telefone: item.telefone || '',
+      local: item.local || '',
+      endereco: item.endereco || ''
+    }))
+    : isMaquinas
+      ? machineData.filter(item => ids.includes(item.id)).map(item => ({
+        nome_maquina: item.nome_maquina || '',
+        patrimonio: item.patrimonio || '',
+        local: item.local || '',
+        descricao: item.descricao || '',
+        status: item.status || 'Ativa'
+      }))
+      : moduloRegistros
+        .filter(item => ids.includes(item.id))
+        .map(item => {
+          const valores = {};
+          moduloCampos.forEach(campo => {
+            valores[campo.nome] = item[campo.nome] ?? '';
+          });
+          return valores;
+        });
 
   showConfirm(`Excluir ${ids.length} item(ns)?`, async () => {
     try {
@@ -1479,6 +1559,14 @@ async function deleteSelected() {
       } else if (isModulo) {
         await carregarRegistrosModulo();
         renderModuloDinamico();
+      }
+
+      if (deletedItems.length) {
+        showUndoToast({
+          type: isInventario ? 'inventario' : isMaquinas ? 'maquinas' : 'modulo',
+          items: deletedItems,
+          moduloId: moduloAtual?.id
+        });
       }
 
     } catch (err) {
@@ -1544,10 +1632,20 @@ function openImportModal(type) {
   document.getElementById('importPreviewTable').querySelector('thead').innerHTML = '';
   document.getElementById('importPreviewTable').querySelector('tbody').innerHTML = '';
   document.getElementById('importFile').value = '';
+  const fileName = document.getElementById('importFileName');
+  if (fileName) fileName.textContent = 'Nenhum arquivo selecionado';
+  const validationEl = document.getElementById('importValidation');
+  if (validationEl) {
+    validationEl.classList.add('hidden');
+    validationEl.innerHTML = '';
+  }
   document.getElementById('importStepUpload')?.classList.remove('hidden');
   document.getElementById('importStepPreview')?.classList.add('hidden');
   const actionBtn = document.getElementById('importActionBtn');
-  if (actionBtn) actionBtn.textContent = 'Confirmar Importação';
+  if (actionBtn) {
+    actionBtn.textContent = 'Confirmar Importação';
+    actionBtn.disabled = false;
+  }
   openModalById('importModal');
 
 
@@ -1557,8 +1655,18 @@ function closeImportModal() {
   document.getElementById('importModal').classList.remove('show');
   document.getElementById('importStepPreview')?.classList.add('hidden');
   document.getElementById('importStepUpload')?.classList.remove('hidden');
+  const validationEl = document.getElementById('importValidation');
+  if (validationEl) {
+    validationEl.classList.add('hidden');
+    validationEl.innerHTML = '';
+  }
+  const fileName = document.getElementById('importFileName');
+  if (fileName) fileName.textContent = 'Nenhum arquivo selecionado';
   const actionBtn = document.getElementById('importActionBtn');
-  if (actionBtn) actionBtn.textContent = 'Confirmar Importação';
+  if (actionBtn) {
+    actionBtn.textContent = 'Confirmar Importação';
+    actionBtn.disabled = false;
+  }
 }
 
 function closeImportModalIfClicked(e) {
@@ -1566,6 +1674,10 @@ function closeImportModalIfClicked(e) {
 }
 function handleImportFile() {
   const file = document.getElementById('importFile').files[0];
+  const fileName = document.getElementById('importFileName');
+  if (fileName) {
+    fileName.textContent = file?.name || 'Nenhum arquivo selecionado';
+  }
   if (!file) return;
 
   const reader = new FileReader();
@@ -1585,12 +1697,84 @@ function handleImportFile() {
 
   reader.readAsBinaryString(file);
 }
+
+function getImportSchema() {
+  if (importType === 'inventario') {
+    return {
+      required: [
+        { label: 'Link', keys: ['link', 'link de internet', 'internet'], fallbackIndex: 1 },
+        { label: 'Local', keys: ['local'], fallbackIndex: 4 }
+      ]
+    };
+  }
+
+  if (importType === 'maquinas') {
+    return {
+      required: [
+        { label: 'Nome da Máquina', keys: ['nome', 'nome maquina', 'nome da maquina', 'maquina', 'máquina'], fallbackIndex: 0 },
+        { label: 'Local', keys: ['local'], fallbackIndex: 2 }
+      ]
+    };
+  }
+
+  return { required: [] };
+}
+
+function resolveImportColumnIndex(headerMap, keys, fallbackIndex) {
+  for (const key of keys) {
+    const idx = headerMap[normalizeHeader(key)];
+    if (idx !== undefined) return idx;
+  }
+  if (fallbackIndex !== undefined && fallbackIndex < importHeaders.length) {
+    return fallbackIndex;
+  }
+  return null;
+}
+
+function validateImportRows() {
+  if (importType === 'modulo') {
+    return { issues: [], cellIssues: new Set(), errorCount: 0 };
+  }
+
+  const headerMap = importHeaders.reduce((acc, header, idx) => {
+    const key = normalizeHeader(header);
+    if (key) acc[key] = idx;
+    return acc;
+  }, {});
+
+  const schema = getImportSchema();
+  const issues = [];
+  const cellIssues = new Set();
+  let errorCount = 0;
+
+  const resolved = schema.required.map(req => {
+    const idx = resolveImportColumnIndex(headerMap, req.keys, req.fallbackIndex);
+    if (idx === null) {
+      issues.push(`Coluna obrigatória não encontrada: ${req.label}.`);
+    }
+    return { ...req, idx };
+  });
+
+  importRows.forEach((row, rowIdx) => {
+    resolved.forEach(req => {
+      if (req.idx === null) return;
+      const value = (row[req.idx] ?? '').toString().trim();
+      if (!value) {
+        cellIssues.add(`${rowIdx}-${req.idx}`);
+        errorCount += 1;
+      }
+    });
+  });
+
+  return { issues, cellIssues, errorCount };
+}
 function renderImportPreview() {
   const thead = document.querySelector('#importPreviewTable thead');
   const tbody = document.querySelector('#importPreviewTable tbody');
   const preview = document.getElementById('importStepPreview');
   const actionBtn = document.getElementById('importActionBtn');
   const uploadStep = document.getElementById('importStepUpload');
+  const validationEl = document.getElementById('importValidation');
 
   thead.innerHTML = `
     <tr>
@@ -1601,12 +1785,18 @@ function renderImportPreview() {
 
   tbody.innerHTML = '';
 
+  const validation = validateImportRows();
+  const cellIssues = validation.cellIssues;
+
   importRows.forEach((row, idx) => {
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
       ${row.map((cell, cidx) => `
         <td contenteditable="true"
+            data-row="${idx}"
+            data-col="${cidx}"
+            class="${cellIssues.has(`${idx}-${cidx}`) ? 'import-error' : ''}"
             oninput="updateImportCell(${idx}, ${cidx}, this.innerText)">
           ${cell ?? ''}
         </td>
@@ -1625,16 +1815,65 @@ function renderImportPreview() {
   uploadStep?.classList.add('hidden');
   if (actionBtn) {
     actionBtn.textContent = `Importar ${importRows.length} linha(s)`;
+    actionBtn.disabled = false;
+  }
+
+  if (validationEl) {
+    if (validation.issues.length || validation.errorCount > 0) {
+      const issuesText = validation.issues.length
+        ? `<div>Campos ausentes serão importados em branco:</div><ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul>`
+        : '';
+      const rowsText = validation.errorCount > 0
+        ? `<div>Existem ${validation.errorCount} célula(s) obrigatória(s) vazia(s). Você pode importar e editar depois.</div>`
+        : '';
+      validationEl.innerHTML = `${issuesText}${rowsText}`;
+      validationEl.classList.remove('hidden');
+    } else {
+      validationEl.classList.add('hidden');
+      validationEl.innerHTML = '';
+    }
   }
 }
 
 function updateImportCell(row, col, value) {
   importRows[row][col] = value;
+  applyImportValidation();
 }
 
 function removeImportRow(index) {
   importRows.splice(index, 1);
   renderImportPreview();
+}
+
+function applyImportValidation() {
+  const validation = validateImportRows();
+  const validationEl = document.getElementById('importValidation');
+  const actionBtn = document.getElementById('importActionBtn');
+
+  document.querySelectorAll('#importPreviewTable tbody td[data-row]').forEach(td => {
+    const key = `${td.dataset.row}-${td.dataset.col}`;
+    td.classList.toggle('import-error', validation.cellIssues.has(key));
+  });
+
+  if (actionBtn) {
+    actionBtn.disabled = false;
+  }
+
+  if (validationEl) {
+    if (validation.issues.length || validation.errorCount > 0) {
+      const issuesText = validation.issues.length
+        ? `<div>Campos ausentes serão importados em branco:</div><ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul>`
+        : '';
+      const rowsText = validation.errorCount > 0
+        ? `<div>Existem ${validation.errorCount} célula(s) obrigatória(s) vazia(s). Você pode importar e editar depois.</div>`
+        : '';
+      validationEl.innerHTML = `${issuesText}${rowsText}`;
+      validationEl.classList.remove('hidden');
+    } else {
+      validationEl.classList.add('hidden');
+      validationEl.innerHTML = '';
+    }
+  }
 }
 function mapImportRows() {
   const headerMap = importHeaders.reduce((acc, header, idx) => {
@@ -1823,52 +2062,14 @@ function exportModulo(tipo) {
 
 function exportModuloExcel() {
   const headers = moduloCampos.map(c => c.nome);
-  const wsData = [
-    ['Prefeitura Municipal de São Francisco do Sul'],
-    ['Secretaria Municipal de Tecnologia da Informação'],
-    [`Relatório de ${moduloAtual?.nome || 'Módulo'}`],
-    [],
-    headers
-  ];
+  const rows = moduloRegistros.map(row => (
+    headers.map(h => row[h] || '')
+  ));
 
-  moduloRegistros.forEach(row => {
-    wsData.push(headers.map(h => row[h] || ''));
-  });
-
-  const worksheet = XLSX.utils.aoa_to_sheet(wsData);
-  worksheet['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
-  ];
-  worksheet['!cols'] = headers.map(() => ({ wch: 22 }));
-  worksheet['!freeze'] = { xSplit: 0, ySplit: 5 };
-
-  Object.keys(worksheet).forEach(cell => {
-    if (!cell.startsWith('!')) {
-      worksheet[cell].s = {
-        alignment: {
-          vertical: 'center',
-          horizontal: 'left',
-          wrapText: true
-        }
-      };
-    }
-  });
-
-  const headerFill = { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } };
-  applyRangeStyle(worksheet, `A1:${XLSX.utils.encode_cell({ r: 2, c: headers.length - 1 })}`, {
-    font: { bold: true },
-    alignment: { horizontal: 'center' },
-    fill: headerFill
-  });
-  applyRangeStyle(worksheet, `A5:${XLSX.utils.encode_col(headers.length - 1)}5`, {
-    font: { bold: true },
-    alignment: { horizontal: 'center' },
-    fill: headerFill
-  });
-  applyRangeStyle(worksheet, `A1:${XLSX.utils.encode_cell({ r: wsData.length - 1, c: headers.length - 1 })}`, {
-    border: XLSX_BORDER
+  const worksheet = buildExcelSheet({
+    title: (moduloAtual?.nome || 'Prefeitura').toUpperCase(),
+    headers,
+    rows
   });
 
   const workbook = XLSX.utils.book_new();
@@ -2030,6 +2231,10 @@ async function carregarCamposModulo() {
 }
 
 async function carregarRegistrosModulo() {
+  const colspan = (moduloCampos?.length || 0) + 2;
+  if (colspan > 1) {
+    setTableLoading('moduloTbody', true, colspan);
+  }
   const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`);
   moduloRegistros = await res.json();
 }
@@ -2220,8 +2425,17 @@ function clearModuloFilters() {
 
 function filtrarModulo() {
   renderModuloDinamico();
+  updateFilterBadges();
 }
 async function excluirRegistroModulo(id) {
+  const item = moduloRegistros.find(row => row.id === id);
+  const deletedItem = item ? (() => {
+    const valores = {};
+    moduloCampos.forEach(campo => {
+      valores[campo.nome] = item[campo.nome] ?? '';
+    });
+    return valores;
+  })() : null;
   showConfirm('Remover este registro?', async () => {
     await fetch(`${API_MODULOS}/${moduloAtual.id}/registros/${id}`, {
       method: 'DELETE'
@@ -2231,6 +2445,9 @@ async function excluirRegistroModulo(id) {
     updateBulkUI();
     await carregarRegistrosModulo();
     renderModuloDinamico();
+    if (deletedItem) {
+      showUndoToast({ type: 'modulo', items: [deletedItem], moduloId: moduloAtual.id });
+    }
   }, 'Confirmar exclusão');
 }
 
@@ -2260,7 +2477,7 @@ function renderFormularioModulo(valores = {}) {
   const container = document.getElementById('moduloFormFields');
   container.innerHTML = '';
 
-  moduloCampos.forEach(campo => {
+  moduloCampos.forEach((campo, index) => {
     const field = document.createElement('div');
     field.className = 'form-full';
 
@@ -2298,6 +2515,9 @@ function renderFormularioModulo(valores = {}) {
 
     input.dataset.field = campo.nome;
     input.dataset.required = campo.obrigatorio ? 'true' : 'false';
+    if (index === 0) {
+      input.dataset.autofocus = 'true';
+    }
 
     field.appendChild(label);
     field.appendChild(input);
@@ -2685,6 +2905,42 @@ function closeAllModals() {
   document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));
 }
 
+function closeModalByEsc(modalEl) {
+  if (!modalEl) return;
+  switch (modalEl.id) {
+    case 'modal':
+      closeModal();
+      break;
+    case 'machineModal':
+      closeMachineModal();
+      break;
+    case 'descModal':
+      closeDescModal();
+      break;
+    case 'importModal':
+      closeImportModal();
+      break;
+    case 'createTabModal':
+      closeCreateTabModal();
+      break;
+    case 'moduloRegistroModal':
+      closeModuloRegistroModal();
+      break;
+    case 'confirmDeleteModuloModal':
+      closeConfirmDeleteModulo();
+      break;
+    case 'systemMessageModal':
+      closeSystemMessageModal();
+      break;
+    case 'systemConfirmModal':
+      closeSystemConfirmModal();
+      break;
+    default:
+      modalEl.classList.remove('show');
+      break;
+  }
+}
+
 /**
  * Abre um modal por ID (sem conflitar com openModal do inventário).
  * Ex: openModalById('createTabModal')
@@ -2695,6 +2951,7 @@ function openModalById(id) {
   if (el) {
     el.classList.remove('hidden');
     el.classList.add('show');
+    focusFirstField(el);
   }
 }
 
@@ -2725,6 +2982,15 @@ document.addEventListener('click', (e) => {
     inv?.classList.add('hidden');
     mq?.classList.add('hidden');
     mod?.classList.add('hidden');
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const openModals = [...document.querySelectorAll('.modal.show')];
+  const topModal = openModals[openModals.length - 1];
+  if (topModal) {
+    closeModalByEsc(topModal);
   }
 });
 
