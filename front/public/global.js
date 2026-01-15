@@ -837,15 +837,14 @@ function exportInventarioPDF(data) {
 function exportInventarioExcel(rows) {
   const wb = XLSX.utils.book_new();
 
-  const headers = ['Descrição', 'Quantidade', 'Velocidade', 'Telefone', 'Local', 'Endereço', 'Observações'];
+  const headers = ['Categoria', 'Link', 'Velocidade', 'Telefone', 'Local', 'Endereço'];
   const rowsData = rows.map(r => ([
+    r.categoria || '',
     r.link,
-    1,
     r.velocidade,
     r.telefone,
     r.local,
-    r.endereco,
-    ''
+    r.endereco
   ]));
 
   const ws = buildExcelSheet({
@@ -853,13 +852,12 @@ function exportInventarioExcel(rows) {
     headers,
     rows: rowsData,
     colWidths: [
+      { wch: 20 },
       { wch: 54 },
-      { wch: 12 },
       { wch: 16 },
       { wch: 16 },
       { wch: 18 },
-      { wch: 26 },
-      { wch: 28 }
+      { wch: 26 }
     ]
   });
 
@@ -1361,15 +1359,13 @@ function exportMaquinasPDF(data) {
 function exportMaquinasExcel(rows) {
   const wb = XLSX.utils.book_new();
 
-  const headers = ['Máquina', 'Quantidade', 'Patrimônio', 'Local', 'Status', 'Descrição', 'Observações'];
+  const headers = ['Nome da Máquina', 'Patrimônio', 'Local', 'Status', 'Descrição'];
   const rowsData = rows.map(r => ([
-    r.nome,
-    1,
+    r.nome_maquina,
     r.patrimonio,
     r.local,
     r.status,
-    r.descricao,
-    ''
+    r.descricao
   ]));
 
   const ws = buildExcelSheet({
@@ -1378,12 +1374,10 @@ function exportMaquinasExcel(rows) {
     rows: rowsData,
     colWidths: [
       { wch: 30 },
-      { wch: 12 },
       { wch: 16 },
       { wch: 20 },
       { wch: 14 },
-      { wch: 40 },
-      { wch: 28 }
+      { wch: 40 }
     ]
   });
 
@@ -1849,7 +1843,13 @@ function renderImportPreview() {
       `).join('')}
       <td>
         <button class="icon-btn delete" onclick="removeImportRow(${idx})">
-          🗑
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M8 6v14"/>
+            <path d="M16 6v14"/>
+            <path d="M5 6l1 16h12l1-16"/>
+            <path d="M9 6V4h6v2"/>
+          </svg>
         </button>
       </td>
     `;
