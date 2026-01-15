@@ -1632,6 +1632,8 @@ function openImportModal(type) {
   document.getElementById('importPreviewTable').querySelector('thead').innerHTML = '';
   document.getElementById('importPreviewTable').querySelector('tbody').innerHTML = '';
   document.getElementById('importFile').value = '';
+  const fileName = document.getElementById('importFileName');
+  if (fileName) fileName.textContent = 'Nenhum arquivo selecionado';
   document.getElementById('importStepUpload')?.classList.remove('hidden');
   document.getElementById('importStepPreview')?.classList.add('hidden');
   const actionBtn = document.getElementById('importActionBtn');
@@ -1653,6 +1655,8 @@ function closeImportModal() {
     validationEl.classList.add('hidden');
     validationEl.innerHTML = '';
   }
+  const fileName = document.getElementById('importFileName');
+  if (fileName) fileName.textContent = 'Nenhum arquivo selecionado';
   const actionBtn = document.getElementById('importActionBtn');
   if (actionBtn) {
     actionBtn.textContent = 'Confirmar Importação';
@@ -1665,6 +1669,10 @@ function closeImportModalIfClicked(e) {
 }
 function handleImportFile() {
   const file = document.getElementById('importFile').files[0];
+  const fileName = document.getElementById('importFileName');
+  if (fileName) {
+    fileName.textContent = file?.name || 'Nenhum arquivo selecionado';
+  }
   if (!file) return;
 
   const reader = new FileReader();
@@ -1802,16 +1810,16 @@ function renderImportPreview() {
   uploadStep?.classList.add('hidden');
   if (actionBtn) {
     actionBtn.textContent = `Importar ${importRows.length} linha(s)`;
-    actionBtn.disabled = validation.errorCount > 0 || validation.issues.length > 0;
+    actionBtn.disabled = false;
   }
 
   if (validationEl) {
     if (validation.issues.length || validation.errorCount > 0) {
       const issuesText = validation.issues.length
-        ? `<ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul>`
+        ? `<div>Campos ausentes serão importados em branco:</div><ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul>`
         : '';
       const rowsText = validation.errorCount > 0
-        ? `<div>Existem ${validation.errorCount} campo(s) obrigatório(s) vazio(s).</div>`
+        ? `<div>Existem ${validation.errorCount} célula(s) obrigatória(s) vazia(s). Você pode importar e editar depois.</div>`
         : '';
       validationEl.innerHTML = `${issuesText}${rowsText}`;
       validationEl.classList.remove('hidden');
@@ -1843,16 +1851,16 @@ function applyImportValidation() {
   });
 
   if (actionBtn) {
-    actionBtn.disabled = validation.errorCount > 0 || validation.issues.length > 0;
+    actionBtn.disabled = false;
   }
 
   if (validationEl) {
     if (validation.issues.length || validation.errorCount > 0) {
       const issuesText = validation.issues.length
-        ? `<ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul>`
+        ? `<div>Campos ausentes serão importados em branco:</div><ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul>`
         : '';
       const rowsText = validation.errorCount > 0
-        ? `<div>Existem ${validation.errorCount} campo(s) obrigatório(s) vazio(s).</div>`
+        ? `<div>Existem ${validation.errorCount} célula(s) obrigatória(s) vazia(s). Você pode importar e editar depois.</div>`
         : '';
       validationEl.innerHTML = `${issuesText}${rowsText}`;
       validationEl.classList.remove('hidden');

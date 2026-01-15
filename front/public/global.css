@@ -826,6 +826,78 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: none !important;
 }
 
+#importModal .card {
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#importModal .card > *:not(.modal-footer) {
+  overflow-y: auto;
+}
+
+.import-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.file-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.file-input input[type="file"] {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.file-input-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #d9e2ec;
+  background: #f8fafc;
+  color: #1f2937;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.file-input-button:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+.file-input-name {
+  font-size: 13px;
+  color: #475569;
+}
+
+body.theme-dark .file-input-button {
+  background: #1a2335;
+  border-color: #2a364a;
+  color: #e2e8f0;
+}
+
+body.theme-dark .file-input-button:hover {
+  background: #1f2a3f;
+  border-color: #3b82f6;
+}
+
+body.theme-dark .file-input-name {
+  color: #cbd5e1;
+}
 .create-tab-card {
   max-width: 720px;
 }

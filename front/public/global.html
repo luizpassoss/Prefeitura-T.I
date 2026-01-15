@@ -562,12 +562,18 @@ class="select" onchange="applyFilters()">
     <!-- STEP 1: UPLOAD -->
     <div id="importStepUpload">
       <div class="import-header">
-        <input
-          type="file"
-          id="importFile"
-          accept=".xlsx,.xls"
-          onchange="handleImportFile()"
-        />
+        <div class="file-input">
+          <input
+            type="file"
+            id="importFile"
+            accept=".xlsx,.xls"
+            onchange="handleImportFile()"
+          />
+          <label for="importFile" class="file-input-button">
+            Selecionar planilha
+          </label>
+          <span id="importFileName" class="file-input-name">Nenhum arquivo selecionado</span>
+        </div>
         <small>Somente arquivos Excel (.xlsx)</small>
       </div>
     </div>
