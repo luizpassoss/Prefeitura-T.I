@@ -38,6 +38,11 @@
         <span class="btn-add-tab-icon" aria-hidden="true">＋</span>
       </button>
     </nav>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Alternar tema" title="Mudar para modo escuro">
+      <span class="theme-toggle-track" aria-hidden="true">
+        <span class="theme-toggle-thumb"></span>
+      </span>
+    </button>
   </aside>
 
   <!-- TAB CONTENT -->
@@ -121,15 +126,6 @@ class="select" onchange="applyFilters()">
             <option value="Saude">Saúde</option>
             <option value="Assistência Cultural">Assistência Cultural</option>
             <option value="Fundacao Cultural">Fundação Cultural</option>
-          </select>
-          <select id="filterFieldInv" class="select" onchange="applyFilters()">
-            <option value="all">Todos os campos</option>
-            <option value="link">Link de Internet</option>
-            <option value="velocidade">Velocidade</option>
-            <option value="telefone">Telefone</option>
-            <option value="local">Local</option>
-            <option value="endereco">Endereço</option>
-            <option value="categoria">Categoria</option>
           </select>
           <input id="filterValueInv" class="input" placeholder="Filtrar por valor" oninput="applyFilters()" />
           <input id="filterLocalInv" class="input" placeholder="Filtrar por local" oninput="applyFilters()" />
@@ -235,15 +231,6 @@ class="select" onchange="applyFilters()">
           <option value="Manutenção">Manutenção</option>
           <option value="Inativa">Inativa</option>
         </select>
-        <select id="filterMachineField" class="select" onchange="applyMachineFilters()">
-          <option value="all">Todos os campos</option>
-          <option value="nome_maquina">Nome</option>
-          <option value="patrimonio">Patrimônio</option>
-          <option value="local">Local</option>
-          <option value="status">Status</option>
-          <option value="descricao">Descrição</option>
-        </select>
-        <input id="filterMachineValue" class="input" placeholder="Filtrar por valor" oninput="applyMachineFilters()" />
         <input id="filterMachineLocal" class="input" placeholder="Filtrar por local" oninput="applyMachineFilters()" />
         <button class="btn cancel" type="button" onclick="clearMachineFilters()">Limpar</button>
       </div>
@@ -337,9 +324,6 @@ class="select" onchange="applyFilters()">
         </div>
 
         <div id="moduleFilters" class="filters filters-panel hidden">
-          <select id="moduloFilterField" class="select" onchange="filtrarModulo()">
-            <option value="all">Todos os campos</option>
-          </select>
           <input id="moduloFilterValue" class="input" placeholder="Filtrar por valor" oninput="filtrarModulo()" />
           <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar</button>
         </div>

@@ -44,11 +44,33 @@ let moduloDeleteTarget = null;
   const machineModal = document.getElementById('machineModal');
 
   const btnNovaAba = document.getElementById('btnNovaAba');
+  const themeToggle = document.getElementById('themeToggle');
   
 
 if (btnNovaAba) {
   btnNovaAba.addEventListener('click', openCreateTabModal);
 }
+
+  function applyTheme(theme) {
+    const isDark = theme === 'dark';
+    document.body.classList.toggle('theme-dark', isDark);
+    if (themeToggle) {
+      themeToggle.setAttribute('aria-pressed', String(isDark));
+      themeToggle.setAttribute('title', isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro');
+    }
+    localStorage.setItem('ti-theme', theme);
+  }
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const nextTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    });
+  }
+
+  const savedTheme = localStorage.getItem('ti-theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
 
 
   /* ===========================
@@ -310,7 +332,6 @@ function getFiltered() {
   // PEGAR O SELECT APENAS SE EXISTIR (ABA INVENTÁRIO)
   const catEl = document.getElementById('filterCategoryInv');
   const cat = catEl ? catEl.value : "All";
-  const fieldFilter = (document.getElementById('filterFieldInv')?.value || 'all').toLowerCase();
   const valueFilter = (document.getElementById('filterValueInv')?.value || '').trim().toLowerCase();
   const localFilter = (document.getElementById('filterLocalInv')?.value || '').trim().toLowerCase();
   const velFilter = (document.getElementById('filterVelInv')?.value || '').trim().toLowerCase();
@@ -361,12 +382,9 @@ if (cat !== "All") {
         endereco: x.endereco,
         categoria: x.categoria
       };
-      if (fieldFilter === 'all') {
-        return Object.values(fields).some(val =>
-          (val || '').toString().toLowerCase().includes(valueFilter)
-        );
-      }
-      return (fields[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
+      return Object.values(fields).some(val =>
+        (val || '').toString().toLowerCase().includes(valueFilter)
+      );
     });
   }
 
@@ -376,8 +394,6 @@ if (cat !== "All") {
 function clearInventoryFilters() {
   const catEl = document.getElementById('filterCategoryInv');
   if (catEl) catEl.value = 'All';
-  const fieldEl = document.getElementById('filterFieldInv');
-  if (fieldEl) fieldEl.value = 'all';
   const valueEl = document.getElementById('filterValueInv');
   if (valueEl) valueEl.value = '';
   const localEl = document.getElementById('filterLocalInv');
@@ -849,11 +865,9 @@ mtbody.addEventListener('click', (e) => {
   /* ===========================
      FILTROS MÁQUINAS
      =========================== */
- function applyMachineFilters() {
+  function applyMachineFilters() {
   const q = (document.getElementById('mq').value || '').trim().toLowerCase();
   const statusFilter = (document.getElementById('filterMachineStatus')?.value || 'All').toLowerCase();
-  const fieldFilter = (document.getElementById('filterMachineField')?.value || 'all').toLowerCase();
-  const valueFilter = (document.getElementById('filterMachineValue')?.value || '').trim().toLowerCase();
   const localFilter = (document.getElementById('filterMachineLocal')?.value || '').trim().toLowerCase();
 
   let list = [...machineData];
@@ -877,39 +891,17 @@ mtbody.addEventListener('click', (e) => {
     list = list.filter(x => (x.local || '').toLowerCase().includes(localFilter));
   }
 
-  if (valueFilter) {
-    list = list.filter(x => {
-      const fields = {
-        nome_maquina: x.nome_maquina,
-        patrimonio: x.patrimonio,
-        local: x.local,
-        status: x.status,
-        descricao: x.descricao
-      };
-      if (fieldFilter === 'all') {
-        return Object.values(fields).some(val =>
-          (val || '').toString().toLowerCase().includes(valueFilter)
-        );
-      }
-      return (fields[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
-    });
-  }
-
   renderMachines(list);
 }
 
   function clearMachineFilters(){
     const mqEl = document.getElementById('mq');
     if (mqEl) mqEl.value = '';
-    const statusEl = document.getElementById('filterMachineStatus');
-    if (statusEl) statusEl.value = 'All';
-    const fieldEl = document.getElementById('filterMachineField');
-    if (fieldEl) fieldEl.value = 'all';
-    const valueEl = document.getElementById('filterMachineValue');
-    if (valueEl) valueEl.value = '';
-    const localEl = document.getElementById('filterMachineLocal');
-    if (localEl) localEl.value = '';
-    applyMachineFilters();
+  const statusEl = document.getElementById('filterMachineStatus');
+  if (statusEl) statusEl.value = 'All';
+  const localEl = document.getElementById('filterMachineLocal');
+  if (localEl) localEl.value = '';
+  applyMachineFilters();
   }
 
 
@@ -1877,8 +1869,6 @@ function renderModuloDinamico() {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
 
-  updateModuloFilterFields();
-
   const filtered = getModuloFiltrado();
 
   // HEADER
@@ -1907,7 +1897,7 @@ function renderModuloDinamico() {
 
     tr.innerHTML = `
       ${moduloCampos.map(c => `
-        <td>${escapeHtml(row[c.nome] || '')}</td>
+        <td>${renderModuloCell(c.nome, row[c.nome])}</td>
       `).join('')}
       <td class="actions">
         <div class="action-group">
@@ -1941,21 +1931,32 @@ function renderModuloDinamico() {
   });
 }
 
+function renderModuloCell(fieldName, value) {
+  const label = (value ?? '').toString();
+  const normalizedField = (fieldName || '').toString().toLowerCase();
+  if (normalizedField.includes('status')) {
+    const display = label || 'Ativa';
+    return `
+      <div class="status-pill status-${normalizeStatus(display)}">
+        <span class="status-dot"></span>
+        <span class="status-text">${escapeHtml(display)}</span>
+      </div>
+    `;
+  }
+  return escapeHtml(label);
+}
+
 function getModuloFiltrado() {
   const q = (document.getElementById('moduloSearch')?.value || '').trim().toLowerCase();
-  const fieldFilter = document.getElementById('moduloFilterField')?.value || 'all';
   const valueFilter = (document.getElementById('moduloFilterValue')?.value || '').trim().toLowerCase();
   if (!q) {
     let filtered = moduloRegistros.map((row, idx) => ({ row, idx }));
     if (valueFilter) {
-      filtered = filtered.filter(({ row }) => {
-        if (fieldFilter === 'all') {
-          return moduloCampos.some(campo =>
-            (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
-          );
-        }
-        return (row[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
-      });
+      filtered = filtered.filter(({ row }) =>
+        moduloCampos.some(campo =>
+          (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
+        )
+      );
     }
     return filtered;
   }
@@ -1968,47 +1969,18 @@ function getModuloFiltrado() {
       )
     );
   if (valueFilter) {
-    filtered = filtered.filter(({ row }) => {
-      if (fieldFilter === 'all') {
-        return moduloCampos.some(campo =>
-          (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
-        );
-      }
-      return (row[fieldFilter] || '').toString().toLowerCase().includes(valueFilter);
-    });
+    filtered = filtered.filter(({ row }) =>
+      moduloCampos.some(campo =>
+        (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
+      )
+    );
   }
   return filtered;
-}
-
-function updateModuloFilterFields() {
-  const select = document.getElementById('moduloFilterField');
-  if (!select) return;
-  const currentValue = select.value || 'all';
-  const fieldNames = moduloCampos.map(campo => campo.nome);
-
-  select.innerHTML = '';
-  const allOption = document.createElement('option');
-  allOption.value = 'all';
-  allOption.textContent = 'Todos os campos';
-  select.appendChild(allOption);
-
-  fieldNames.forEach(nome => {
-    const option = document.createElement('option');
-    option.value = nome;
-    option.textContent = nome;
-    select.appendChild(option);
-  });
-
-  if ([...select.options].some(opt => opt.value === currentValue)) {
-    select.value = currentValue;
-  }
 }
 
 function clearModuloFilters() {
   const searchEl = document.getElementById('moduloSearch');
   if (searchEl) searchEl.value = '';
-  const fieldEl = document.getElementById('moduloFilterField');
-  if (fieldEl) fieldEl.value = 'all';
   const valueEl = document.getElementById('moduloFilterValue');
   if (valueEl) valueEl.value = '';
   filtrarModulo();
