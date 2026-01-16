@@ -2939,7 +2939,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } =
 
   row.innerHTML = `
     <select class="field-preset" onchange="applyFieldPreset(${idx}, this.value)">
-      <option value="">Usar campo de outra aba</option>
+      <option value="" disabled selected>Usar campo de outra aba</option>
       ${presetOptions}
     </select>
 
