@@ -1245,6 +1245,31 @@ mtbody.addEventListener('click', (e) => {
     list = sortWithIndex(list, item => item[key], sortState.machines.dir);
   }
 
+  if (nomeColumnFilter) {
+    list = list.filter(x => (x.nome_maquina || '').toLowerCase().includes(nomeColumnFilter));
+  }
+
+  if (patrimonioColumnFilter) {
+    list = list.filter(x => (x.patrimonio || '').toLowerCase().includes(patrimonioColumnFilter));
+  }
+
+  if (localColumnFilter) {
+    list = list.filter(x => (x.local || '').toLowerCase().includes(localColumnFilter));
+  }
+
+  if (statusColumnFilter) {
+    list = list.filter(x => (x.status || '').toLowerCase().includes(statusColumnFilter));
+  }
+
+  if (descricaoColumnFilter) {
+    list = list.filter(x => (x.descricao || '').toLowerCase().includes(descricaoColumnFilter));
+  }
+
+  if (sortState.machines.key) {
+    const key = sortState.machines.key;
+    list = sortWithIndex(list, item => item[key], sortState.machines.dir);
+  }
+
   renderMachines(list);
   updateSortIndicators('#tabMaquinas thead', sortState.machines);
   updateFilterBadges();
@@ -2860,6 +2885,13 @@ function getModuloFiltrado() {
         )
       );
     }
+    if (columnFilters.length) {
+      filtered = filtered.filter(({ row }) =>
+        columnFilters.every(([field, value]) =>
+          (row[field] || '').toString().toLowerCase().includes(value)
+        )
+      );
+    }
     return filtered;
   }
 
@@ -2870,6 +2902,13 @@ function getModuloFiltrado() {
         (row[campo.nome] || '').toString().toLowerCase().includes(q)
       )
     );
+  if (columnFilters.length) {
+    filtered = filtered.filter(({ row }) =>
+      columnFilters.every(([field, value]) =>
+        (row[field] || '').toString().toLowerCase().includes(value)
+      )
+    );
+  }
   if (columnFilters.length) {
     filtered = filtered.filter(({ row }) =>
       columnFilters.every(([field, value]) =>
