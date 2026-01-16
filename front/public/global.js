@@ -90,6 +90,14 @@ if (btnNovaAba) {
   initSortOrderToggle('machines', sortState.machines, applyMachineFilters);
   initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
 
+  document.querySelectorAll('#sortMenuMq [data-sort-key]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      toggleSort(sortState.machines, btn.dataset.sortKey);
+      applyMachineFilters();
+      document.getElementById('sortMenuMq')?.classList.add('hidden');
+    });
+  });
+
 
   /* ===========================
      ESTADOS
