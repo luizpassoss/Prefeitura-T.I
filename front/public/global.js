@@ -631,10 +631,6 @@ function getFiltered() {
   // PEGAR O SELECT APENAS SE EXISTIR (ABA INVENTÁRIO)
   const catEl = document.getElementById('filterCategoryInv');
   const cat = catEl ? catEl.value : "All";
-  const valueFilter = (document.getElementById('filterValueInv')?.value || '').trim().toLowerCase();
-  const localFilter = (document.getElementById('filterLocalInv')?.value || '').trim().toLowerCase();
-  const velFilter = (document.getElementById('filterVelInv')?.value || '').trim().toLowerCase();
-  const telFilter = (document.getElementById('filterTelInv')?.value || '').trim().toLowerCase();
   const linkColumnFilter = getInputValue('invFilterLink');
   const velColumnFilter = getInputValue('invFilterVel');
   const telColumnFilter = getInputValue('invFilterTel');
@@ -664,18 +660,6 @@ if (cat !== "All") {
     );
   }
 
-  if (localFilter) {
-    list = list.filter(x => (x.local || '').toLowerCase().includes(localFilter));
-  }
-
-  if (velFilter) {
-    list = list.filter(x => (x.velocidade || '').toLowerCase().includes(velFilter));
-  }
-
-  if (telFilter) {
-    list = list.filter(x => (x.telefone || '').toLowerCase().includes(telFilter));
-  }
-
   if (linkColumnFilter) {
     list = list.filter(x => (x.link || '').toLowerCase().includes(linkColumnFilter));
   }
@@ -696,22 +680,6 @@ if (cat !== "All") {
     list = list.filter(x => (x.endereco || '').toLowerCase().includes(enderecoColumnFilter));
   }
 
-  if (valueFilter) {
-    list = list.filter(x => {
-      const fields = {
-        link: x.link,
-        velocidade: x.velocidade,
-        telefone: x.telefone,
-        local: x.local,
-        endereco: x.endereco,
-        categoria: x.categoria
-      };
-      return Object.values(fields).some(val =>
-        (val || '').toString().toLowerCase().includes(valueFilter)
-      );
-    });
-  }
-
   return list;
 }
 
@@ -730,31 +698,25 @@ function updateFilterBadge(type, count) {
 function updateFilterBadges() {
   const q = (document.getElementById('q')?.value || '').trim();
   const cat = (document.getElementById('filterCategoryInv')?.value || 'All');
-  const value = (document.getElementById('filterValueInv')?.value || '').trim();
-  const local = (document.getElementById('filterLocalInv')?.value || '').trim();
-  const vel = (document.getElementById('filterVelInv')?.value || '').trim();
-  const tel = (document.getElementById('filterTelInv')?.value || '').trim();
   const invLink = (document.getElementById('invFilterLink')?.value || '').trim();
   const invVel = (document.getElementById('invFilterVel')?.value || '').trim();
   const invTel = (document.getElementById('invFilterTel')?.value || '').trim();
   const invLocal = (document.getElementById('invFilterLocal')?.value || '').trim();
   const invEnd = (document.getElementById('invFilterEndereco')?.value || '').trim();
-  const invCount = [q, value, local, vel, tel, invLink, invVel, invTel, invLocal, invEnd].filter(Boolean).length + (cat !== 'All' ? 1 : 0);
+  const invCount = [q, invLink, invVel, invTel, invLocal, invEnd].filter(Boolean).length + (cat !== 'All' ? 1 : 0);
 
   const mq = (document.getElementById('mq')?.value || '').trim();
   const status = (document.getElementById('filterMachineStatus')?.value || 'All');
-  const mqLocal = (document.getElementById('filterMachineLocal')?.value || '').trim();
   const mqNome = (document.getElementById('mqFilterNome')?.value || '').trim();
   const mqPatrimonio = (document.getElementById('mqFilterPatrimonio')?.value || '').trim();
   const mqLocalCol = (document.getElementById('mqFilterLocal')?.value || '').trim();
   const mqStatusCol = (document.getElementById('mqFilterStatus')?.value || '').trim();
   const mqDescricao = (document.getElementById('mqFilterDescricao')?.value || '').trim();
-  const mqCount = [mq, mqLocal, mqNome, mqPatrimonio, mqLocalCol, mqStatusCol, mqDescricao].filter(Boolean).length + (status !== 'All' ? 1 : 0);
+  const mqCount = [mq, mqNome, mqPatrimonio, mqLocalCol, mqStatusCol, mqDescricao].filter(Boolean).length + (status !== 'All' ? 1 : 0);
 
   const modSearch = (document.getElementById('moduloSearch')?.value || '').trim();
-  const modValue = (document.getElementById('moduloFilterValue')?.value || '').trim();
   const modColumnFilters = Object.values(moduloColumnFilters || {}).filter(value => value?.trim());
-  const modCount = [modSearch, modValue, ...modColumnFilters].filter(Boolean).length;
+  const modCount = [modSearch, ...modColumnFilters].filter(Boolean).length;
 
   updateFilterBadge('inventory', invCount);
   updateFilterBadge('machines', mqCount);
@@ -764,14 +726,6 @@ function updateFilterBadges() {
 function clearInventoryFilters() {
   const catEl = document.getElementById('filterCategoryInv');
   if (catEl) catEl.value = 'All';
-  const valueEl = document.getElementById('filterValueInv');
-  if (valueEl) valueEl.value = '';
-  const localEl = document.getElementById('filterLocalInv');
-  if (localEl) localEl.value = '';
-  const velEl = document.getElementById('filterVelInv');
-  if (velEl) velEl.value = '';
-  const telEl = document.getElementById('filterTelInv');
-  if (telEl) telEl.value = '';
   const headerFilters = ['invFilterLink', 'invFilterVel', 'invFilterTel', 'invFilterLocal', 'invFilterEndereco'];
   headerFilters.forEach((id) => {
     const el = document.getElementById(id);
@@ -1243,7 +1197,6 @@ mtbody.addEventListener('click', (e) => {
   function applyMachineFilters() {
   const q = (document.getElementById('mq').value || '').trim().toLowerCase();
   const statusFilter = (document.getElementById('filterMachineStatus')?.value || 'All').toLowerCase();
-  const localFilter = (document.getElementById('filterMachineLocal')?.value || '').trim().toLowerCase();
   const nomeColumnFilter = getInputValue('mqFilterNome');
   const patrimonioColumnFilter = getInputValue('mqFilterPatrimonio');
   const localColumnFilter = getInputValue('mqFilterLocal');
@@ -1267,8 +1220,29 @@ mtbody.addEventListener('click', (e) => {
     list = list.filter(x => (x.status || '').toLowerCase() === statusFilter);
   }
 
-  if (localFilter) {
-    list = list.filter(x => (x.local || '').toLowerCase().includes(localFilter));
+  if (nomeColumnFilter) {
+    list = list.filter(x => (x.nome_maquina || '').toLowerCase().includes(nomeColumnFilter));
+  }
+
+  if (patrimonioColumnFilter) {
+    list = list.filter(x => (x.patrimonio || '').toLowerCase().includes(patrimonioColumnFilter));
+  }
+
+  if (localColumnFilter) {
+    list = list.filter(x => (x.local || '').toLowerCase().includes(localColumnFilter));
+  }
+
+  if (statusColumnFilter) {
+    list = list.filter(x => (x.status || '').toLowerCase().includes(statusColumnFilter));
+  }
+
+  if (descricaoColumnFilter) {
+    list = list.filter(x => (x.descricao || '').toLowerCase().includes(descricaoColumnFilter));
+  }
+
+  if (sortState.machines.key) {
+    const key = sortState.machines.key;
+    list = sortWithIndex(list, item => item[key], sortState.machines.dir);
   }
 
   if (nomeColumnFilter) {
@@ -1306,8 +1280,6 @@ function clearMachineFilters(){
   if (mqEl) mqEl.value = '';
   const statusEl = document.getElementById('filterMachineStatus');
   if (statusEl) statusEl.value = 'All';
-  const localEl = document.getElementById('filterMachineLocal');
-  if (localEl) localEl.value = '';
   const headerFilters = ['mqFilterNome', 'mqFilterPatrimonio', 'mqFilterLocal', 'mqFilterStatus', 'mqFilterDescricao'];
   headerFilters.forEach((id) => {
     const el = document.getElementById(id);
@@ -2740,7 +2712,7 @@ function renderModuloDinamico() {
           />
         </th>
       `).join('')}
-      <th></th>
+      <th class="actions-header"></th>
     </tr>
   `;
 
@@ -2901,16 +2873,15 @@ function formatDateForTable(value) {
 
 function getModuloFiltrado() {
   const q = (document.getElementById('moduloSearch')?.value || '').trim().toLowerCase();
-  const valueFilter = (document.getElementById('moduloFilterValue')?.value || '').trim().toLowerCase();
   const columnFilters = Object.entries(moduloColumnFilters)
     .filter(([, value]) => value && value.trim())
     .map(([field, value]) => [field, value.trim().toLowerCase()]);
   if (!q) {
     let filtered = moduloRegistros.map((row, idx) => ({ row, idx }));
-    if (valueFilter) {
+    if (columnFilters.length) {
       filtered = filtered.filter(({ row }) =>
-        moduloCampos.some(campo =>
-          (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
+        columnFilters.every(([field, value]) =>
+          (row[field] || '').toString().toLowerCase().includes(value)
         )
       );
     }
@@ -2931,10 +2902,10 @@ function getModuloFiltrado() {
         (row[campo.nome] || '').toString().toLowerCase().includes(q)
       )
     );
-  if (valueFilter) {
+  if (columnFilters.length) {
     filtered = filtered.filter(({ row }) =>
-      moduloCampos.some(campo =>
-        (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
+      columnFilters.every(([field, value]) =>
+        (row[field] || '').toString().toLowerCase().includes(value)
       )
     );
   }
@@ -2951,8 +2922,6 @@ function getModuloFiltrado() {
 function clearModuloFilters() {
   const searchEl = document.getElementById('moduloSearch');
   if (searchEl) searchEl.value = '';
-  const valueEl = document.getElementById('moduloFilterValue');
-  if (valueEl) valueEl.value = '';
   moduloColumnFilters = {};
   document.querySelectorAll('#moduloThead .table-filter-input').forEach((input) => {
     input.value = '';

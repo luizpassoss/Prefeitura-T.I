@@ -135,10 +135,6 @@
             <option value="Assistência Cultural">Assistência Cultural</option>
             <option value="Fundacao Cultural">Fundação Cultural</option>
           </select>
-          <input id="filterValueInv" class="input" placeholder="Filtrar por valor" oninput="applyFilters()" />
-          <input id="filterLocalInv" class="input" placeholder="Filtrar por local" oninput="applyFilters()" />
-          <input id="filterVelInv" class="input" placeholder="Filtrar por velocidade" oninput="applyFilters()" />
-          <input id="filterTelInv" class="input" placeholder="Filtrar por telefone" oninput="applyFilters()" />
           <button class="btn cancel" type="button" onclick="clearInventoryFilters()">Limpar</button>
         </div>
 
@@ -173,7 +169,7 @@
                 <th>
                   <input id="invFilterEndereco" class="table-filter-input" placeholder="Filtrar endereço" oninput="applyFilters()" />
                 </th>
-                <th></th>
+                <th class="actions-header"></th>
               </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -266,7 +262,6 @@
             <option value="Manutenção">Manutenção</option>
             <option value="Inativa">Inativa</option>
           </select>
-          <input id="filterMachineLocal" class="input" placeholder="Filtrar por local" oninput="applyMachineFilters()" />
           <button class="btn cancel" type="button" onclick="clearMachineFilters()">Limpar</button>
         </div>
         <div class="table-wrap">
@@ -300,7 +295,7 @@
                 <th>
                   <input id="mqFilterDescricao" class="table-filter-input" placeholder="Filtrar descrição" oninput="applyMachineFilters()" />
                 </th>
-                <th></th>
+                <th class="actions-header"></th>
               </tr>
             </thead>
             <tbody id="mtbody"></tbody>
@@ -395,8 +390,7 @@
         </div>
 
         <div id="moduleFilters" class="filters filters-panel hidden">
-          <input id="moduloFilterValue" class="input" placeholder="Filtrar por valor" oninput="filtrarModulo()" />
-          <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar</button>
+          <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar filtros</button>
         </div>
 
         <div class="table-wrap">
