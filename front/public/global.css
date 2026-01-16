@@ -557,7 +557,17 @@ body.theme-dark thead th {
   border-bottom: 1px solid #243049;
 }
 
+body.theme-dark .table-wrap th.checkbox-cell,
+body.theme-dark .table-wrap th.actions-header {
+  background: #182235;
+}
+
 body.theme-dark .table-filters th {
+  background: #131c2b;
+}
+
+body.theme-dark .table-wrap thead .table-filters th.checkbox-cell,
+body.theme-dark .table-wrap thead .table-filters th.actions-header {
   background: #131c2b;
 }
 
@@ -820,6 +830,16 @@ body.theme-dark .export-menu button:hover {
   background: rgba(148, 163, 184, 0.12);
 }
 
+body.theme-dark .sort-order-toggle {
+  background: rgba(148, 163, 184, 0.16);
+  color: #e2e8f0;
+}
+
+body.theme-dark .sort-order-toggle:hover {
+  background: rgba(148, 163, 184, 0.28);
+  color: #f8fafc;
+}
+
 body.theme-dark .btn.export {
   background: #1f2937;
   color: #e2e8f0;
@@ -1046,22 +1066,6 @@ body.theme-dark .file-input-name {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
-}
-
-.help-link {
-  background: none;
-  border: none;
-  color: #93c5fd;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-}
-
-.help-link:hover {
-  color: #bfdbfe;
-  text-decoration: underline;
 }
 .create-tab-card .form-grid {
   grid-template-columns: 1fr;
@@ -1843,7 +1847,7 @@ td {
 }
 
 .table-wrap th.checkbox-cell {
-  background: inherit;
+  background: #f1f5fb;
 }
 
 .table-wrap td.checkbox-cell {
@@ -1858,7 +1862,12 @@ td {
 }
 
 .table-wrap th.actions-header {
-  background: inherit;
+  background: #f1f5fb;
+}
+
+.table-wrap thead .table-filters th.checkbox-cell,
+.table-wrap thead .table-filters th.actions-header {
+  background: #f8fafc;
 }
 
 .table-wrap td.actions {
@@ -2235,6 +2244,42 @@ body.theme-dark .status-inativa .status-dot {
 .export-menu button:hover {
   background: #f3f4f6;
   transform: translateX(2px);
+}
+
+.export-menu-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  padding: 8px 12px 4px;
+}
+
+.export-menu-title.sort-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sort-order-toggle {
+  border: none;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sort-order-toggle:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.sort-wrapper .sort-btn {
+  padding: 8px 10px;
+  font-size: var(--font-xs);
 }
 
 .import-validation {
