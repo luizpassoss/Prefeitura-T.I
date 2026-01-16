@@ -2541,7 +2541,58 @@ function renderFormularioModulo(valores = {}) {
     };
 
     let input;
-    if (campo.tipo === 'select') {
+    const normalizedName = normalizeHeader(campo.nome);
+    const isNomeMaquina = normalizedName.includes('nomemaquina');
+    if (isNomeMaquina) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'machine-name-group';
+
+      const prefixSelect = document.createElement('select');
+      const prefixes = ['PMSFS-DT', 'SMSSFS-DT'];
+      prefixes.forEach(prefix => {
+        const option = document.createElement('option');
+        option.value = prefix;
+        option.textContent = prefix;
+        prefixSelect.appendChild(option);
+      });
+
+      const numberInput = document.createElement('input');
+      numberInput.type = 'text';
+      numberInput.placeholder = 'Número';
+
+      input = document.createElement('input');
+      input.type = 'hidden';
+
+      const currentValue = valores[campo.nome] || '';
+      const matchedPrefix = prefixes.find(prefix => currentValue.startsWith(prefix));
+      if (matchedPrefix) {
+        prefixSelect.value = matchedPrefix;
+        numberInput.value = currentValue.replace(matchedPrefix, '').replace(/^[-\s]+/, '');
+      } else if (prefixes.length) {
+        prefixSelect.value = prefixes[0];
+        numberInput.value = currentValue;
+      }
+
+      const syncValue = () => {
+        const prefix = prefixSelect.value;
+        const suffix = numberInput.value.trim();
+        input.value = suffix ? `${prefix}-${suffix}` : prefix;
+      };
+
+      prefixSelect.addEventListener('change', syncValue);
+      numberInput.addEventListener('input', syncValue);
+      syncValue();
+
+      if (index === 0) {
+        numberInput.dataset.autofocus = 'true';
+      }
+
+      wrapper.appendChild(prefixSelect);
+      wrapper.appendChild(numberInput);
+      field.appendChild(label);
+      field.appendChild(wrapper);
+      field.appendChild(input);
+    } else if (campo.tipo === 'select') {
       input = document.createElement('select');
       const options = getSelectOptionsForCampo(campo);
       options.forEach(optionValue => {
@@ -2570,8 +2621,10 @@ function renderFormularioModulo(valores = {}) {
       input.dataset.autofocus = 'true';
     }
 
-    field.appendChild(label);
-    field.appendChild(input);
+    if (!isNomeMaquina) {
+      field.appendChild(label);
+      field.appendChild(input);
+    }
     container.appendChild(field);
   });
 }
@@ -2637,6 +2690,113 @@ const tabTemplates = {
     { nome: 'Descrição', tipo: 'texto', obrigatorio: false }
   ]
 };
+
+const fieldPresetMap = Object.entries(tabTemplates).reduce((acc, [group, fields]) => {
+  fields.forEach(field => {
+    const key = `${group}:${field.nome}`;
+    acc[key] = { ...field, group };
+  });
+  return acc;
+}, {});
+
+let fieldDragInitialized = false;
+
+function applyFieldPreset(idx, presetKey) {
+  const preset = fieldPresetMap[presetKey];
+  if (!preset) return;
+
+  const row = document.querySelector(`.field-row[data-idx="${idx}"]`);
+  if (!row) return;
+
+  const nameInput = row.querySelector('.field-name');
+  const typeSelect = row.querySelector('.field-type');
+  const requiredInput = row.querySelector('.field-required');
+
+  if (nameInput) nameInput.value = preset.nome;
+  if (typeSelect) typeSelect.value = preset.tipo;
+  if (requiredInput) requiredInput.checked = preset.obrigatorio;
+
+  if (newTabFields[idx]) {
+    newTabFields[idx].nome = preset.nome;
+    newTabFields[idx].tipo = preset.tipo;
+    newTabFields[idx].obrigatorio = preset.obrigatorio;
+  }
+}
+
+function getFieldRowsData() {
+  const rows = [...document.querySelectorAll('#fieldsContainer .field-row')];
+  return rows.map(row => ({
+    nome: row.querySelector('.field-name')?.value.trim() || '',
+    tipo: row.querySelector('.field-type')?.value || 'texto',
+    obrigatorio: !!row.querySelector('.field-required')?.checked
+  }));
+}
+
+function rebuildFieldRowsFromDOM() {
+  const container = document.getElementById('fieldsContainer');
+  if (!container) return;
+  const rowsData = getFieldRowsData().filter(row => row.nome);
+  newTabFields = [];
+  window.newTabFields = newTabFields;
+  container.innerHTML = '';
+  rowsData.forEach(row => addFieldWithValues(row));
+}
+
+function validateDuplicateFields(fields) {
+  const seen = new Map();
+  const duplicates = new Set();
+  fields.forEach(field => {
+    const key = normalizeHeader(field.nome);
+    if (!key) return;
+    if (seen.has(key)) {
+      duplicates.add(field.nome);
+    } else {
+      seen.set(key, field.nome);
+    }
+  });
+  if (duplicates.size) {
+    showMessage(`Campos duplicados encontrados: ${[...duplicates].join(', ')}`);
+    return false;
+  }
+  return true;
+}
+
+function initFieldDragAndDrop() {
+  if (fieldDragInitialized) return;
+  const container = document.getElementById('fieldsContainer');
+  if (!container) return;
+  fieldDragInitialized = true;
+
+  container.addEventListener('dragstart', event => {
+    const handle = event.target.closest('.field-drag');
+    if (!handle) return;
+    const row = handle.closest('.field-row');
+    if (!row) return;
+    row.classList.add('dragging');
+    event.dataTransfer.effectAllowed = 'move';
+  });
+
+  container.addEventListener('dragend', event => {
+    const row = event.target.closest('.field-row');
+    if (row) row.classList.remove('dragging');
+  });
+
+  container.addEventListener('dragover', event => {
+    const row = event.target.closest('.field-row');
+    const dragging = container.querySelector('.field-row.dragging');
+    if (!row || !dragging || row === dragging) return;
+    event.preventDefault();
+    const rect = row.getBoundingClientRect();
+    const shouldInsertAfter = event.clientY > rect.top + rect.height / 2;
+    container.insertBefore(dragging, shouldInsertAfter ? row.nextSibling : row);
+  });
+
+  container.addEventListener('drop', event => {
+    if (!container.querySelector('.field-row.dragging')) return;
+    event.preventDefault();
+    rebuildFieldRowsFromDOM();
+  });
+}
 
 const inventoryLocalOptions = [
   'Prefeitura Sede',
@@ -2734,6 +2894,7 @@ function openCreateTabModal() {
   document.getElementById('newTabDescription').value = '';
   const templateSelect = document.getElementById('newTabTemplate');
   if (templateSelect) templateSelect.value = 'custom';
+  initFieldDragAndDrop();
   openModalById('createTabModal');
 }
 
@@ -2772,7 +2933,16 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } =
   row.className = 'field-row';
   row.dataset.idx = idx;
 
+  const presetOptions = Object.entries(fieldPresetMap)
+    .map(([key, value]) => `<option value="${key}">${value.group === 'inventario' ? 'Inventário' : 'Máquinas'}: ${value.nome}</option>`)
+    .join('');
+
   row.innerHTML = `
+    <select class="field-preset" onchange="applyFieldPreset(${idx}, this.value)">
+      <option value="">Usar campo de outra aba</option>
+      ${presetOptions}
+    </select>
+
     <input
       type="text"
       class="field-name"
@@ -2795,6 +2965,13 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } =
 
     <button
       type="button"
+      class="field-drag"
+      title="Arraste para reordenar"
+      draggable="true"
+    >↕</button>
+
+    <button
+      type="button"
       class="field-remove"
       title="Remover campo"
       onclick="removeField(${idx})"
@@ -2802,6 +2979,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } =
   `;
 
   document.getElementById('fieldsContainer').appendChild(row);
+  initFieldDragAndDrop();
 
   const typeSelect = row.querySelector('.field-type');
   if (typeSelect) {
@@ -2864,19 +3042,32 @@ async function createNewTab() {
 
   // 2. cria campos
   const fields = document.querySelectorAll('.field-row');
+  const fieldsData = [...fields].map(row => ({
+    nome: row.querySelector('.field-name')?.value.trim(),
+    tipo: row.querySelector('.field-type')?.value || 'texto',
+    obrigatorio: !!row.querySelector('.field-required')?.checked
+  })).filter(field => field.nome);
 
-  for (let i = 0; i < fields.length; i++) {
-    const nomeCampo = fields[i].querySelector('.field-name').value;
-    const tipo = fields[i].querySelector('.field-type').value;
-    const obrigatorio = fields[i].querySelector('.field-required').checked;
+  if (!fieldsData.length) {
+    showMessage('Adicione ao menos um campo com nome válido.');
+    return;
+  }
+
+  if (!validateDuplicateFields(fieldsData)) {
+    return;
+  }
+
+  for (let i = 0; i < fieldsData.length; i++) {
+    const field = fieldsData[i];
+    if (!field) continue;
 
     await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        nome: nomeCampo,
-        tipo,
-        obrigatorio,
+        nome: field.nome,
+        tipo: field.tipo,
+        obrigatorio: field.obrigatorio,
         ordem: i
       })
     });
@@ -2896,7 +3087,7 @@ async function openModulo(modulo) {
 
   renderModuloTable(campos, registros);
 }
- async function salvarNovoModulo() {
+async function salvarNovoModulo() {
   const nome = document.getElementById('newTabName').value.trim();
   const descricao = document.getElementById('newTabDescription').value.trim();
 
@@ -2930,6 +3121,10 @@ const camposValidos = fieldRows
 
 if (!camposValidos.length) {
   showMessage('Adicione ao menos um campo com nome válido.');
+  return;
+}
+
+if (!validateDuplicateFields(camposValidos)) {
   return;
 }
 
