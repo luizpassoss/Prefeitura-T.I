@@ -557,7 +557,17 @@ body.theme-dark thead th {
   border-bottom: 1px solid #243049;
 }
 
+body.theme-dark .table-wrap th.checkbox-cell,
+body.theme-dark .table-wrap th.actions-header {
+  background: #182235;
+}
+
 body.theme-dark .table-filters th {
+  background: #131c2b;
+}
+
+body.theme-dark .table-wrap thead .table-filters th.checkbox-cell,
+body.theme-dark .table-wrap thead .table-filters th.actions-header {
   background: #131c2b;
 }
 
@@ -1046,22 +1056,6 @@ body.theme-dark .file-input-name {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
-}
-
-.help-link {
-  background: none;
-  border: none;
-  color: #93c5fd;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-}
-
-.help-link:hover {
-  color: #bfdbfe;
-  text-decoration: underline;
 }
 .create-tab-card .form-grid {
   grid-template-columns: 1fr;
@@ -1843,7 +1837,7 @@ td {
 }
 
 .table-wrap th.checkbox-cell {
-  background: inherit;
+  background: #f1f5fb;
 }
 
 .table-wrap td.checkbox-cell {
@@ -1858,7 +1852,12 @@ td {
 }
 
 .table-wrap th.actions-header {
-  background: inherit;
+  background: #f1f5fb;
+}
+
+.table-wrap thead .table-filters th.checkbox-cell,
+.table-wrap thead .table-filters th.actions-header {
+  background: #f8fafc;
 }
 
 .table-wrap td.actions {
@@ -2235,6 +2234,18 @@ body.theme-dark .status-inativa .status-dot {
 .export-menu button:hover {
   background: #f3f4f6;
   transform: translateX(2px);
+}
+
+.export-menu-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  padding: 8px 12px 4px;
+}
+
+.sort-wrapper .sort-btn {
+  padding: 8px 10px;
+  font-size: var(--font-xs);
 }
 
 .import-validation {
