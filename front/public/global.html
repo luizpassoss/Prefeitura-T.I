@@ -59,8 +59,15 @@
                 class="help-tip"
                 role="img"
                 aria-label="Ajuda do inventário"
-                data-help="Use filtros e busca para encontrar registros. Importe planilhas do sistema e exporte relatórios."
-              >?</span>
+                data-help-title="Inventário de Links e Conexões"
+                data-help-more="Use filtros e busca para encontrar registros rapidamente. Exporte relatórios quando precisar compartilhar dados e utilize a importação para atualizar em lote."
+              >
+                <span class="help-tip-icon">?</span>
+                <span class="help-tooltip">
+                  <span class="help-tooltip-text">Use filtros e busca para encontrar registros.</span>
+                  <button type="button" class="help-link">Saiba mais</button>
+                </span>
+              </span>
             </div>
             <div class="small">Gerencie, filtre, edite e exporte relatórios</div>
           </div>
@@ -139,15 +146,34 @@
           <table id="tb">
             <thead>
               <tr>
-                <th style="width:32px; text-align:center;">
+                <th style="width:32px; text-align:center;" class="checkbox-cell">
                   <input type="checkbox" id="chkAllInv">
                 </th>
-                <th style="width:20%">Link de Internet</th>
-                <th style="width:15%">Velocidade (DL/UL)</th>
-                <th style="width:12%">Telefone</th>
-                <th style="width:16%">Local</th>
-                <th style="width:28%">Endereço</th>
+                <th style="width:20%" class="sortable" data-sort-key="link">Link de Internet <span class="sort-indicator"></span></th>
+                <th style="width:15%" class="sortable" data-sort-key="velocidade">Velocidade (DL/UL) <span class="sort-indicator"></span></th>
+                <th style="width:12%" class="sortable" data-sort-key="telefone">Telefone <span class="sort-indicator"></span></th>
+                <th style="width:16%" class="sortable" data-sort-key="local">Local <span class="sort-indicator"></span></th>
+                <th style="width:28%" class="sortable" data-sort-key="endereco">Endereço <span class="sort-indicator"></span></th>
                 <th class="actions-header" style="width:9%">Ações</th>
+              </tr>
+              <tr class="table-filters">
+                <th class="checkbox-cell"></th>
+                <th>
+                  <input id="invFilterLink" class="table-filter-input" placeholder="Filtrar link" oninput="applyFilters()" />
+                </th>
+                <th>
+                  <input id="invFilterVel" class="table-filter-input" placeholder="Filtrar velocidade" oninput="applyFilters()" />
+                </th>
+                <th>
+                  <input id="invFilterTel" class="table-filter-input" placeholder="Filtrar telefone" oninput="applyFilters()" />
+                </th>
+                <th>
+                  <input id="invFilterLocal" class="table-filter-input" placeholder="Filtrar local" oninput="applyFilters()" />
+                </th>
+                <th>
+                  <input id="invFilterEndereco" class="table-filter-input" placeholder="Filtrar endereço" oninput="applyFilters()" />
+                </th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -167,8 +193,15 @@
                 class="help-tip"
                 role="img"
                 aria-label="Ajuda de máquinas"
-                data-help="Cadastre máquinas, ajuste status e local. Importe/exporte planilhas para agilizar."
-              >?</span>
+                data-help-title="Inventário de Máquinas"
+                data-help-more="Cadastre máquinas, ajuste status e local, e use os filtros para localizar ativos rapidamente. A importação agiliza atualizações em lote."
+              >
+                <span class="help-tip-icon">?</span>
+                <span class="help-tooltip">
+                  <span class="help-tooltip-text">Cadastre máquinas e ajuste status/local.</span>
+                  <button type="button" class="help-link">Saiba mais</button>
+                </span>
+              </span>
             </div>
             <div class="small">Gerencie, filtre, edite e exporte relatórios</div>
           </div>
@@ -240,15 +273,34 @@
           <table>
             <thead>
               <tr>
-                <th style="width:40px">
+                <th style="width:40px" class="checkbox-cell">
                   <input type="checkbox" id="chkAllMq">
                 </th>
-                <th>Nome Máquina</th>
-                <th>Patrimônio</th>
-                <th>Local</th>
-                <th>Status</th>
-                <th>Descrição</th>
-                <th style="width:110px; text-align:center">Ações</th>
+                <th class="sortable" data-sort-key="nome_maquina">Nome Máquina <span class="sort-indicator"></span></th>
+                <th class="sortable" data-sort-key="patrimonio">Patrimônio <span class="sort-indicator"></span></th>
+                <th class="sortable" data-sort-key="local">Local <span class="sort-indicator"></span></th>
+                <th class="sortable" data-sort-key="status">Status <span class="sort-indicator"></span></th>
+                <th class="sortable" data-sort-key="descricao">Descrição <span class="sort-indicator"></span></th>
+                <th style="width:110px; text-align:center" class="actions-header">Ações</th>
+              </tr>
+              <tr class="table-filters">
+                <th class="checkbox-cell"></th>
+                <th>
+                  <input id="mqFilterNome" class="table-filter-input" placeholder="Filtrar nome" oninput="applyMachineFilters()" />
+                </th>
+                <th>
+                  <input id="mqFilterPatrimonio" class="table-filter-input" placeholder="Filtrar patrimônio" oninput="applyMachineFilters()" />
+                </th>
+                <th>
+                  <input id="mqFilterLocal" class="table-filter-input" placeholder="Filtrar local" oninput="applyMachineFilters()" />
+                </th>
+                <th>
+                  <input id="mqFilterStatus" class="table-filter-input" placeholder="Filtrar status" oninput="applyMachineFilters()" />
+                </th>
+                <th>
+                  <input id="mqFilterDescricao" class="table-filter-input" placeholder="Filtrar descrição" oninput="applyMachineFilters()" />
+                </th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="mtbody"></tbody>
@@ -268,8 +320,15 @@
                 class="help-tip"
                 role="img"
                 aria-label="Ajuda do módulo"
-                data-help="Crie abas personalizadas com campos próprios. Use o botão de novo registro para adicionar dados."
-              >?</span>
+                data-help-title="Abas Personalizadas"
+                data-help-more="Crie abas personalizadas com campos próprios, defina quais são obrigatórios e use filtros para localizar informações rapidamente."
+              >
+                <span class="help-tip-icon">?</span>
+                <span class="help-tooltip">
+                  <span class="help-tooltip-text">Crie abas personalizadas com campos próprios.</span>
+                  <button type="button" class="help-link">Saiba mais</button>
+                </span>
+              </span>
             </div>
             <div id="moduloDescricao" class="small">Tabela personalizada</div>
           </div>
@@ -572,8 +631,15 @@
         class="help-tip"
         role="img"
         aria-label="Ajuda sobre importação"
-        data-help="Use uma planilha exportada do sistema. Confira a prévia, ajuste se necessário e confirme para importar."
-      >?</span>
+        data-help-title="Importação de Planilhas"
+        data-help-more="Use uma planilha exportada do sistema. Confira a prévia, ajuste dados quando necessário e confirme para importar."
+      >
+        <span class="help-tip-icon">?</span>
+        <span class="help-tooltip">
+          <span class="help-tooltip-text">Use uma planilha exportada do sistema.</span>
+          <button type="button" class="help-link">Saiba mais</button>
+        </span>
+      </span>
     </div>
 
     <!-- STEP 1: UPLOAD -->
@@ -608,6 +674,27 @@
 
     </div>
 
+    <div class="import-history">
+      <div class="import-history-header">
+        <h3>Histórico de importações</h3>
+        <button type="button" class="btn secondary" onclick="clearImportHistory()">Limpar histórico</button>
+      </div>
+      <div class="table-wrap">
+        <table id="importHistoryTable">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Usuário</th>
+              <th>Arquivo</th>
+              <th>Status</th>
+              <th class="actions-header">Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeImportModal()">Cancelar</button>
 
@@ -632,8 +719,15 @@
           class="help-tip"
           role="img"
           aria-label="Ajuda sobre criação de aba"
-          data-help="Defina o nome da aba e adicione campos. Você pode usar modelos prontos, arrastar para reordenar e evitar campos duplicados."
-        >?</span>
+          data-help-title="Criar nova aba"
+          data-help-more="Defina o nome da aba, adicione campos e escolha modelos prontos. Reordene e evite campos duplicados para manter a consistência."
+        >
+          <span class="help-tip-icon">?</span>
+          <span class="help-tooltip">
+            <span class="help-tooltip-text">Defina o nome da aba e adicione campos.</span>
+            <button type="button" class="help-link">Saiba mais</button>
+          </span>
+        </span>
       </div>
       <p class="modal-subtitle">
         Defina o nome da aba e os campos que deseja na tabela personalizada.
@@ -689,8 +783,15 @@
         class="help-tip"
         role="img"
         aria-label="Ajuda sobre registro do módulo"
-        data-help="Preencha os campos obrigatórios e salve. Os valores seguem a ordem definida na criação da aba."
-      >?</span>
+        data-help-title="Novo registro"
+        data-help-more="Preencha os campos obrigatórios e salve. Os valores seguem a ordem definida na criação da aba personalizada."
+      >
+        <span class="help-tip-icon">?</span>
+        <span class="help-tooltip">
+          <span class="help-tooltip-text">Preencha os campos obrigatórios e salve.</span>
+          <button type="button" class="help-link">Saiba mais</button>
+        </span>
+      </span>
     </div>
 
     <div id="moduloFormFields" class="form-grid"></div>
@@ -744,6 +845,19 @@
     </div>
   </div>
 </div>
+
+<div id="helpPanelOverlay" class="side-panel-overlay hidden" onclick="closeHelpPanel()"></div>
+<aside id="helpPanel" class="side-panel hidden" aria-labelledby="helpPanelTitle">
+  <div class="side-panel-header">
+    <h3 id="helpPanelTitle">Ajuda</h3>
+    <button type="button" class="icon-btn" onclick="closeHelpPanel()" aria-label="Fechar ajuda">
+      <svg viewBox="0 0 24 24">
+        <path d="M6 6l12 12M18 6l-12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+  <div id="helpPanelContent" class="side-panel-content"></div>
+</aside>
 
 
 
