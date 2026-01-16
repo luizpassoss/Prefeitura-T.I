@@ -954,9 +954,10 @@ body.theme-dark .file-input-name {
   content: attr(data-help);
   position: absolute;
   top: calc(100% + 8px);
-  left: 50%;
+  left: 0;
+  min-width: 220px;
+  max-width: 320px;
   width: max-content;
-  max-width: 260px;
   background: #0f172a;
   color: #f8fafc;
   padding: 10px 12px;
@@ -964,10 +965,12 @@ body.theme-dark .file-input-name {
   font-size: 12px;
   font-weight: 500;
   line-height: 1.4;
-  white-space: pre-line;
+  white-space: normal;
+  word-break: break-word;
+  text-align: left;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
   opacity: 0;
-  transform: translate(-50%, 6px);
+  transform: translateY(6px);
   pointer-events: none;
   transition: all 0.2s ease;
   z-index: 5;
@@ -976,7 +979,7 @@ body.theme-dark .file-input-name {
 .help-tip:hover::after,
 .help-tip:focus::after {
   opacity: 1;
-  transform: translate(-50%, 0);
+  transform: translateY(0);
 }
 
 .help-tip:hover,
