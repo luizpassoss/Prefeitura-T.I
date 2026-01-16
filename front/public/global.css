@@ -9,6 +9,17 @@
   --warning: #fbc02d;
   --border: #d9e2ec;
   --pill-bg: #e8f2ff;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --font-xs: 12px;
+  --font-sm: 14px;
+  --font-md: 16px;
+  --font-lg: 20px;
+  --font-xl: 24px;
+  --icon-size: 16px;
 }
 .tab-content {
     width: 100%;
@@ -105,7 +116,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: #2c3e50de;
-  font-size: 13px;
+  font-size: var(--font-sm);
 }
 
 body.theme-dark {
@@ -449,16 +460,17 @@ table {
   width: 100%;
   border-collapse: collapse;
   background: transparent;
+  table-layout: fixed;
 }
 
 thead th {
   background: #f1f5fb;
   color: #54667a;
   font-weight: 600;
-  padding: 18px 14px;
+  padding: var(--space-3) var(--space-2);
   text-align: left;
   border-bottom: 1px solid #e6edf5;
-  font-size: 14px;
+  font-size: var(--font-xs);
 }
 
 thead th.actions-header {
@@ -478,10 +490,10 @@ tbody td.checkbox-cell input {
 }
 
 tbody td {
-  padding: 16px 14px;
+  padding: var(--space-3) var(--space-2);
   border-bottom: 1px solid #e6edf5;
   color: #1a1f27;
-  font-size: 14px;
+  font-size: var(--font-xs);
 }
 
 tbody tr:hover td {
@@ -813,7 +825,7 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: var(--space-5);
   z-index: 9999;
 }
 
@@ -832,7 +844,7 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   max-width: 620px;
   background: #fff;
   border-radius: 14px;
-  padding: 24px;
+  padding: var(--space-5);
   box-shadow: 0 10px 28px rgba(0,0,0,0.25);
 }
 .modal.hidden {
@@ -841,12 +853,12 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 
 #importModal .card {
   max-height: 85vh;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }
 
-#importModal .card > *:not(.modal-footer) {
+#importModal .card > *:not(.modal-footer):not(.modal-title-row) {
   overflow-y: auto;
 }
 
@@ -875,8 +887,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 .file-input-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
   border-radius: 10px;
   border: 1px solid #d9e2ec;
   background: #f8fafc;
@@ -893,7 +905,7 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 .file-input-name {
-  font-size: 13px;
+  font-size: var(--font-xs);
   color: #475569;
   min-width: 180px;
 }
@@ -919,13 +931,13 @@ body.theme-dark .file-input-name {
 .modal-title-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .title-with-help {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .controls .help-tip {
@@ -939,7 +951,7 @@ body.theme-dark .file-input-name {
   border: 1px solid #cbd5f5;
   background: #f8fafc;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-xs);
   font-weight: 700;
   line-height: 1;
   display: inline-flex;
@@ -960,9 +972,9 @@ body.theme-dark .file-input-name {
   width: max-content;
   background: #0f172a;
   color: #f8fafc;
-  padding: 10px 12px;
+  padding: var(--space-2) var(--space-3);
   border-radius: 10px;
-  font-size: 12px;
+  font-size: var(--font-xs);
   font-weight: 500;
   line-height: 1.4;
   white-space: normal;
@@ -976,21 +988,19 @@ body.theme-dark .file-input-name {
   z-index: 5;
 }
 
-.help-tip:hover::after,
-.help-tip:focus::after {
+.help-tip:hover::after {
   opacity: 1;
   transform: translateY(0);
 }
 
-.help-tip:hover,
-.help-tip:focus {
+.help-tip:hover {
   border-color: #93c5fd;
   color: #1d4ed8;
   background: #eff6ff;
 }
 .create-tab-card .form-grid {
   grid-template-columns: 1fr;
-  gap: 14px;
+  gap: var(--space-3);
 }
 
 .create-tab-card input,
@@ -998,7 +1008,7 @@ body.theme-dark .file-input-name {
   background-color: #ffffff;
   border: 1px solid rgba(4, 83, 231, 0.171);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: var(--font-sm);
   color: #000000cc;
 }
 
@@ -1010,13 +1020,13 @@ body.theme-dark .file-input-name {
 
 .modal-heading h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--font-lg);
   color: #0f172a;
 }
 
 .modal-subtitle {
-  margin: 6px 0 16px;
-  font-size: 13px;
+  margin: var(--space-1) 0 var(--space-4);
+  font-size: var(--font-xs);
   color: #64748b;
 }
 
@@ -1755,7 +1765,7 @@ td {
   vertical-align: middle;
 }
 table tbody tr {
-  height: 52px;
+  height: 44px;
 }
 
 .pill.small {
@@ -2041,8 +2051,8 @@ body.theme-dark .import-error {
 
 /* Ícones */
 .export-menu .icon {
-  width: 18px;
-  height: 18px;
+  width: var(--icon-size);
+  height: var(--icon-size);
   background-size: contain;
   background-repeat: no-repeat;
   flex-shrink: 0;
@@ -2067,8 +2077,8 @@ body.theme-dark .import-error {
 .export-menu li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
   cursor: pointer;
 }
 
@@ -2078,8 +2088,8 @@ body.theme-dark .import-error {
 
 /* Base */
 .icon {
-  width: 18px;
-  height: 18px;
+  width: var(--icon-size);
+  height: var(--icon-size);
   display: inline-block;
   background-size: contain;
   background-repeat: no-repeat;
