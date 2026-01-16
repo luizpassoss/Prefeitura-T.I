@@ -557,7 +557,17 @@ body.theme-dark thead th {
   border-bottom: 1px solid #243049;
 }
 
+body.theme-dark .table-wrap th.checkbox-cell,
+body.theme-dark .table-wrap th.actions-header {
+  background: #182235;
+}
+
 body.theme-dark .table-filters th {
+  background: #131c2b;
+}
+
+body.theme-dark .table-wrap thead .table-filters th.checkbox-cell,
+body.theme-dark .table-wrap thead .table-filters th.actions-header {
   background: #131c2b;
 }
 
@@ -1843,7 +1853,7 @@ td {
 }
 
 .table-wrap th.checkbox-cell {
-  background: inherit;
+  background: #f1f5fb;
 }
 
 .table-wrap td.checkbox-cell {
@@ -1858,7 +1868,12 @@ td {
 }
 
 .table-wrap th.actions-header {
-  background: inherit;
+  background: #f1f5fb;
+}
+
+.table-wrap thead .table-filters th.checkbox-cell,
+.table-wrap thead .table-filters th.actions-header {
+  background: #f8fafc;
 }
 
 .table-wrap td.actions {

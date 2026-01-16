@@ -212,7 +212,9 @@ function updateBulkUI() {
   function focusFirstField(modalEl) {
     if (!modalEl) return;
     requestAnimationFrame(() => {
-      const target = modalEl.querySelector('[data-autofocus], input, select, textarea, button');
+      const target = modalEl.querySelector(
+        '[data-autofocus], input, select, textarea, button:not(.help-link)'
+      );
       if (target) target.focus();
     });
   }
@@ -3731,11 +3733,14 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
   const link = e.target.closest('.help-link');
   if (!link) return;
+  e.preventDefault();
+  e.stopPropagation();
   const tip = link.closest('.help-tip');
   if (!tip) return;
   const title = tip.dataset.helpTitle || 'Ajuda';
   const content = tip.dataset.helpMore || tip.dataset.help || '';
   openHelpPanel(title, content);
+  link.blur();
 });
 
 function getActiveSearchInput() {
