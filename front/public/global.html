@@ -87,6 +87,24 @@
               Filtros
               <span class="filter-count" data-filter-badge="inventory" aria-label="Filtros ativos"></span>
             </button>
+            <div class="export-wrapper sort-wrapper">
+              <button class="btn secondary sort-btn" type="button" onclick="toggleSortMenu('inv')">
+                Ordenar
+              </button>
+              <div id="sortMenuInv" class="export-menu hidden" role="menu" aria-label="Ordenar por">
+                <div class="export-menu-title sort-menu-header">
+                  Ordenar por
+                  <button type="button" class="sort-order-toggle" data-sort-scope="inventory">
+                    Crescente (A→Z / 0→9)
+                  </button>
+                </div>
+                <button type="button" data-sort-key="link">Link de Internet</button>
+                <button type="button" data-sort-key="velocidade">Velocidade (DL/UL)</button>
+                <button type="button" data-sort-key="telefone">Telefone</button>
+                <button type="button" data-sort-key="local">Local</button>
+                <button type="button" data-sort-key="endereco">Endereço</button>
+              </div>
+            </div>
             <button class="btn secondary import-btn" onclick="openImportModal('inventario')">
               <span class="icon excel-icon" aria-hidden="true"></span>
               Importar Planilha
@@ -144,11 +162,11 @@
                 <th style="width:32px; text-align:center;" class="checkbox-cell">
                   <input type="checkbox" id="chkAllInv">
                 </th>
-                <th style="width:20%" class="sortable" data-sort-key="link">Link de Internet <span class="sort-indicator"></span></th>
-                <th style="width:15%" class="sortable" data-sort-key="velocidade">Velocidade (DL/UL) <span class="sort-indicator"></span></th>
-                <th style="width:12%" class="sortable" data-sort-key="telefone">Telefone <span class="sort-indicator"></span></th>
-                <th style="width:16%" class="sortable" data-sort-key="local">Local <span class="sort-indicator"></span></th>
-                <th style="width:28%" class="sortable" data-sort-key="endereco">Endereço <span class="sort-indicator"></span></th>
+                <th style="width:20%">Link de Internet</th>
+                <th style="width:15%">Velocidade (DL/UL)</th>
+                <th style="width:12%">Telefone</th>
+                <th style="width:16%">Local</th>
+                <th style="width:28%">Endereço</th>
                 <th class="actions-header" style="width:9%">Ações</th>
               </tr>
               <tr class="table-filters">
@@ -222,7 +240,12 @@
                 Ordenar
               </button>
               <div id="sortMenuMq" class="export-menu hidden" role="menu" aria-label="Ordenar por">
-                <div class="export-menu-title">Ordenar por</div>
+                <div class="export-menu-title sort-menu-header">
+                  Ordenar por
+                  <button type="button" class="sort-order-toggle" data-sort-scope="machines">
+                    Crescente (A→Z / 0→9)
+                  </button>
+                </div>
                 <button type="button" data-sort-key="nome_maquina">Nome da Máquina</button>
                 <button type="button" data-sort-key="patrimonio">Patrimônio</button>
                 <button type="button" data-sort-key="local">Local</button>
@@ -366,6 +389,20 @@
               <span class="icon excel-icon" aria-hidden="true"></span>
               Importar Planilha
             </button>
+            <div class="export-wrapper sort-wrapper">
+              <button class="btn secondary sort-btn" type="button" onclick="toggleSortMenu('mod')">
+                Ordenar
+              </button>
+              <div id="sortMenuMod" class="export-menu hidden" role="menu" aria-label="Ordenar por">
+                <div class="export-menu-title sort-menu-header">
+                  Ordenar por
+                  <button type="button" class="sort-order-toggle" data-sort-scope="modules">
+                    Crescente (A→Z / 0→9)
+                  </button>
+                </div>
+                <div class="sort-menu-options" id="sortMenuModOptions"></div>
+              </div>
+            </div>
 
             <div class="export-wrapper">
               <button class="btn export" onclick="toggleExportMenu('mod')">

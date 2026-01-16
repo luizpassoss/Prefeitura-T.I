@@ -830,6 +830,16 @@ body.theme-dark .export-menu button:hover {
   background: rgba(148, 163, 184, 0.12);
 }
 
+body.theme-dark .sort-order-toggle {
+  background: rgba(148, 163, 184, 0.16);
+  color: #e2e8f0;
+}
+
+body.theme-dark .sort-order-toggle:hover {
+  background: rgba(148, 163, 184, 0.28);
+  color: #f8fafc;
+}
+
 body.theme-dark .btn.export {
   background: #1f2937;
   color: #e2e8f0;
@@ -2241,6 +2251,30 @@ body.theme-dark .status-inativa .status-dot {
   font-weight: 600;
   color: #64748b;
   padding: 8px 12px 4px;
+}
+
+.export-menu-title.sort-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sort-order-toggle {
+  border: none;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sort-order-toggle:hover {
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
 .sort-wrapper .sort-btn {
