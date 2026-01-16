@@ -11,6 +11,7 @@ let camposModuloAtual = [];
   let importType = null; // inventario | maquinas
   let importRows = [];
   let importHeaders = [];
+  let importFileName = '';
 
 /* ===========================
    MÓDULOS DINÂMICOS
@@ -24,6 +25,15 @@ let moduloCampos = [];
 let moduloRegistros = [];
 let moduloEditId = null;
 let moduloDeleteTarget = null;
+let moduloColumnFilters = {};
+let moduloSortState = { key: null, dir: 'asc' };
+
+const sortState = {
+  inventory: { key: null, dir: 'asc' },
+  machines: { key: null, dir: 'asc' }
+};
+
+const IMPORT_HISTORY_KEY = 'ti-import-history';
 
   /* ===========================
      CONFIG
@@ -72,6 +82,21 @@ if (btnNovaAba) {
   const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
   updateFilterBadges();
+  renderImportHistory();
+
+  document.querySelectorAll('#tb thead .sortable').forEach((th) => {
+    th.addEventListener('click', () => {
+      toggleSort(sortState.inventory, th.dataset.sortKey);
+      applyFilters();
+    });
+  });
+
+  document.querySelectorAll('#tabMaquinas thead .sortable').forEach((th) => {
+    th.addEventListener('click', () => {
+      toggleSort(sortState.machines, th.dataset.sortKey);
+      applyMachineFilters();
+    });
+  });
 
 
   /* ===========================
@@ -309,6 +334,25 @@ function showMessage(message, title = 'Aviso') {
     showMessage(message);
   }
 
+  function openHelpPanel(title, content) {
+    const panel = document.getElementById('helpPanel');
+    const overlay = document.getElementById('helpPanelOverlay');
+    const titleEl = document.getElementById('helpPanelTitle');
+    const contentEl = document.getElementById('helpPanelContent');
+    if (!panel || !overlay || !titleEl || !contentEl) return;
+    titleEl.textContent = title || 'Ajuda';
+    contentEl.textContent = content || '';
+    panel.classList.remove('hidden');
+    overlay.classList.remove('hidden');
+  }
+
+  function closeHelpPanel() {
+    const panel = document.getElementById('helpPanel');
+    const overlay = document.getElementById('helpPanelOverlay');
+    panel?.classList.add('hidden');
+    overlay?.classList.add('hidden');
+  }
+
   /* ===========================
      RENDER INVENTÁRIO
      =========================== */
@@ -323,7 +367,7 @@ function showMessage(message, title = 'Aviso') {
     list.forEach((it, idx) => {
       const tr = document.createElement('tr');
      tr.innerHTML = `
-  <td style="text-align:center;">
+  <td class="checkbox-cell" style="text-align:center;">
     <input 
       type="checkbox"
       class="chk-inv"
@@ -437,6 +481,150 @@ function normalize(s){
     .toLowerCase();
 }
 
+function getInputValue(id) {
+  return (document.getElementById(id)?.value || '').trim().toLowerCase();
+}
+
+function isValidPhoneNumber(value) {
+  const digits = (value || '').replace(/\D/g, '');
+  if (!digits) return true;
+  return digits.length >= 8 && digits.length <= 11;
+}
+
+function isValidEmail(value) {
+  if (!value) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function applyPhoneMask(value) {
+  const digits = (value || '').replace(/\D/g, '').slice(0, 11);
+  if (!digits) return '';
+  if (digits.length <= 10) {
+    return digits
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d)/, '$1-$2');
+}
+
+function applyDateMask(value) {
+  const digits = (value || '').replace(/\D/g, '').slice(0, 8);
+  if (!digits) return '';
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function normalizeDateValue(value) {
+  if (!value) return '';
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+    const [day, month, year] = trimmed.split('/');
+    return `${year}-${month}-${day}`;
+  }
+  return trimmed;
+}
+
+function normalizeSortValue(value) {
+  if (value === null || value === undefined) return '';
+  const str = value.toString().trim();
+  const numeric = Number(str.replace(',', '.'));
+  if (!Number.isNaN(numeric) && str !== '') return numeric;
+  return str.toLowerCase();
+}
+
+function sortWithIndex(list, getValue, dir = 'asc') {
+  const multiplier = dir === 'desc' ? -1 : 1;
+  return list
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => {
+      const av = normalizeSortValue(getValue(a.item));
+      const bv = normalizeSortValue(getValue(b.item));
+      if (av < bv) return -1 * multiplier;
+      if (av > bv) return 1 * multiplier;
+      return a.index - b.index;
+    })
+    .map(({ item }) => item);
+}
+
+function updateSortIndicators(scopeSelector, state) {
+  document.querySelectorAll(`${scopeSelector} .sortable`).forEach((th) => {
+    th.classList.remove('asc', 'desc');
+    th.setAttribute('aria-sort', 'none');
+    if (th.dataset.sortKey === state.key) {
+      th.classList.add(state.dir);
+      th.setAttribute('aria-sort', state.dir === 'asc' ? 'ascending' : 'descending');
+    }
+  });
+}
+
+function toggleSort(state, key) {
+  if (state.key === key) {
+    state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    state.key = key;
+    state.dir = 'asc';
+  }
+}
+
+function getCurrentUserName() {
+  return localStorage.getItem('ti-user') || 'Usuário atual';
+}
+
+function loadImportHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(IMPORT_HISTORY_KEY)) || [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveImportHistory(items) {
+  localStorage.setItem(IMPORT_HISTORY_KEY, JSON.stringify(items));
+}
+
+function recordImportHistory(entry) {
+  const history = loadImportHistory();
+  history.unshift(entry);
+  saveImportHistory(history.slice(0, 10));
+  renderImportHistory();
+}
+
+function formatHistoryDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('pt-BR');
+}
+
+function renderImportHistory() {
+  const tbody = document.querySelector('#importHistoryTable tbody');
+  if (!tbody) return;
+  const history = loadImportHistory();
+  if (!history.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:12px;color:#94a3b8">Nenhuma importação registrada.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = history.map((item) => `
+    <tr>
+      <td>${formatHistoryDate(item.date)}</td>
+      <td>${escapeHtml(item.user)}</td>
+      <td>${escapeHtml(item.file)}</td>
+      <td><span class="import-status ${item.status}">${item.statusLabel}</span></td>
+      <td class="actions">
+        <button class="btn secondary" type="button" onclick="reprocessImport('${item.id}')">Reprocessar</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function clearImportHistory() {
+  saveImportHistory([]);
+  renderImportHistory();
+}
+
 function getFiltered() {
   const q = (document.getElementById('q')?.value || "").toLowerCase();
 
@@ -447,6 +635,11 @@ function getFiltered() {
   const localFilter = (document.getElementById('filterLocalInv')?.value || '').trim().toLowerCase();
   const velFilter = (document.getElementById('filterVelInv')?.value || '').trim().toLowerCase();
   const telFilter = (document.getElementById('filterTelInv')?.value || '').trim().toLowerCase();
+  const linkColumnFilter = getInputValue('invFilterLink');
+  const velColumnFilter = getInputValue('invFilterVel');
+  const telColumnFilter = getInputValue('invFilterTel');
+  const localColumnFilter = getInputValue('invFilterLocal');
+  const enderecoColumnFilter = getInputValue('invFilterEndereco');
 
   let list = [...data];
 
@@ -481,6 +674,26 @@ if (cat !== "All") {
 
   if (telFilter) {
     list = list.filter(x => (x.telefone || '').toLowerCase().includes(telFilter));
+  }
+
+  if (linkColumnFilter) {
+    list = list.filter(x => (x.link || '').toLowerCase().includes(linkColumnFilter));
+  }
+
+  if (velColumnFilter) {
+    list = list.filter(x => (x.velocidade || '').toLowerCase().includes(velColumnFilter));
+  }
+
+  if (telColumnFilter) {
+    list = list.filter(x => (x.telefone || '').toLowerCase().includes(telColumnFilter));
+  }
+
+  if (localColumnFilter) {
+    list = list.filter(x => (x.local || '').toLowerCase().includes(localColumnFilter));
+  }
+
+  if (enderecoColumnFilter) {
+    list = list.filter(x => (x.endereco || '').toLowerCase().includes(enderecoColumnFilter));
   }
 
   if (valueFilter) {
@@ -521,16 +734,27 @@ function updateFilterBadges() {
   const local = (document.getElementById('filterLocalInv')?.value || '').trim();
   const vel = (document.getElementById('filterVelInv')?.value || '').trim();
   const tel = (document.getElementById('filterTelInv')?.value || '').trim();
-  const invCount = [q, value, local, vel, tel].filter(Boolean).length + (cat !== 'All' ? 1 : 0);
+  const invLink = (document.getElementById('invFilterLink')?.value || '').trim();
+  const invVel = (document.getElementById('invFilterVel')?.value || '').trim();
+  const invTel = (document.getElementById('invFilterTel')?.value || '').trim();
+  const invLocal = (document.getElementById('invFilterLocal')?.value || '').trim();
+  const invEnd = (document.getElementById('invFilterEndereco')?.value || '').trim();
+  const invCount = [q, value, local, vel, tel, invLink, invVel, invTel, invLocal, invEnd].filter(Boolean).length + (cat !== 'All' ? 1 : 0);
 
   const mq = (document.getElementById('mq')?.value || '').trim();
   const status = (document.getElementById('filterMachineStatus')?.value || 'All');
   const mqLocal = (document.getElementById('filterMachineLocal')?.value || '').trim();
-  const mqCount = [mq, mqLocal].filter(Boolean).length + (status !== 'All' ? 1 : 0);
+  const mqNome = (document.getElementById('mqFilterNome')?.value || '').trim();
+  const mqPatrimonio = (document.getElementById('mqFilterPatrimonio')?.value || '').trim();
+  const mqLocalCol = (document.getElementById('mqFilterLocal')?.value || '').trim();
+  const mqStatusCol = (document.getElementById('mqFilterStatus')?.value || '').trim();
+  const mqDescricao = (document.getElementById('mqFilterDescricao')?.value || '').trim();
+  const mqCount = [mq, mqLocal, mqNome, mqPatrimonio, mqLocalCol, mqStatusCol, mqDescricao].filter(Boolean).length + (status !== 'All' ? 1 : 0);
 
   const modSearch = (document.getElementById('moduloSearch')?.value || '').trim();
   const modValue = (document.getElementById('moduloFilterValue')?.value || '').trim();
-  const modCount = [modSearch, modValue].filter(Boolean).length;
+  const modColumnFilters = Object.values(moduloColumnFilters || {}).filter(value => value?.trim());
+  const modCount = [modSearch, modValue, ...modColumnFilters].filter(Boolean).length;
 
   updateFilterBadge('inventory', invCount);
   updateFilterBadge('machines', mqCount);
@@ -548,6 +772,11 @@ function clearInventoryFilters() {
   if (velEl) velEl.value = '';
   const telEl = document.getElementById('filterTelInv');
   if (telEl) telEl.value = '';
+  const headerFilters = ['invFilterLink', 'invFilterVel', 'invFilterTel', 'invFilterLocal', 'invFilterEndereco'];
+  headerFilters.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   applyFilters();
 }
 
@@ -573,7 +802,13 @@ async function carregarLogoPrefeitura() {
 
 
   function applyFilters(){
-    renderTable(getFiltered());
+    let filtered = getFiltered();
+    if (sortState.inventory.key) {
+      const key = sortState.inventory.key;
+      filtered = sortWithIndex(filtered, item => item[key], sortState.inventory.dir);
+    }
+    renderTable(filtered);
+    updateSortIndicators('#tb thead', sortState.inventory);
     updateFilterBadges();
   }
   function renderPills({q, cat, tel, vmin, vmax}){
@@ -669,6 +904,7 @@ if (mLocalSelect && mLocalOutro) {
   safeAdd('inpLink','change', function(){ const e = document.getElementById('inpLinkOutro'); if(!e) return; e.style.display = this.value==='Outro' ? 'block' : 'none'; if(this.value!=='Outro') e.value=''; });
   safeAdd('inpVel','change', function(){ const e = document.getElementById('inpVelOutro'); if(!e) return; e.style.display = this.value==='Outro' ? 'block' : 'none'; if(this.value!=='Outro') e.value=''; });
   safeAdd('inpLocal','change', function(){ const e = document.getElementById('inpLocalOutro'); if(!e) return; e.style.display = this.value==='Outro' ? 'block' : 'none'; if(this.value!=='Outro') e.value=''; });
+  safeAdd('inpTel', 'input', function() { this.value = applyPhoneMask(this.value); });
 
   async function saveItem(){
     const categoria = (document.getElementById('inpCategoria').value || '').trim();
@@ -684,7 +920,18 @@ if (mLocalSelect && mLocalOutro) {
 telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
  const endereco = (document.getElementById('inpEnd').value || '').trim();
 
-    if(!link || !local){ showMessage('Preencha ao menos Link e Local.'); return; }
+    const missingFields = [];
+    if (!link) missingFields.push('Link');
+    if (!local) missingFields.push('Local');
+    if (missingFields.length) {
+      showMessage(`Campo${missingFields.length > 1 ? 's' : ''} obrigatório${missingFields.length > 1 ? 's' : ''}: ${missingFields.join(' e ')}.`);
+      return;
+    }
+
+    if (telefone && !isValidPhoneNumber(telefone)) {
+      showMessage('Telefone inválido. Informe DDD + número (8 a 11 dígitos).');
+      return;
+    }
 
     const item = { categoria, link, velocidade, telefone, local, endereco };
 
@@ -882,7 +1129,7 @@ function exportInventarioExcel(rows) {
     list.forEach((it, idx) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-  <td style="text-align:center">
+  <td class="checkbox-cell" style="text-align:center">
     <input
       type="checkbox"
       class="chk-mq"
@@ -997,6 +1244,11 @@ mtbody.addEventListener('click', (e) => {
   const q = (document.getElementById('mq').value || '').trim().toLowerCase();
   const statusFilter = (document.getElementById('filterMachineStatus')?.value || 'All').toLowerCase();
   const localFilter = (document.getElementById('filterMachineLocal')?.value || '').trim().toLowerCase();
+  const nomeColumnFilter = getInputValue('mqFilterNome');
+  const patrimonioColumnFilter = getInputValue('mqFilterPatrimonio');
+  const localColumnFilter = getInputValue('mqFilterLocal');
+  const statusColumnFilter = getInputValue('mqFilterStatus');
+  const descricaoColumnFilter = getInputValue('mqFilterDescricao');
 
   let list = [...machineData];
 
@@ -1019,17 +1271,48 @@ mtbody.addEventListener('click', (e) => {
     list = list.filter(x => (x.local || '').toLowerCase().includes(localFilter));
   }
 
+  if (nomeColumnFilter) {
+    list = list.filter(x => (x.nome_maquina || '').toLowerCase().includes(nomeColumnFilter));
+  }
+
+  if (patrimonioColumnFilter) {
+    list = list.filter(x => (x.patrimonio || '').toLowerCase().includes(patrimonioColumnFilter));
+  }
+
+  if (localColumnFilter) {
+    list = list.filter(x => (x.local || '').toLowerCase().includes(localColumnFilter));
+  }
+
+  if (statusColumnFilter) {
+    list = list.filter(x => (x.status || '').toLowerCase().includes(statusColumnFilter));
+  }
+
+  if (descricaoColumnFilter) {
+    list = list.filter(x => (x.descricao || '').toLowerCase().includes(descricaoColumnFilter));
+  }
+
+  if (sortState.machines.key) {
+    const key = sortState.machines.key;
+    list = sortWithIndex(list, item => item[key], sortState.machines.dir);
+  }
+
   renderMachines(list);
+  updateSortIndicators('#tabMaquinas thead', sortState.machines);
   updateFilterBadges();
 }
 
-  function clearMachineFilters(){
-    const mqEl = document.getElementById('mq');
-    if (mqEl) mqEl.value = '';
+function clearMachineFilters(){
+  const mqEl = document.getElementById('mq');
+  if (mqEl) mqEl.value = '';
   const statusEl = document.getElementById('filterMachineStatus');
   if (statusEl) statusEl.value = 'All';
   const localEl = document.getElementById('filterMachineLocal');
   if (localEl) localEl.value = '';
+  const headerFilters = ['mqFilterNome', 'mqFilterPatrimonio', 'mqFilterLocal', 'mqFilterStatus', 'mqFilterDescricao'];
+  headerFilters.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   applyMachineFilters();
   }
 
@@ -1126,6 +1409,7 @@ if (localSelect && [...localSelect.options].some(o => o.value === it.local)) {
 async function saveMachine(){
   let local = (document.getElementById('mLocal')?.value || '').trim();
   const localOutro = (document.getElementById('mLocalOutro')?.value || '').trim();
+  const machineNumber = (document.getElementById('mNomeNumero')?.value || '').trim();
 
   if (local === 'Outro' && localOutro) {
     local = localOutro;
@@ -1144,9 +1428,13 @@ if(!item.local){
   return;
 }
 
-
-  if(!item.nome_maquina){
+  if(!machineNumber){
     showMessage("Informe o número da máquina.");
+    return;
+  }
+
+  if (!/^\d+$/.test(machineNumber)) {
+    showMessage("Número da máquina inválido. Use apenas números.");
     return;
   }
 
@@ -1625,6 +1913,7 @@ function openImportModal(type) {
   importType = type;
   importRows = [];
   importHeaders = [];
+  importFileName = '';
 
   document.getElementById('importTitle').innerText =
     type === 'inventario'
@@ -1651,6 +1940,7 @@ function openImportModal(type) {
     actionBtn.disabled = false;
   }
   openModalById('importModal');
+  renderImportHistory();
 
 
 }
@@ -1659,6 +1949,7 @@ function closeImportModal() {
   document.getElementById('importModal').classList.remove('show');
   document.getElementById('importStepPreview')?.classList.add('hidden');
   document.getElementById('importStepUpload')?.classList.remove('hidden');
+  importFileName = '';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -1679,6 +1970,7 @@ function closeImportModalIfClicked(e) {
 function handleImportFile() {
   const file = document.getElementById('importFile').files[0];
   const fileName = document.getElementById('importFileName');
+  importFileName = file?.name || '';
   if (fileName) {
     fileName.textContent = file?.name || 'Nenhum arquivo selecionado';
   }
@@ -1960,6 +2252,136 @@ function mapImportRows() {
   return [];
 }
 
+function mapModuloImportRows() {
+  const headerMap = {};
+  importHeaders.forEach((h, idx) => {
+    const key = normalizeHeader(h);
+    if (key) headerMap[key] = idx;
+  });
+
+  const camposMap = moduloCampos.map(c => ({
+    nome: c.nome,
+    key: normalizeHeader(c.nome)
+  }));
+
+  return importRows.map((row) => {
+    const valores = {};
+    camposMap.forEach(campo => {
+      const idx = headerMap[campo.key];
+      valores[campo.nome] = idx !== undefined ? row[idx] : '';
+    });
+    return valores;
+  });
+}
+
+async function runModuloImport(rows, moduleId) {
+  let successCount = 0;
+  const errors = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    try {
+      await fetch(`${API_MODULOS}/${moduleId}/registros`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valores: rows[i] })
+      });
+      successCount += 1;
+    } catch (err) {
+      errors.push({ linha: i + 2, erro: err.message });
+    }
+  }
+
+  return { successCount, errorCount: errors.length, errors };
+}
+
+async function executeImport({ type, rows, moduleId }) {
+  if (type === 'modulo') {
+    const result = await runModuloImport(rows, moduleId);
+    return {
+      status: result.errorCount > 0 ? 'warning' : 'success',
+      statusLabel: result.errorCount > 0 ? 'Com avisos' : 'Concluída',
+      ...result
+    };
+  }
+
+  const url =
+    type === 'inventario'
+      ? `${API_BASE}/import/inventario`
+      : `${API_BASE}/import/maquinas`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rows })
+  });
+
+  const result = await res.json();
+
+  if (result.errors?.length) {
+    return {
+      status: 'warning',
+      statusLabel: 'Com avisos',
+      errorCount: result.errors.length,
+      result
+    };
+  }
+
+  return { status: 'success', statusLabel: 'Concluída', errorCount: 0, result };
+}
+
+async function reprocessImport(id) {
+  const history = loadImportHistory();
+  const entry = history.find(item => item.id === id);
+  if (!entry) {
+    showMessage('Importação não encontrada no histórico.');
+    return;
+  }
+
+  try {
+    const result = await executeImport({
+      type: entry.type,
+      rows: entry.rows || [],
+      moduleId: entry.moduleId
+    });
+
+    recordImportHistory({
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      date: new Date().toISOString(),
+      user: getCurrentUserName(),
+      file: `Reprocessado: ${entry.file}`,
+      status: result.status,
+      statusLabel: result.statusLabel,
+      type: entry.type,
+      rows: entry.rows || [],
+      moduleId: entry.moduleId || null
+    });
+
+    if (entry.type === 'modulo') {
+      await carregarRegistrosModulo();
+      renderModuloDinamico();
+    } else {
+      await fetchData();
+      await fetchMachines();
+    }
+
+    showMessage(`Reprocessamento concluído (${result.statusLabel}).`);
+  } catch (err) {
+    console.error(err);
+    showMessage('Erro ao reprocessar importação.');
+    recordImportHistory({
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      date: new Date().toISOString(),
+      user: getCurrentUserName(),
+      file: `Reprocessado: ${entry.file}`,
+      status: 'error',
+      statusLabel: 'Falhou',
+      type: entry.type,
+      rows: entry.rows || [],
+      moduleId: entry.moduleId || null
+    });
+  }
+}
+
 function normalizeHeader(value = '') {
   return value
     .toString()
@@ -1984,48 +2406,67 @@ async function confirmImport() {
   if (validation.issues.length || validation.errorCount > 0) {
     showImportWarning('Existem campos obrigatórios vazios. Você pode importar e ajustar depois.');
   }
-  const rows = mapImportRows();
-
-  if (importType === 'modulo') {
-    await importarRegistrosModulo();
-    closeImportModal();
+  if (importType === 'modulo' && !moduloAtual?.id) {
+    showImportWarning('Selecione uma aba personalizada antes de importar.');
     return;
   }
+  const rows = importType === 'modulo' ? mapModuloImportRows() : mapImportRows();
+  const fileName = importFileName || 'Importação manual';
 
   if (!rows.length) {
     showImportWarning('Nenhum dado para importar.');
     return;
   }
 
-  const url =
-    importType === 'inventario'
-      ? `${API_BASE}/import/inventario`
-      : `${API_BASE}/import/maquinas`;
-
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rows })
+    const result = await executeImport({
+      type: importType,
+      rows,
+      moduleId: importType === 'modulo' ? moduloAtual?.id : null
     });
 
-    const result = await res.json();
-
-    if (result.errors?.length) {
-      showImportWarning(`Importação concluída com ${result.errors.length} erro(s).`);
-      console.table(result.errors);
+    if (result.status === 'warning') {
+      showImportWarning(`Importação concluída com ${result.errorCount || result.errors?.length || 0} erro(s).`);
+      if (result.errors?.length) console.table(result.errors);
     } else {
       showMessage('Importação realizada com sucesso!');
     }
 
+    recordImportHistory({
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      date: new Date().toISOString(),
+      user: getCurrentUserName(),
+      file: fileName,
+      status: result.status,
+      statusLabel: result.statusLabel,
+      type: importType,
+      rows,
+      moduleId: importType === 'modulo' ? moduloAtual?.id : null
+    });
+
     closeImportModal();
-    await fetchData();
-await fetchMachines();
 
-
+    if (importType === 'modulo') {
+      await carregarRegistrosModulo();
+      renderModuloDinamico();
+    } else {
+      await fetchData();
+      await fetchMachines();
+    }
   } catch (err) {
     console.error(err);
     showMessage('Erro ao importar dados.');
+    recordImportHistory({
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      date: new Date().toISOString(),
+      user: getCurrentUserName(),
+      file: fileName,
+      status: 'error',
+      statusLabel: 'Falhou',
+      type: importType,
+      rows,
+      moduleId: importType === 'modulo' ? moduloAtual?.id : null
+    });
   }
 }
 
@@ -2056,39 +2497,14 @@ async function importarRegistrosModulo() {
     showImportWarning('Os cabeçalhos da planilha não correspondem aos campos do módulo. Os dados serão importados em branco para os campos ausentes.');
   }
 
-  let successCount = 0;
-  const errors = [];
+  const rows = mapModuloImportRows();
+  const result = await executeImport({ type: 'modulo', rows, moduleId: moduloAtual.id });
 
-  for (let i = 0; i < importRows.length; i++) {
-    const row = importRows[i];
-    const valores = {};
-
-    camposMap.forEach(campo => {
-      const idx = headerMap[campo.key];
-      if (idx !== undefined) {
-        valores[campo.nome] = row[idx];
-      } else {
-        valores[campo.nome] = '';
-      }
-    });
-
-    try {
-      await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ valores })
-      });
-      successCount += 1;
-    } catch (err) {
-      errors.push({ linha: i + 2, erro: err.message });
-    }
-  }
-
-  if (errors.length) {
-    console.table(errors);
-    showMessage(`Importação concluída com ${errors.length} erro(s).`);
+  if (result.errorCount > 0) {
+    console.table(result.errors);
+    showMessage(`Importação concluída com ${result.errorCount} erro(s).`);
   } else {
-    showMessage(`Importação concluída: ${successCount} registro(s).`);
+    showMessage(`Importação concluída: ${result.successCount} registro(s).`);
   }
 
   await carregarRegistrosModulo();
@@ -2306,15 +2722,64 @@ function renderModuloDinamico() {
       <th class="checkbox-cell">
         <input type="checkbox" id="chkAllMod">
       </th>
-      ${moduloCampos.map(c => `<th>${c.nome}</th>`).join('')}
+      ${moduloCampos.map(c => `
+        <th class="sortable" data-sort-key="${c.nome}">
+          ${c.nome} <span class="sort-indicator"></span>
+        </th>
+      `).join('')}
       <th class="actions-header">Ações</th>
     </tr>
+    <tr class="table-filters">
+      <th class="checkbox-cell"></th>
+      ${moduloCampos.map(c => `
+        <th>
+          <input
+            class="table-filter-input"
+            data-field="${c.nome}"
+            placeholder="Filtrar ${c.nome}"
+          />
+        </th>
+      `).join('')}
+      <th></th>
+    </tr>
   `;
+
+  thead.querySelectorAll('.table-filter-input').forEach((input) => {
+    const field = input.dataset.field;
+    input.value = moduloColumnFilters[field] || '';
+    input.addEventListener('input', (event) => {
+      const field = event.target.dataset.field;
+      moduloColumnFilters[field] = event.target.value;
+      filtrarModulo();
+    });
+  });
+
+  thead.querySelectorAll('.sortable').forEach((th) => {
+    th.addEventListener('click', () => {
+      toggleSort(moduloSortState, th.dataset.sortKey);
+      renderModuloDinamico();
+    });
+  });
+
+  updateSortIndicators('#moduloThead', moduloSortState);
 
   // BODY
   tbody.innerHTML = '';
 
-  if (!filtered.length) {
+  let sorted = filtered;
+  if (moduloSortState.key) {
+    const key = moduloSortState.key;
+    const dir = moduloSortState.dir;
+    sorted = [...filtered].sort((a, b) => {
+      const av = normalizeSortValue(a.row?.[key]);
+      const bv = normalizeSortValue(b.row?.[key]);
+      if (av < bv) return dir === 'asc' ? -1 : 1;
+      if (av > bv) return dir === 'asc' ? 1 : -1;
+      return a.idx - b.idx;
+    });
+  }
+
+  if (!sorted.length) {
     tbody.innerHTML = `
       <tr>
         <td colspan="${moduloCampos.length + 2}" style="padding:22px;color:#9fb6d9">
@@ -2327,7 +2792,7 @@ function renderModuloDinamico() {
     return;
   }
 
-  filtered.forEach(({ row, idx }) => {
+  sorted.forEach(({ row, idx }) => {
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
@@ -2437,12 +2902,22 @@ function formatDateForTable(value) {
 function getModuloFiltrado() {
   const q = (document.getElementById('moduloSearch')?.value || '').trim().toLowerCase();
   const valueFilter = (document.getElementById('moduloFilterValue')?.value || '').trim().toLowerCase();
+  const columnFilters = Object.entries(moduloColumnFilters)
+    .filter(([, value]) => value && value.trim())
+    .map(([field, value]) => [field, value.trim().toLowerCase()]);
   if (!q) {
     let filtered = moduloRegistros.map((row, idx) => ({ row, idx }));
     if (valueFilter) {
       filtered = filtered.filter(({ row }) =>
         moduloCampos.some(campo =>
           (row[campo.nome] || '').toString().toLowerCase().includes(valueFilter)
+        )
+      );
+    }
+    if (columnFilters.length) {
+      filtered = filtered.filter(({ row }) =>
+        columnFilters.every(([field, value]) =>
+          (row[field] || '').toString().toLowerCase().includes(value)
         )
       );
     }
@@ -2463,6 +2938,13 @@ function getModuloFiltrado() {
       )
     );
   }
+  if (columnFilters.length) {
+    filtered = filtered.filter(({ row }) =>
+      columnFilters.every(([field, value]) =>
+        (row[field] || '').toString().toLowerCase().includes(value)
+      )
+    );
+  }
   return filtered;
 }
 
@@ -2471,6 +2953,10 @@ function clearModuloFilters() {
   if (searchEl) searchEl.value = '';
   const valueEl = document.getElementById('moduloFilterValue');
   if (valueEl) valueEl.value = '';
+  moduloColumnFilters = {};
+  document.querySelectorAll('#moduloThead .table-filter-input').forEach((input) => {
+    input.value = '';
+  });
   filtrarModulo();
 }
 
@@ -2537,7 +3023,8 @@ function renderFormularioModulo(valores = {}) {
 
     const typeMap = {
       numero: 'number',
-      data: 'date'
+      data: 'text',
+      email: 'email'
     };
 
     let input;
@@ -2613,15 +3100,36 @@ function renderFormularioModulo(valores = {}) {
       input = document.createElement('input');
       input.type = typeMap[campo.tipo] || 'text';
       input.value = valores[campo.nome] || '';
+      if (campo.tipo === 'data') {
+        input.placeholder = 'dd/mm/aaaa';
+        input.inputMode = 'numeric';
+      }
     }
 
     input.dataset.field = campo.nome;
+    input.dataset.type = campo.tipo || 'texto';
     input.dataset.required = campo.obrigatorio ? 'true' : 'false';
     if (index === 0) {
       input.dataset.autofocus = 'true';
     }
 
     if (!isNomeMaquina) {
+      if (campo.tipo === 'data') {
+        input.addEventListener('input', (event) => {
+          event.target.value = applyDateMask(event.target.value);
+        });
+      }
+      const normalizedFieldName = normalizeHeader(campo.nome);
+      if (campo.tipo === 'email') {
+        input.addEventListener('blur', (event) => {
+          event.target.value = event.target.value.trim().toLowerCase();
+        });
+      }
+      if (normalizedFieldName.includes('telefone')) {
+        input.addEventListener('input', (event) => {
+          event.target.value = applyPhoneMask(event.target.value);
+        });
+      }
       field.appendChild(label);
       field.appendChild(input);
     }
@@ -2641,11 +3149,30 @@ async function salvarRegistroModulo() {
   for (const input of inputs) {
     const nome = input.dataset.field;
     const valor = input.value?.trim();
+    const tipo = input.dataset.type || 'texto';
     if (input.dataset.required === 'true' && !valor) {
       showMessage(`Preencha o campo obrigatório: ${nome}`);
       return;
     }
-    valores[nome] = valor || '';
+    const normalizedFieldName = normalizeHeader(nome);
+    if (valor && tipo === 'email' && !isValidEmail(valor)) {
+      showMessage(`E-mail inválido no campo: ${nome}`);
+      return;
+    }
+    if (valor && normalizedFieldName.includes('telefone') && !isValidPhoneNumber(valor)) {
+      showMessage(`Telefone inválido no campo: ${nome}`);
+      return;
+    }
+    if (valor && tipo === 'data') {
+      const normalized = normalizeDateValue(valor);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+        showMessage(`Data inválida no campo: ${nome}`);
+        return;
+      }
+      valores[nome] = normalized;
+    } else {
+      valores[nome] = valor || '';
+    }
   }
 
   const url = moduloEditId
@@ -2955,6 +3482,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } =
       <option value="texto">Texto</option>
       <option value="numero">Número</option>
       <option value="data">Data</option>
+      <option value="email">E-mail</option>
       <option value="select">Lista</option>
     </select>
 
@@ -3231,12 +3759,78 @@ document.addEventListener('click', (e) => {
   }
 });
 
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('.help-link');
+  if (!link) return;
+  const tip = link.closest('.help-tip');
+  if (!tip) return;
+  const title = tip.dataset.helpTitle || 'Ajuda';
+  const content = tip.dataset.helpMore || tip.dataset.help || '';
+  openHelpPanel(title, content);
+});
+
+function getActiveSearchInput() {
+  if (document.getElementById('tabInventario')?.classList.contains('active')) {
+    return document.getElementById('q');
+  }
+  if (document.getElementById('tabMaquinas')?.classList.contains('active')) {
+    return document.getElementById('mq');
+  }
+  if (document.getElementById('tabModuloDinamico')?.classList.contains('active')) {
+    return document.getElementById('moduloSearch');
+  }
+  return null;
+}
+
+function isTypingField(el) {
+  if (!el) return false;
+  const tag = el.tagName?.toLowerCase();
+  return tag === 'input' || tag === 'textarea' || el.isContentEditable;
+}
+
 document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape') return;
-  const openModals = [...document.querySelectorAll('.modal.show')];
-  const topModal = openModals[openModals.length - 1];
-  if (topModal) {
-    closeModalByEsc(topModal);
+  if (e.key === 'Escape') {
+    const openModals = [...document.querySelectorAll('.modal.show')];
+    const topModal = openModals[openModals.length - 1];
+    if (topModal) {
+      closeModalByEsc(topModal);
+    }
+    return;
+  }
+
+  if (e.key === '/' && !isTypingField(document.activeElement)) {
+    const input = getActiveSearchInput();
+    if (input) {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+    return;
+  }
+
+  if (e.key === 'Enter' && !e.shiftKey && document.activeElement?.tagName !== 'TEXTAREA') {
+    const openModals = [...document.querySelectorAll('.modal.show')];
+    const topModal = openModals[openModals.length - 1];
+    if (!topModal || !topModal.contains(document.activeElement)) return;
+    switch (topModal.id) {
+      case 'modal':
+        saveItem();
+        break;
+      case 'machineModal':
+        saveMachine();
+        break;
+      case 'moduloRegistroModal':
+        salvarRegistroModulo();
+        break;
+      case 'createTabModal':
+        salvarNovoModulo();
+        break;
+      case 'importModal':
+        confirmImport();
+        break;
+      default:
+        break;
+    }
   }
 });
 
@@ -3271,6 +3865,8 @@ document.addEventListener('keydown', (e) => {
   window.clearInventoryFilters = clearInventoryFilters;
   window.clearMachineFilters = clearMachineFilters;
   window.clearModuloFilters = clearModuloFilters;
+  window.clearImportHistory = clearImportHistory;
+  window.reprocessImport = reprocessImport;
   window.openImportModal = openImportModal;
   window.closeImportModal = closeImportModal;
   window.closeImportModalIfClicked = closeImportModalIfClicked;
@@ -3278,6 +3874,7 @@ document.addEventListener('keydown', (e) => {
   window.confirmImport = confirmImport;
   window.removeImportRow = removeImportRow;
   window.updateImportCell = updateImportCell;
+  window.closeHelpPanel = closeHelpPanel;
 
   window.openCreateTabModal = openCreateTabModal;
   window.closeCreateTabModal = closeCreateTabModal;
