@@ -84,19 +84,11 @@ if (btnNovaAba) {
   updateFilterBadges();
   renderImportHistory();
 
-  document.querySelectorAll('#tb thead .sortable').forEach((th) => {
-    th.addEventListener('click', () => {
-      toggleSort(sortState.inventory, th.dataset.sortKey);
-      applyFilters();
-    });
-  });
-
-  document.querySelectorAll('#tabMaquinas thead .sortable').forEach((th) => {
-    th.addEventListener('click', () => {
-      toggleSort(sortState.machines, th.dataset.sortKey);
-      applyMachineFilters();
-    });
-  });
+  initSortMenu('sortMenuInv', sortState.inventory, applyFilters);
+  initSortMenu('sortMenuMq', sortState.machines, applyMachineFilters);
+  initSortOrderToggle('inventory', sortState.inventory, applyFilters);
+  initSortOrderToggle('machines', sortState.machines, applyMachineFilters);
+  initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
 
 
   /* ===========================
@@ -212,7 +204,9 @@ function updateBulkUI() {
   function focusFirstField(modalEl) {
     if (!modalEl) return;
     requestAnimationFrame(() => {
-      const target = modalEl.querySelector('[data-autofocus], input, select, textarea, button');
+      const target = modalEl.querySelector(
+        '[data-autofocus], input, select, textarea, button:not(.help-link)'
+      );
       if (target) target.focus();
     });
   }
@@ -528,12 +522,37 @@ function normalizeDateValue(value) {
   return trimmed;
 }
 
+const sortCollator = new Intl.Collator('pt-BR', {
+  numeric: true,
+  sensitivity: 'base'
+});
+
 function normalizeSortValue(value) {
   if (value === null || value === undefined) return '';
-  const str = value.toString().trim();
-  const numeric = Number(str.replace(',', '.'));
-  if (!Number.isNaN(numeric) && str !== '') return numeric;
-  return str.toLowerCase();
+  return value.toString().trim();
+}
+
+function toNumericValue(value) {
+  if (typeof value === 'number') return value;
+  if (value === null || value === undefined) return null;
+  const str = value.toString().trim().replace(',', '.');
+  if (!str) return null;
+  if (!/^-?\d+(\.\d+)?$/.test(str)) return null;
+  const numeric = Number(str);
+  return Number.isNaN(numeric) ? null : numeric;
+}
+
+function compareSortValues(aValue, bValue) {
+  const aNum = toNumericValue(aValue);
+  const bNum = toNumericValue(bValue);
+  if (aNum !== null && bNum !== null) {
+    if (aNum < bNum) return -1;
+    if (aNum > bNum) return 1;
+    return 0;
+  }
+  const aStr = normalizeSortValue(aValue);
+  const bStr = normalizeSortValue(bValue);
+  return sortCollator.compare(aStr, bStr);
 }
 
 function sortWithIndex(list, getValue, dir = 'asc') {
@@ -541,13 +560,50 @@ function sortWithIndex(list, getValue, dir = 'asc') {
   return list
     .map((item, index) => ({ item, index }))
     .sort((a, b) => {
-      const av = normalizeSortValue(getValue(a.item));
-      const bv = normalizeSortValue(getValue(b.item));
-      if (av < bv) return -1 * multiplier;
-      if (av > bv) return 1 * multiplier;
+      const result = compareSortValues(getValue(a.item), getValue(b.item));
+      if (result !== 0) return result * multiplier;
       return a.index - b.index;
     })
     .map(({ item }) => item);
+}
+
+function setSort(state, key, dir = null) {
+  state.key = key;
+  if (dir) {
+    state.dir = dir;
+  }
+}
+
+function initSortMenu(menuId, state, onApply) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+  menu.querySelectorAll('[data-sort-key]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setSort(state, btn.dataset.sortKey);
+      if (typeof onApply === 'function') onApply();
+      menu.classList.add('hidden');
+    });
+  });
+}
+
+function updateSortOrderLabel(button, dir) {
+  if (!button) return;
+  button.textContent =
+    dir === 'desc' ? 'Decrescente (Z→A / 9→0)' : 'Crescente (A→Z / 0→9)';
+}
+
+function initSortOrderToggle(scope, state, onApply) {
+  const button = document.querySelector(`.sort-order-toggle[data-sort-scope="${scope}"]`);
+  if (!button) return;
+  updateSortOrderLabel(button, state.dir);
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+    updateSortOrderLabel(button, state.dir);
+    if (state.key && typeof onApply === 'function') {
+      onApply();
+    }
+  });
 }
 
 function updateSortIndicators(scopeSelector, state) {
@@ -1299,11 +1355,16 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
 
   function parseMachineName(nome = '') {
     const trimmed = (nome || '').trim();
-    const match = MACHINE_PREFIXES.find(prefix => trimmed.startsWith(`${prefix}-`));
+    const match = MACHINE_PREFIXES.find(prefix => trimmed.startsWith(prefix));
     if (match) {
-      return { prefix: match, numero: trimmed.slice(match.length + 1) };
+      let numero = trimmed.slice(match.length);
+      if (numero.startsWith('-')) {
+        numero = numero.slice(1);
+      }
+      return { prefix: match, numero };
     }
-    return { prefix: MACHINE_PREFIXES[0], numero: trimmed };
+    const numeroMatch = trimmed.match(/(\d+)$/);
+    return { prefix: MACHINE_PREFIXES[0], numero: numeroMatch ? numeroMatch[1] : '' };
   }
 
   function buildMachineName() {
@@ -1880,6 +1941,34 @@ function toggleExportMenu(tipo) {
     inv.classList.add('hidden');
     mq.classList.add('hidden');
   }
+}
+
+function toggleSortMenu(tipo) {
+  const menu = document.getElementById('sortMenuMq');
+  const invMenu = document.getElementById('sortMenuInv');
+  const modMenu = document.getElementById('sortMenuMod');
+  const inv = document.getElementById('exportMenuInv');
+  const mq = document.getElementById('exportMenuMq');
+  const mod = document.getElementById('exportMenuMod');
+
+  if (tipo === 'mq' && menu) {
+    menu.classList.toggle('hidden');
+    invMenu?.classList.add('hidden');
+    modMenu?.classList.add('hidden');
+  }
+  if (tipo === 'inv' && invMenu) {
+    invMenu.classList.toggle('hidden');
+    menu?.classList.add('hidden');
+    modMenu?.classList.add('hidden');
+  }
+  if (tipo === 'mod' && modMenu) {
+    modMenu.classList.toggle('hidden');
+    menu?.classList.add('hidden');
+    invMenu?.classList.add('hidden');
+  }
+  inv?.classList.add('hidden');
+  mq?.classList.add('hidden');
+  mod?.classList.add('hidden');
 }
 function openImportModal(type) {
   importType = type;
@@ -2695,9 +2784,7 @@ function renderModuloDinamico() {
         <input type="checkbox" id="chkAllMod">
       </th>
       ${moduloCampos.map(c => `
-        <th class="sortable" data-sort-key="${c.nome}">
-          ${c.nome} <span class="sort-indicator"></span>
-        </th>
+        <th>${c.nome}</th>
       `).join('')}
       <th class="actions-header">Ações</th>
     </tr>
@@ -2726,14 +2813,13 @@ function renderModuloDinamico() {
     });
   });
 
-  thead.querySelectorAll('.sortable').forEach((th) => {
-    th.addEventListener('click', () => {
-      toggleSort(moduloSortState, th.dataset.sortKey);
-      renderModuloDinamico();
-    });
-  });
-
-  updateSortIndicators('#moduloThead', moduloSortState);
+  const sortMenuOptions = document.getElementById('sortMenuModOptions');
+  if (sortMenuOptions) {
+    sortMenuOptions.innerHTML = moduloCampos
+      .map((campo) => `<button type="button" data-sort-key="${campo.nome}">${campo.nome}</button>`)
+      .join('');
+    initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
+  }
 
   // BODY
   tbody.innerHTML = '';
@@ -2741,14 +2827,7 @@ function renderModuloDinamico() {
   let sorted = filtered;
   if (moduloSortState.key) {
     const key = moduloSortState.key;
-    const dir = moduloSortState.dir;
-    sorted = [...filtered].sort((a, b) => {
-      const av = normalizeSortValue(a.row?.[key]);
-      const bv = normalizeSortValue(b.row?.[key]);
-      if (av < bv) return dir === 'asc' ? -1 : 1;
-      if (av > bv) return dir === 'asc' ? 1 : -1;
-      return a.idx - b.idx;
-    });
+    sorted = sortWithIndex(filtered, (item) => item.row?.[key], moduloSortState.dir);
   }
 
   if (!sorted.length) {
@@ -3708,6 +3787,9 @@ document.addEventListener('click', (e) => {
     document.getElementById('exportMenuInv')?.classList.add('hidden');
     document.getElementById('exportMenuMq')?.classList.add('hidden');
     document.getElementById('exportMenuMod')?.classList.add('hidden');
+    document.getElementById('sortMenuMq')?.classList.add('hidden');
+    document.getElementById('sortMenuInv')?.classList.add('hidden');
+    document.getElementById('sortMenuMod')?.classList.add('hidden');
   }
 });
 
@@ -3725,17 +3807,10 @@ document.addEventListener('click', (e) => {
     inv?.classList.add('hidden');
     mq?.classList.add('hidden');
     mod?.classList.add('hidden');
+    document.getElementById('sortMenuMq')?.classList.add('hidden');
+    document.getElementById('sortMenuInv')?.classList.add('hidden');
+    document.getElementById('sortMenuMod')?.classList.add('hidden');
   }
-});
-
-document.addEventListener('click', (e) => {
-  const link = e.target.closest('.help-link');
-  if (!link) return;
-  const tip = link.closest('.help-tip');
-  if (!tip) return;
-  const title = tip.dataset.helpTitle || 'Ajuda';
-  const content = tip.dataset.helpMore || tip.dataset.help || '';
-  openHelpPanel(title, content);
 });
 
 function getActiveSearchInput() {
@@ -3829,6 +3904,7 @@ document.addEventListener('keydown', (e) => {
   window.exportMaquinas = exportMaquinas;
   window.exportModulo = exportModulo;
   window.toggleExportMenu = toggleExportMenu;
+  window.toggleSortMenu = toggleSortMenu;
   window.carregarLogoPrefeitura = carregarLogoPrefeitura;
   window.toggleFilters = toggleFilters;
   window.clearInventoryFilters = clearInventoryFilters;
