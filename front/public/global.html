@@ -65,7 +65,6 @@
                 <span class="help-tip-icon">?</span>
                 <span class="help-tooltip">
                   <span class="help-tooltip-text">Use filtros e busca para encontrar registros.</span>
-                  <button type="button" class="help-link">Saiba mais</button>
                 </span>
               </span>
             </div>
@@ -195,7 +194,6 @@
                 <span class="help-tip-icon">?</span>
                 <span class="help-tooltip">
                   <span class="help-tooltip-text">Cadastre máquinas e ajuste status/local.</span>
-                  <button type="button" class="help-link">Saiba mais</button>
                 </span>
               </span>
             </div>
@@ -219,6 +217,19 @@
               Filtros
               <span class="filter-count" data-filter-badge="machines" aria-label="Filtros ativos"></span>
             </button>
+            <div class="export-wrapper sort-wrapper">
+              <button class="btn secondary sort-btn" type="button" onclick="toggleSortMenu('mq')">
+                Ordenar
+              </button>
+              <div id="sortMenuMq" class="export-menu hidden" role="menu" aria-label="Ordenar por">
+                <div class="export-menu-title">Ordenar por</div>
+                <button type="button" data-sort-key="nome_maquina">Nome da Máquina</button>
+                <button type="button" data-sort-key="patrimonio">Patrimônio</button>
+                <button type="button" data-sort-key="local">Local</button>
+                <button type="button" data-sort-key="status">Status</button>
+                <button type="button" data-sort-key="descricao">Descrição</button>
+              </div>
+            </div>
             <button class="btn secondary import-btn" onclick="openImportModal('maquinas')">
               <span class="icon excel-icon" aria-hidden="true"></span>
               Importar Planilha
@@ -271,11 +282,11 @@
                 <th style="width:40px" class="checkbox-cell">
                   <input type="checkbox" id="chkAllMq">
                 </th>
-                <th class="sortable" data-sort-key="nome_maquina">Nome Máquina <span class="sort-indicator"></span></th>
-                <th class="sortable" data-sort-key="patrimonio">Patrimônio <span class="sort-indicator"></span></th>
-                <th class="sortable" data-sort-key="local">Local <span class="sort-indicator"></span></th>
-                <th class="sortable" data-sort-key="status">Status <span class="sort-indicator"></span></th>
-                <th class="sortable" data-sort-key="descricao">Descrição <span class="sort-indicator"></span></th>
+                <th>Nome Máquina</th>
+                <th>Patrimônio</th>
+                <th>Local</th>
+                <th>Status</th>
+                <th>Descrição</th>
                 <th style="width:110px; text-align:center" class="actions-header">Ações</th>
               </tr>
               <tr class="table-filters">
@@ -321,7 +332,6 @@
                 <span class="help-tip-icon">?</span>
                 <span class="help-tooltip">
                   <span class="help-tooltip-text">Crie abas personalizadas com campos próprios.</span>
-                  <button type="button" class="help-link">Saiba mais</button>
                 </span>
               </span>
             </div>
@@ -631,7 +641,6 @@
         <span class="help-tip-icon">?</span>
         <span class="help-tooltip">
           <span class="help-tooltip-text">Use uma planilha exportada do sistema.</span>
-          <button type="button" class="help-link">Saiba mais</button>
         </span>
       </span>
     </div>
@@ -719,7 +728,6 @@
           <span class="help-tip-icon">?</span>
           <span class="help-tooltip">
             <span class="help-tooltip-text">Defina o nome da aba e adicione campos.</span>
-            <button type="button" class="help-link">Saiba mais</button>
           </span>
         </span>
       </div>
@@ -780,12 +788,11 @@
         data-help-title="Novo registro"
         data-help-more="Preencha os campos obrigatórios e salve. Os valores seguem a ordem definida na criação da aba personalizada."
       >
-        <span class="help-tip-icon">?</span>
-        <span class="help-tooltip">
-          <span class="help-tooltip-text">Preencha os campos obrigatórios e salve.</span>
-          <button type="button" class="help-link">Saiba mais</button>
+          <span class="help-tip-icon">?</span>
+          <span class="help-tooltip">
+            <span class="help-tooltip-text">Preencha os campos obrigatórios e salve.</span>
+          </span>
         </span>
-      </span>
     </div>
 
     <div id="moduloFormFields" class="form-grid"></div>

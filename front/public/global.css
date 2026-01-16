@@ -1057,22 +1057,6 @@ body.theme-dark .file-input-name {
   transform: translateY(0);
   pointer-events: auto;
 }
-
-.help-link {
-  background: none;
-  border: none;
-  color: #93c5fd;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 0;
-  cursor: pointer;
-  text-align: left;
-}
-
-.help-link:hover {
-  color: #bfdbfe;
-  text-decoration: underline;
-}
 .create-tab-card .form-grid {
   grid-template-columns: 1fr;
   gap: var(--space-3);
@@ -2250,6 +2234,18 @@ body.theme-dark .status-inativa .status-dot {
 .export-menu button:hover {
   background: #f3f4f6;
   transform: translateX(2px);
+}
+
+.export-menu-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  padding: 8px 12px 4px;
+}
+
+.sort-wrapper .sort-btn {
+  padding: 8px 10px;
+  font-size: var(--font-xs);
 }
 
 .import-validation {

@@ -98,6 +98,14 @@ if (btnNovaAba) {
     });
   });
 
+  document.querySelectorAll('#sortMenuMq [data-sort-key]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      toggleSort(sortState.machines, btn.dataset.sortKey);
+      applyMachineFilters();
+      document.getElementById('sortMenuMq')?.classList.add('hidden');
+    });
+  });
+
 
   /* ===========================
      ESTADOS
@@ -1301,11 +1309,16 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
 
   function parseMachineName(nome = '') {
     const trimmed = (nome || '').trim();
-    const match = MACHINE_PREFIXES.find(prefix => trimmed.startsWith(`${prefix}-`));
+    const match = MACHINE_PREFIXES.find(prefix => trimmed.startsWith(prefix));
     if (match) {
-      return { prefix: match, numero: trimmed.slice(match.length + 1) };
+      let numero = trimmed.slice(match.length);
+      if (numero.startsWith('-')) {
+        numero = numero.slice(1);
+      }
+      return { prefix: match, numero };
     }
-    return { prefix: MACHINE_PREFIXES[0], numero: trimmed };
+    const numeroMatch = trimmed.match(/(\d+)$/);
+    return { prefix: MACHINE_PREFIXES[0], numero: numeroMatch ? numeroMatch[1] : '' };
   }
 
   function buildMachineName() {
@@ -1881,6 +1894,20 @@ function toggleExportMenu(tipo) {
     mod?.classList.toggle('hidden');
     inv.classList.add('hidden');
     mq.classList.add('hidden');
+  }
+}
+
+function toggleSortMenu(tipo) {
+  const menu = document.getElementById('sortMenuMq');
+  const inv = document.getElementById('exportMenuInv');
+  const mq = document.getElementById('exportMenuMq');
+  const mod = document.getElementById('exportMenuMod');
+
+  if (tipo === 'mq' && menu) {
+    menu.classList.toggle('hidden');
+    inv?.classList.add('hidden');
+    mq?.classList.add('hidden');
+    mod?.classList.add('hidden');
   }
 }
 function openImportModal(type) {
@@ -3710,6 +3737,7 @@ document.addEventListener('click', (e) => {
     document.getElementById('exportMenuInv')?.classList.add('hidden');
     document.getElementById('exportMenuMq')?.classList.add('hidden');
     document.getElementById('exportMenuMod')?.classList.add('hidden');
+    document.getElementById('sortMenuMq')?.classList.add('hidden');
   }
 });
 
@@ -3727,20 +3755,8 @@ document.addEventListener('click', (e) => {
     inv?.classList.add('hidden');
     mq?.classList.add('hidden');
     mod?.classList.add('hidden');
+    document.getElementById('sortMenuMq')?.classList.add('hidden');
   }
-});
-
-document.addEventListener('click', (e) => {
-  const link = e.target.closest('.help-link');
-  if (!link) return;
-  e.preventDefault();
-  e.stopPropagation();
-  const tip = link.closest('.help-tip');
-  if (!tip) return;
-  const title = tip.dataset.helpTitle || 'Ajuda';
-  const content = tip.dataset.helpMore || tip.dataset.help || '';
-  openHelpPanel(title, content);
-  link.blur();
 });
 
 function getActiveSearchInput() {
@@ -3834,6 +3850,7 @@ document.addEventListener('keydown', (e) => {
   window.exportMaquinas = exportMaquinas;
   window.exportModulo = exportModulo;
   window.toggleExportMenu = toggleExportMenu;
+  window.toggleSortMenu = toggleSortMenu;
   window.carregarLogoPrefeitura = carregarLogoPrefeitura;
   window.toggleFilters = toggleFilters;
   window.clearInventoryFilters = clearInventoryFilters;
