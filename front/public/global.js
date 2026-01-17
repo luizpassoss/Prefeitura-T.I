@@ -2319,13 +2319,14 @@ function mapImportRows() {
     if (key) acc[key] = idx;
     return acc;
   }, {});
+  const hasHeaders = Object.keys(headerMap).length > 0;
 
   const getValue = (row, keys, fallbackIndex) => {
     for (const key of keys) {
       const idx = headerMap[normalizeHeader(key)];
       if (idx !== undefined) return row[idx];
     }
-    if (fallbackIndex === undefined || fallbackIndex >= row.length) return '';
+    if (hasHeaders || fallbackIndex === undefined || fallbackIndex >= row.length) return '';
     return row[fallbackIndex];
   };
 
