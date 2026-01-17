@@ -2341,7 +2341,10 @@ function mapImportRows() {
 
   if (importType === 'inventario') {
     return importRows.map(r => ({
-      categoria: getValue(r, ['categoria'], 0),
+      categoria: (() => {
+        const value = (getValue(r, ['categoria']) ?? '').toString().trim();
+        return value || 'Prefeitura';
+      })(),
       link: getValue(r, ['link', 'link de internet', 'internet', 'descricao', 'descrição'], 0),
       velocidade: getValue(r, ['velocidade', 'velocidade dl/ul', 'download', 'upload'], 2),
       telefone: getValue(r, ['telefone', 'contato'], 3),
@@ -2355,7 +2358,10 @@ function mapImportRows() {
       nome_maquina: getValue(r, ['nome', 'nome maquina', 'nome da maquina', 'máquina', 'maquina'], 0),
       patrimonio: getValue(r, ['patrimonio', 'patrimônio'], 1),
       local: getValue(r, ['local'], 2),
-      status: getValue(r, ['status'], 3),
+      status: (() => {
+        const value = (getValue(r, ['status'], 3) ?? '').toString().trim();
+        return value || 'Ativa';
+      })(),
       descricao: getValue(r, ['descricao', 'descrição'], 4)
     }));
   }
