@@ -252,6 +252,8 @@ body.theme-dark {
   cursor: pointer;
   font-weight: 500;
   transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease;
+  display: block;
+  width: 100%;
 }
 
 .tab-dinamica-wrapper {
@@ -259,9 +261,11 @@ body.theme-dark {
   align-items: center;
   gap: 6px;
   position: relative;
+  width: 100%;
 }
 
-.tab-dinamica-wrapper .tab-dinamica {
+.tab-dinamica-wrapper .tab-dinamica,
+.tab-dinamica-wrapper > a {
   flex: 1;
 }
 
@@ -1153,6 +1157,27 @@ body.theme-dark .file-input-name {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.manual-tab-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.manual-tab-actions select {
+  flex: 1;
+}
+
+.manual-tab-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.manual-tab-row input {
+  flex: 1;
 }
 
 .btn.secondary {

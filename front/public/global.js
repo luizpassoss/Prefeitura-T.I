@@ -47,6 +47,35 @@ const manualTabFieldConfig = {
   ]
 };
 
+function getManualTabConfig(tabType) {
+  const stored = localStorage.getItem(`ti-tab-config-${tabType}`);
+  const defaults = manualTabFieldConfig[tabType] || [];
+  const defaultOrder = defaults.map(field => field.key);
+  if (!stored) {
+    return { order: defaultOrder, labels: {}, hidden: [] };
+  }
+  try {
+    const parsed = JSON.parse(stored);
+    const order = Array.isArray(parsed.order) ? parsed.order.slice() : defaultOrder.slice();
+    defaultOrder.forEach((key) => {
+      if (!order.includes(key)) {
+        order.push(key);
+      }
+    });
+    return {
+      order,
+      labels: parsed.labels || {},
+      hidden: Array.isArray(parsed.hidden) ? parsed.hidden : []
+    };
+  } catch (e) {
+    return { order: defaultOrder, labels: {}, hidden: [] };
+  }
+}
+
+function saveManualTabConfig(tabType, config) {
+  localStorage.setItem(`ti-tab-config-${tabType}`, JSON.stringify(config));
+}
+
 const sortState = {
   inventory: { key: null, dir: 'asc' },
   machines: { key: null, dir: 'asc' }
@@ -382,7 +411,7 @@ function showMessage(message, title = 'Aviso') {
     list.forEach((it, idx) => {
       const tr = document.createElement('tr');
      tr.innerHTML = `
-  <td class="checkbox-cell" style="text-align:center;">
+ <td class="checkbox-cell" style="text-align:center;">
     <input 
       type="checkbox"
       class="chk-inv"
@@ -391,7 +420,7 @@ function showMessage(message, title = 'Aviso') {
     >
   </td>
 
- <td>
+ <td data-field="link">
   <div class="link-cell">
     <div class="link-text">${escapeHtml(it.link)}</div>
     <div class="link-category">${escapeHtml(it.categoria)}</div>
@@ -400,10 +429,10 @@ function showMessage(message, title = 'Aviso') {
 
 
 
-  <td class="small">${escapeHtml(it.velocidade)}</td>
-  <td class="small">${escapeHtml(it.telefone)}</td>
-  <td>${escapeHtml(it.local)}</td>
-  <td>${escapeHtml(it.endereco)}</td>
+  <td class="small" data-field="velocidade">${escapeHtml(it.velocidade)}</td>
+  <td class="small" data-field="telefone">${escapeHtml(it.telefone)}</td>
+  <td data-field="local">${escapeHtml(it.local)}</td>
+  <td data-field="endereco">${escapeHtml(it.endereco)}</td>
   <td class="actions">
     <div class="action-group">
     <button class="icon-btn edit" title="Editar" data-idx="${idx}">
@@ -1168,10 +1197,10 @@ function exportInventarioExcel(rows) {
       ${selectedMaqIds.has(it.id) ? 'checked' : ''}
     >
   </td>
-  <td>${escapeHtml(it.nome_maquina || '')}</td>
-  <td>${escapeHtml(it.patrimonio || '')}</td>
-  <td>${escapeHtml(it.local || '')}</td>
-<td>
+  <td data-field="nome_maquina">${escapeHtml(it.nome_maquina || '')}</td>
+  <td data-field="patrimonio">${escapeHtml(it.patrimonio || '')}</td>
+  <td data-field="local">${escapeHtml(it.local || '')}</td>
+<td data-field="status">
   <div class="status-pill status-${normalizeStatus(it.status)}">
     <span class="status-dot"></span>
     <span class="status-text">${it.status || 'Ativa'}</span>
@@ -1180,7 +1209,7 @@ function exportInventarioExcel(rows) {
 
 
 
-<td>
+<td data-field="descricao">
   <div
     class="desc-preview"
     data-full="${escapeHtml(it.descricao || '')}"
@@ -2712,7 +2741,7 @@ function renderAbasDinamicas() {
     menuBtn.innerHTML = '⋯';
     menuBtn.onclick = (e) => {
       e.stopPropagation();
-      toggleTabMenu(menuBtn);
+      toggleTabMenu(menuBtn, e);
     };
 
     const menu = document.createElement('div');
@@ -3687,7 +3716,7 @@ function getManualTabLabels(tabType) {
 function applyManualTabLabels(tabType) {
   const config = manualTabFieldConfig[tabType];
   if (!config) return;
-  const labels = getManualTabLabels(tabType);
+  const { labels, hidden } = getManualTabConfig(tabType);
   const tabId = tabType === 'inventario' ? 'tabInventario' : 'tabMaquinas';
   const tab = document.getElementById(tabId);
   if (!tab) return;
@@ -3697,27 +3726,87 @@ function applyManualTabLabels(tabType) {
     if (th) th.textContent = text;
     const input = tab.querySelector(`.table-filter-input[data-field="${key}"]`);
     if (input) input.placeholder = `Filtrar ${text.toLowerCase()}`;
+    const isHidden = hidden.includes(key);
+    [th, input?.closest('th')].forEach((el) => {
+      if (el) el.style.display = isHidden ? 'none' : '';
+    });
+    tab.querySelectorAll(`[data-field="${key}"]`).forEach((el) => {
+      if (el.tagName !== 'TH' && !el.classList.contains('table-filter-input')) {
+        el.style.display = isHidden ? 'none' : '';
+      }
+    });
   });
 }
 
 function openManualTabManager(tabType) {
   closeTabMenus();
-  manualTabContext = tabType;
+  manualTabContext = { tabType, config: getManualTabConfig(tabType) };
   const modalTitle = document.getElementById('manageManualTabTitle');
   if (modalTitle) {
     modalTitle.textContent = `Gerenciar aba ${tabType === 'inventario' ? 'Inventário' : 'Máquinas'}`;
   }
+  renderManualTabManager();
+  openModalById('manageManualTabModal');
+}
+
+function renderManualTabManager() {
+  if (!manualTabContext) return;
+  const { tabType, config } = manualTabContext;
   const container = document.getElementById('manageManualTabFields');
   if (!container) return;
-  const labels = getManualTabLabels(tabType);
   const fields = manualTabFieldConfig[tabType] || [];
-  container.innerHTML = fields.map(field => `
+  const fieldMap = new Map(fields.map(field => [field.key, field.label]));
+  const visibleKeys = config.order.filter(key => !config.hidden.includes(key));
+  container.innerHTML = visibleKeys.map(key => `
     <div class="form-full">
-      <label>${field.label}</label>
-      <input type="text" data-field="${field.key}" value="${escapeHtml(labels[field.key] || field.label)}" />
+      <label>${fieldMap.get(key) || key}</label>
+      <div class="manual-tab-row" data-field="${key}">
+        <input type="text" data-field="${key}" value="${escapeHtml(config.labels[key] || fieldMap.get(key) || key)}" />
+        <button type="button" class="btn secondary" onclick="hideManualTabField('${key}')">Ocultar</button>
+      </div>
     </div>
   `).join('');
-  openModalById('manageManualTabModal');
+
+  const select = document.getElementById('manualTabFieldSelect');
+  if (select) {
+    const hiddenKeys = config.order.filter(key => config.hidden.includes(key));
+    select.innerHTML = hiddenKeys.length
+      ? hiddenKeys.map(key => `<option value="${key}">${fieldMap.get(key) || key}</option>`).join('')
+      : `<option value="">Sem campos ocultos</option>`;
+    select.disabled = hiddenKeys.length === 0;
+  }
+  const addButton = document.querySelector('.manual-tab-actions button');
+  if (addButton) {
+    addButton.disabled = select ? select.disabled : true;
+  }
+}
+
+function addManualTabField() {
+  if (!manualTabContext) return;
+  const select = document.getElementById('manualTabFieldSelect');
+  if (!select || !select.value) return;
+  const key = select.value;
+  const { config } = manualTabContext;
+  config.hidden = config.hidden.filter(item => item !== key);
+  if (!config.order.includes(key)) {
+    config.order.push(key);
+  }
+  saveManualTabConfig(manualTabContext.tabType, config);
+  manualTabContext.config = config;
+  renderManualTabManager();
+  applyManualTabLabels(manualTabContext.tabType);
+}
+
+function hideManualTabField(key) {
+  if (!manualTabContext) return;
+  const { config } = manualTabContext;
+  if (!config.hidden.includes(key)) {
+    config.hidden.push(key);
+  }
+  saveManualTabConfig(manualTabContext.tabType, config);
+  manualTabContext.config = config;
+  renderManualTabManager();
+  applyManualTabLabels(manualTabContext.tabType);
 }
 
 function saveManualTabFields() {
@@ -3725,22 +3814,31 @@ function saveManualTabFields() {
   const container = document.getElementById('manageManualTabFields');
   if (!container) return;
   const inputs = container.querySelectorAll('input[data-field]');
-  const labels = {};
+  const labels = { ...manualTabContext.config.labels };
   inputs.forEach(input => {
     const key = input.dataset.field;
     const value = input.value.trim();
-    if (value) labels[key] = value;
+    if (value) {
+      labels[key] = value;
+    } else {
+      delete labels[key];
+    }
   });
-  localStorage.setItem(`ti-tab-labels-${manualTabContext}`, JSON.stringify(labels));
-  applyManualTabLabels(manualTabContext);
+  const nextConfig = {
+    ...manualTabContext.config,
+    labels
+  };
+  saveManualTabConfig(manualTabContext.tabType, nextConfig);
+  applyManualTabLabels(manualTabContext.tabType);
   closeManageManualTabModal();
 }
 
 function resetManualTabFields() {
   if (!manualTabContext) return;
-  localStorage.removeItem(`ti-tab-labels-${manualTabContext}`);
-  openManualTabManager(manualTabContext);
-  applyManualTabLabels(manualTabContext);
+  localStorage.removeItem(`ti-tab-config-${manualTabContext.tabType}`);
+  manualTabContext.config = getManualTabConfig(manualTabContext.tabType);
+  renderManualTabManager();
+  applyManualTabLabels(manualTabContext.tabType);
 }
 
 function closeManageManualTabModal(e) {
@@ -4214,6 +4312,8 @@ document.addEventListener('keydown', (e) => {
   window.sortFieldsAlphabetically = sortFieldsAlphabetically;
   window.openManualTabManager = openManualTabManager;
   window.saveManualTabFields = saveManualTabFields;
+  window.addManualTabField = addManualTabField;
+  window.hideManualTabField = hideManualTabField;
   window.resetManualTabFields = resetManualTabFields;
   window.closeManageManualTabModal = closeManageManualTabModal;
   window.toggleTabMenu = toggleTabMenu;
