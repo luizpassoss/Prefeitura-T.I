@@ -32,8 +32,24 @@
 
 
     <nav class="nav">
-      <a class="active" onclick="switchTab('inventario')">Inventário</a>
-      <a onclick="switchTab('maquinas')">Máquinas</a>
+      <div class="tab-dinamica-wrapper" data-tab-type="manual" data-tab-id="inventario">
+        <a class="active" onclick="switchTab('inventario')">Inventário</a>
+        <button class="tab-menu-btn" type="button" aria-label="Opções da aba Inventário" onclick="toggleTabMenu(this, event)">
+          <span aria-hidden="true">⋯</span>
+        </button>
+        <div class="tab-menu-dropdown hidden">
+          <button type="button" onclick="openManualTabManager('inventario')">Gerenciar</button>
+        </div>
+      </div>
+      <div class="tab-dinamica-wrapper" data-tab-type="manual" data-tab-id="maquinas">
+        <a onclick="switchTab('maquinas')">Máquinas</a>
+        <button class="tab-menu-btn" type="button" aria-label="Opções da aba Máquinas" onclick="toggleTabMenu(this, event)">
+          <span aria-hidden="true">⋯</span>
+        </button>
+        <div class="tab-menu-dropdown hidden">
+          <button type="button" onclick="openManualTabManager('maquinas')">Gerenciar</button>
+        </div>
+      </div>
       <button class="btn-add-tab" onclick="openCreateTabModal()" aria-label="Criar nova aba">
         <span class="btn-add-tab-icon" aria-hidden="true">＋</span>
       </button>
@@ -65,7 +81,6 @@
                 <span class="help-tip-icon">?</span>
                 <span class="help-tooltip">
                   <span class="help-tooltip-text">Use filtros e busca para encontrar registros.</span>
-                  <button type="button" class="help-link">Saiba mais</button>
                 </span>
               </span>
             </div>
@@ -88,6 +103,24 @@
               Filtros
               <span class="filter-count" data-filter-badge="inventory" aria-label="Filtros ativos"></span>
             </button>
+            <div class="export-wrapper sort-wrapper">
+              <button class="btn secondary sort-btn" type="button" onclick="toggleSortMenu('inv')">
+                Ordenar
+              </button>
+              <div id="sortMenuInv" class="export-menu hidden" role="menu" aria-label="Ordenar por">
+                <div class="export-menu-title sort-menu-header">
+                  Ordenar por
+                  <button type="button" class="sort-order-toggle" data-sort-scope="inventory">
+                    Crescente (A→Z / 0→9)
+                  </button>
+                </div>
+                <button type="button" data-sort-key="link">Link de Internet</button>
+                <button type="button" data-sort-key="velocidade">Velocidade (DL/UL)</button>
+                <button type="button" data-sort-key="telefone">Telefone</button>
+                <button type="button" data-sort-key="local">Local</button>
+                <button type="button" data-sort-key="endereco">Endereço</button>
+              </div>
+            </div>
             <button class="btn secondary import-btn" onclick="openImportModal('inventario')">
               <span class="icon excel-icon" aria-hidden="true"></span>
               Importar Planilha
@@ -145,29 +178,29 @@
                 <th style="width:32px; text-align:center;" class="checkbox-cell">
                   <input type="checkbox" id="chkAllInv">
                 </th>
-                <th style="width:20%" class="sortable" data-sort-key="link">Link de Internet <span class="sort-indicator"></span></th>
-                <th style="width:15%" class="sortable" data-sort-key="velocidade">Velocidade (DL/UL) <span class="sort-indicator"></span></th>
-                <th style="width:12%" class="sortable" data-sort-key="telefone">Telefone <span class="sort-indicator"></span></th>
-                <th style="width:16%" class="sortable" data-sort-key="local">Local <span class="sort-indicator"></span></th>
-                <th style="width:28%" class="sortable" data-sort-key="endereco">Endereço <span class="sort-indicator"></span></th>
+                <th style="width:20%" data-field="link">Link de Internet</th>
+                <th style="width:15%" data-field="velocidade">Velocidade (DL/UL)</th>
+                <th style="width:12%" data-field="telefone">Telefone</th>
+                <th style="width:16%" data-field="local">Local</th>
+                <th style="width:28%" data-field="endereco">Endereço</th>
                 <th class="actions-header" style="width:9%">Ações</th>
               </tr>
               <tr class="table-filters">
                 <th class="checkbox-cell"></th>
                 <th>
-                  <input id="invFilterLink" class="table-filter-input" placeholder="Filtrar link" oninput="applyFilters()" />
+                  <input id="invFilterLink" class="table-filter-input" placeholder="Filtrar link" data-field="link" oninput="applyFilters()" />
                 </th>
                 <th>
-                  <input id="invFilterVel" class="table-filter-input" placeholder="Filtrar velocidade" oninput="applyFilters()" />
+                  <input id="invFilterVel" class="table-filter-input" placeholder="Filtrar velocidade" data-field="velocidade" oninput="applyFilters()" />
                 </th>
                 <th>
-                  <input id="invFilterTel" class="table-filter-input" placeholder="Filtrar telefone" oninput="applyFilters()" />
+                  <input id="invFilterTel" class="table-filter-input" placeholder="Filtrar telefone" data-field="telefone" oninput="applyFilters()" />
                 </th>
                 <th>
-                  <input id="invFilterLocal" class="table-filter-input" placeholder="Filtrar local" oninput="applyFilters()" />
+                  <input id="invFilterLocal" class="table-filter-input" placeholder="Filtrar local" data-field="local" oninput="applyFilters()" />
                 </th>
                 <th>
-                  <input id="invFilterEndereco" class="table-filter-input" placeholder="Filtrar endereço" oninput="applyFilters()" />
+                  <input id="invFilterEndereco" class="table-filter-input" placeholder="Filtrar endereço" data-field="endereco" oninput="applyFilters()" />
                 </th>
                 <th class="actions-header"></th>
               </tr>
@@ -195,7 +228,6 @@
                 <span class="help-tip-icon">?</span>
                 <span class="help-tooltip">
                   <span class="help-tooltip-text">Cadastre máquinas e ajuste status/local.</span>
-                  <button type="button" class="help-link">Saiba mais</button>
                 </span>
               </span>
             </div>
@@ -219,6 +251,24 @@
               Filtros
               <span class="filter-count" data-filter-badge="machines" aria-label="Filtros ativos"></span>
             </button>
+            <div class="export-wrapper sort-wrapper">
+              <button class="btn secondary sort-btn" type="button" onclick="toggleSortMenu('mq')">
+                Ordenar
+              </button>
+              <div id="sortMenuMq" class="export-menu hidden" role="menu" aria-label="Ordenar por">
+                <div class="export-menu-title sort-menu-header">
+                  Ordenar por
+                  <button type="button" class="sort-order-toggle" data-sort-scope="machines">
+                    Crescente (A→Z / 0→9)
+                  </button>
+                </div>
+                <button type="button" data-sort-key="nome_maquina">Nome da Máquina</button>
+                <button type="button" data-sort-key="patrimonio">Patrimônio</button>
+                <button type="button" data-sort-key="local">Local</button>
+                <button type="button" data-sort-key="status">Status</button>
+                <button type="button" data-sort-key="descricao">Descrição</button>
+              </div>
+            </div>
             <button class="btn secondary import-btn" onclick="openImportModal('maquinas')">
               <span class="icon excel-icon" aria-hidden="true"></span>
               Importar Planilha
@@ -271,29 +321,29 @@
                 <th style="width:40px" class="checkbox-cell">
                   <input type="checkbox" id="chkAllMq">
                 </th>
-                <th class="sortable" data-sort-key="nome_maquina">Nome Máquina <span class="sort-indicator"></span></th>
-                <th class="sortable" data-sort-key="patrimonio">Patrimônio <span class="sort-indicator"></span></th>
-                <th class="sortable" data-sort-key="local">Local <span class="sort-indicator"></span></th>
-                <th class="sortable" data-sort-key="status">Status <span class="sort-indicator"></span></th>
-                <th class="sortable" data-sort-key="descricao">Descrição <span class="sort-indicator"></span></th>
+                <th data-field="nome_maquina">Nome Máquina</th>
+                <th data-field="patrimonio">Patrimônio</th>
+                <th data-field="local">Local</th>
+                <th data-field="status">Status</th>
+                <th data-field="descricao">Descrição</th>
                 <th style="width:110px; text-align:center" class="actions-header">Ações</th>
               </tr>
               <tr class="table-filters">
                 <th class="checkbox-cell"></th>
                 <th>
-                  <input id="mqFilterNome" class="table-filter-input" placeholder="Filtrar nome" oninput="applyMachineFilters()" />
+                  <input id="mqFilterNome" class="table-filter-input" placeholder="Filtrar nome" data-field="nome_maquina" oninput="applyMachineFilters()" />
                 </th>
                 <th>
-                  <input id="mqFilterPatrimonio" class="table-filter-input" placeholder="Filtrar patrimônio" oninput="applyMachineFilters()" />
+                  <input id="mqFilterPatrimonio" class="table-filter-input" placeholder="Filtrar patrimônio" data-field="patrimonio" oninput="applyMachineFilters()" />
                 </th>
                 <th>
-                  <input id="mqFilterLocal" class="table-filter-input" placeholder="Filtrar local" oninput="applyMachineFilters()" />
+                  <input id="mqFilterLocal" class="table-filter-input" placeholder="Filtrar local" data-field="local" oninput="applyMachineFilters()" />
                 </th>
                 <th>
-                  <input id="mqFilterStatus" class="table-filter-input" placeholder="Filtrar status" oninput="applyMachineFilters()" />
+                  <input id="mqFilterStatus" class="table-filter-input" placeholder="Filtrar status" data-field="status" oninput="applyMachineFilters()" />
                 </th>
                 <th>
-                  <input id="mqFilterDescricao" class="table-filter-input" placeholder="Filtrar descrição" oninput="applyMachineFilters()" />
+                  <input id="mqFilterDescricao" class="table-filter-input" placeholder="Filtrar descrição" data-field="descricao" oninput="applyMachineFilters()" />
                 </th>
                 <th class="actions-header"></th>
               </tr>
@@ -321,7 +371,6 @@
                 <span class="help-tip-icon">?</span>
                 <span class="help-tooltip">
                   <span class="help-tooltip-text">Crie abas personalizadas com campos próprios.</span>
-                  <button type="button" class="help-link">Saiba mais</button>
                 </span>
               </span>
             </div>
@@ -356,6 +405,20 @@
               <span class="icon excel-icon" aria-hidden="true"></span>
               Importar Planilha
             </button>
+            <div class="export-wrapper sort-wrapper">
+              <button class="btn secondary sort-btn" type="button" onclick="toggleSortMenu('mod')">
+                Ordenar
+              </button>
+              <div id="sortMenuMod" class="export-menu hidden" role="menu" aria-label="Ordenar por">
+                <div class="export-menu-title sort-menu-header">
+                  Ordenar por
+                  <button type="button" class="sort-order-toggle" data-sort-scope="modules">
+                    Crescente (A→Z / 0→9)
+                  </button>
+                </div>
+                <div class="sort-menu-options" id="sortMenuModOptions"></div>
+              </div>
+            </div>
 
             <div class="export-wrapper">
               <button class="btn export" onclick="toggleExportMenu('mod')">
@@ -631,7 +694,6 @@
         <span class="help-tip-icon">?</span>
         <span class="help-tooltip">
           <span class="help-tooltip-text">Use uma planilha exportada do sistema.</span>
-          <button type="button" class="help-link">Saiba mais</button>
         </span>
       </span>
     </div>
@@ -719,7 +781,6 @@
           <span class="help-tip-icon">?</span>
           <span class="help-tooltip">
             <span class="help-tooltip-text">Defina o nome da aba e adicione campos.</span>
-            <button type="button" class="help-link">Saiba mais</button>
           </span>
         </span>
       </div>
@@ -755,16 +816,43 @@
 
     <div class="create-tab-header">
       <label>Campos da Tabela</label>
-      <button type="button" class="btn secondary" onclick="addField()">
-        + Adicionar Campo
-      </button>
+      <div class="create-tab-actions">
+        <button type="button" class="btn secondary" onclick="sortFieldsAlphabetically()">
+          Ordenar A→Z
+        </button>
+        <button type="button" class="btn secondary" onclick="addField()">
+          + Adicionar Campo
+        </button>
+      </div>
     </div>
 
     <div id="fieldsContainer"></div>
 
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeCreateTabModal()">Cancelar</button>
-      <button class="btn-salvar" onclick="salvarNovoModulo()">Criar Aba</button>
+      <button id="createTabSubmitBtn" class="btn-salvar" onclick="submitTabModal()">Criar Aba</button>
+    </div>
+  </div>
+</div>
+
+<div id="manageManualTabModal" class="modal" onclick="closeManageManualTabModal(event)">
+  <div class="card" style="max-width: 560px" onclick="event.stopPropagation()">
+    <div class="modal-heading">
+      <h2 id="manageManualTabTitle">Gerenciar Aba</h2>
+      <p class="modal-subtitle">Ajuste os nomes dos campos exibidos na tabela.</p>
+    </div>
+
+    <div id="manageManualTabFields" class="form-grid"></div>
+
+    <div class="manual-tab-actions">
+      <select id="manualTabFieldSelect" class="select"></select>
+      <button class="btn secondary" type="button" onclick="addManualTabField()">Adicionar campo</button>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn cancel" type="button" onclick="resetManualTabFields()">Restaurar padrão</button>
+      <button class="btn-cancelar" onclick="closeManageManualTabModal()">Cancelar</button>
+      <button class="btn-salvar" onclick="saveManualTabFields()">Salvar</button>
     </div>
   </div>
 </div>
@@ -780,12 +868,11 @@
         data-help-title="Novo registro"
         data-help-more="Preencha os campos obrigatórios e salve. Os valores seguem a ordem definida na criação da aba personalizada."
       >
-        <span class="help-tip-icon">?</span>
-        <span class="help-tooltip">
-          <span class="help-tooltip-text">Preencha os campos obrigatórios e salve.</span>
-          <button type="button" class="help-link">Saiba mais</button>
+          <span class="help-tip-icon">?</span>
+          <span class="help-tooltip">
+            <span class="help-tooltip-text">Preencha os campos obrigatórios e salve.</span>
+          </span>
         </span>
-      </span>
     </div>
 
     <div id="moduloFormFields" class="form-grid"></div>
