@@ -2686,11 +2686,12 @@ function renderAbasDinamicas() {
 
   // remove abas dinâmicas antigas
   nav.querySelectorAll('.tab-dinamica').forEach(e => e.remove());
-  nav.querySelectorAll('.tab-dinamica-wrapper').forEach(e => e.remove());
+  nav.querySelectorAll('.tab-dinamica-wrapper[data-tab-type="module"]').forEach(e => e.remove());
 
   modulos.forEach(mod => {
     const wrapper = document.createElement('div');
     wrapper.className = 'tab-dinamica-wrapper';
+    wrapper.dataset.tabType = 'module';
 
     const a = document.createElement('a');
     a.className = 'tab-dinamica';
