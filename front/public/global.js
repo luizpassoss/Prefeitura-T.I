@@ -1771,10 +1771,10 @@ function exportMaquinasExcel(rows) {
 
     if (tabName === 'inventario') {
       document.getElementById('tabInventario').classList.add('active');
-      document.querySelector('.nav a:nth-child(1)').classList.add('active');
+      document.querySelector('.tab-dinamica-wrapper[data-tab-id="inventario"] > a')?.classList.add('active');
     } else {
       document.getElementById('tabMaquinas').classList.add('active');
-      document.querySelector('.nav a:nth-child(2)').classList.add('active');
+      document.querySelector('.tab-dinamica-wrapper[data-tab-id="maquinas"] > a')?.classList.add('active');
       fetchMachines();
     }
   }
@@ -2856,7 +2856,7 @@ function renderModuloDinamico() {
       ${moduloCampos.map(c => `
         <th>${c.nome}</th>
       `).join('')}
-      <th class="actions-header">Ações</th>
+      <th class="actions-header" style="width:110px; text-align:center">Ações</th>
     </tr>
     <tr class="table-filters">
       <th class="checkbox-cell"></th>
@@ -4317,6 +4317,7 @@ document.addEventListener('keydown', (e) => {
   window.resetManualTabFields = resetManualTabFields;
   window.closeManageManualTabModal = closeManageManualTabModal;
   window.toggleTabMenu = toggleTabMenu;
+  window.applyFieldPreset = applyFieldPreset;
   window.closeCreateTabModal = closeCreateTabModal;
   window.applyTabTemplate = applyTabTemplate;
   window.addField = addField;
