@@ -2179,31 +2179,20 @@ function validateImportRows() {
     return { issues: [], cellIssues: new Set(), errorCount: 0 };
   }
 
-  const headerMap = importHeaders.reduce((acc, header, idx) => {
-    const key = normalizeHeader(header);
-    if (key) acc[key] = idx;
-    return acc;
-  }, {});
-
-  const schema = getImportSchema();
   const issues = [];
   const cellIssues = new Set();
   let errorCount = 0;
 
-  const resolved = schema.required.map(req => {
-    const idx = resolveImportColumnIndex(headerMap, req.keys, req.fallbackIndex);
-    if (idx === null) {
-      issues.push(`Coluna obrigatória não encontrada: ${req.label}.`);
-    }
-    return { ...req, idx };
-  });
+  const mappedRows = mapImportRows();
+  const requiredFields =
+    importType === 'inventario'
+      ? ['link', 'local']
+      : ['nome_maquina', 'local'];
 
-  importRows.forEach((row, rowIdx) => {
-    resolved.forEach(req => {
-      if (req.idx === null) return;
-      const value = (row[req.idx] ?? '').toString().trim();
+  mappedRows.forEach((row) => {
+    requiredFields.forEach((field) => {
+      const value = (row[field] ?? '').toString().trim();
       if (!value) {
-        cellIssues.add(`${rowIdx}-${req.idx}`);
         errorCount += 1;
       }
     });
@@ -2336,6 +2325,7 @@ function mapImportRows() {
       const idx = headerMap[normalizeHeader(key)];
       if (idx !== undefined) return row[idx];
     }
+    if (fallbackIndex === undefined || fallbackIndex >= row.length) return '';
     return row[fallbackIndex];
   };
 
