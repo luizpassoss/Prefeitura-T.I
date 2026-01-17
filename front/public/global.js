@@ -27,6 +27,54 @@ let moduloEditId = null;
 let moduloDeleteTarget = null;
 let moduloColumnFilters = {};
 let moduloSortState = { key: null, dir: 'asc' };
+let manageTabContext = null;
+let manualTabContext = null;
+
+const manualTabFieldConfig = {
+  inventario: [
+    { key: 'link', label: 'Link de Internet' },
+    { key: 'velocidade', label: 'Velocidade (DL/UL)' },
+    { key: 'telefone', label: 'Telefone' },
+    { key: 'local', label: 'Local' },
+    { key: 'endereco', label: 'Endereço' }
+  ],
+  maquinas: [
+    { key: 'nome_maquina', label: 'Nome Máquina' },
+    { key: 'patrimonio', label: 'Patrimônio' },
+    { key: 'local', label: 'Local' },
+    { key: 'status', label: 'Status' },
+    { key: 'descricao', label: 'Descrição' }
+  ]
+};
+
+function getManualTabConfig(tabType) {
+  const stored = localStorage.getItem(`ti-tab-config-${tabType}`);
+  const defaults = manualTabFieldConfig[tabType] || [];
+  const defaultOrder = defaults.map(field => field.key);
+  if (!stored) {
+    return { order: defaultOrder, labels: {}, hidden: [] };
+  }
+  try {
+    const parsed = JSON.parse(stored);
+    const order = Array.isArray(parsed.order) ? parsed.order.slice() : defaultOrder.slice();
+    defaultOrder.forEach((key) => {
+      if (!order.includes(key)) {
+        order.push(key);
+      }
+    });
+    return {
+      order,
+      labels: parsed.labels || {},
+      hidden: Array.isArray(parsed.hidden) ? parsed.hidden : []
+    };
+  } catch (e) {
+    return { order: defaultOrder, labels: {}, hidden: [] };
+  }
+}
+
+function saveManualTabConfig(tabType, config) {
+  localStorage.setItem(`ti-tab-config-${tabType}`, JSON.stringify(config));
+}
 
 const sortState = {
   inventory: { key: null, dir: 'asc' },
@@ -84,19 +132,13 @@ if (btnNovaAba) {
   updateFilterBadges();
   renderImportHistory();
 
-  document.querySelectorAll('#tb thead .sortable').forEach((th) => {
-    th.addEventListener('click', () => {
-      toggleSort(sortState.inventory, th.dataset.sortKey);
-      applyFilters();
-    });
-  });
-
-  document.querySelectorAll('#tabMaquinas thead .sortable').forEach((th) => {
-    th.addEventListener('click', () => {
-      toggleSort(sortState.machines, th.dataset.sortKey);
-      applyMachineFilters();
-    });
-  });
+  initSortMenu('sortMenuInv', sortState.inventory, applyFilters);
+  initSortMenu('sortMenuMq', sortState.machines, applyMachineFilters);
+  initSortOrderToggle('inventory', sortState.inventory, applyFilters);
+  initSortOrderToggle('machines', sortState.machines, applyMachineFilters);
+  initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
+  applyManualTabLabels('inventario');
+  applyManualTabLabels('maquinas');
 
 
   /* ===========================
@@ -212,7 +254,9 @@ function updateBulkUI() {
   function focusFirstField(modalEl) {
     if (!modalEl) return;
     requestAnimationFrame(() => {
-      const target = modalEl.querySelector('[data-autofocus], input, select, textarea, button');
+      const target = modalEl.querySelector(
+        '[data-autofocus], input, select, textarea, button:not(.help-link)'
+      );
       if (target) target.focus();
     });
   }
@@ -367,7 +411,7 @@ function showMessage(message, title = 'Aviso') {
     list.forEach((it, idx) => {
       const tr = document.createElement('tr');
      tr.innerHTML = `
-  <td class="checkbox-cell" style="text-align:center;">
+ <td class="checkbox-cell" style="text-align:center;">
     <input 
       type="checkbox"
       class="chk-inv"
@@ -376,7 +420,7 @@ function showMessage(message, title = 'Aviso') {
     >
   </td>
 
- <td>
+ <td data-field="link">
   <div class="link-cell">
     <div class="link-text">${escapeHtml(it.link)}</div>
     <div class="link-category">${escapeHtml(it.categoria)}</div>
@@ -385,10 +429,10 @@ function showMessage(message, title = 'Aviso') {
 
 
 
-  <td class="small">${escapeHtml(it.velocidade)}</td>
-  <td class="small">${escapeHtml(it.telefone)}</td>
-  <td>${escapeHtml(it.local)}</td>
-  <td>${escapeHtml(it.endereco)}</td>
+  <td class="small" data-field="velocidade">${escapeHtml(it.velocidade)}</td>
+  <td class="small" data-field="telefone">${escapeHtml(it.telefone)}</td>
+  <td data-field="local">${escapeHtml(it.local)}</td>
+  <td data-field="endereco">${escapeHtml(it.endereco)}</td>
   <td class="actions">
     <div class="action-group">
     <button class="icon-btn edit" title="Editar" data-idx="${idx}">
@@ -528,12 +572,37 @@ function normalizeDateValue(value) {
   return trimmed;
 }
 
+const sortCollator = new Intl.Collator('pt-BR', {
+  numeric: true,
+  sensitivity: 'base'
+});
+
 function normalizeSortValue(value) {
   if (value === null || value === undefined) return '';
-  const str = value.toString().trim();
-  const numeric = Number(str.replace(',', '.'));
-  if (!Number.isNaN(numeric) && str !== '') return numeric;
-  return str.toLowerCase();
+  return value.toString().trim();
+}
+
+function toNumericValue(value) {
+  if (typeof value === 'number') return value;
+  if (value === null || value === undefined) return null;
+  const str = value.toString().trim().replace(',', '.');
+  if (!str) return null;
+  if (!/^-?\d+(\.\d+)?$/.test(str)) return null;
+  const numeric = Number(str);
+  return Number.isNaN(numeric) ? null : numeric;
+}
+
+function compareSortValues(aValue, bValue) {
+  const aNum = toNumericValue(aValue);
+  const bNum = toNumericValue(bValue);
+  if (aNum !== null && bNum !== null) {
+    if (aNum < bNum) return -1;
+    if (aNum > bNum) return 1;
+    return 0;
+  }
+  const aStr = normalizeSortValue(aValue);
+  const bStr = normalizeSortValue(bValue);
+  return sortCollator.compare(aStr, bStr);
 }
 
 function sortWithIndex(list, getValue, dir = 'asc') {
@@ -541,13 +610,50 @@ function sortWithIndex(list, getValue, dir = 'asc') {
   return list
     .map((item, index) => ({ item, index }))
     .sort((a, b) => {
-      const av = normalizeSortValue(getValue(a.item));
-      const bv = normalizeSortValue(getValue(b.item));
-      if (av < bv) return -1 * multiplier;
-      if (av > bv) return 1 * multiplier;
+      const result = compareSortValues(getValue(a.item), getValue(b.item));
+      if (result !== 0) return result * multiplier;
       return a.index - b.index;
     })
     .map(({ item }) => item);
+}
+
+function setSort(state, key, dir = null) {
+  state.key = key;
+  if (dir) {
+    state.dir = dir;
+  }
+}
+
+function initSortMenu(menuId, state, onApply) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+  menu.querySelectorAll('[data-sort-key]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setSort(state, btn.dataset.sortKey);
+      if (typeof onApply === 'function') onApply();
+      menu.classList.add('hidden');
+    });
+  });
+}
+
+function updateSortOrderLabel(button, dir) {
+  if (!button) return;
+  button.textContent =
+    dir === 'desc' ? 'Decrescente (Z→A / 9→0)' : 'Crescente (A→Z / 0→9)';
+}
+
+function initSortOrderToggle(scope, state, onApply) {
+  const button = document.querySelector(`.sort-order-toggle[data-sort-scope="${scope}"]`);
+  if (!button) return;
+  updateSortOrderLabel(button, state.dir);
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+    updateSortOrderLabel(button, state.dir);
+    if (state.key && typeof onApply === 'function') {
+      onApply();
+    }
+  });
 }
 
 function updateSortIndicators(scopeSelector, state) {
@@ -1091,10 +1197,10 @@ function exportInventarioExcel(rows) {
       ${selectedMaqIds.has(it.id) ? 'checked' : ''}
     >
   </td>
-  <td>${escapeHtml(it.nome_maquina || '')}</td>
-  <td>${escapeHtml(it.patrimonio || '')}</td>
-  <td>${escapeHtml(it.local || '')}</td>
-<td>
+  <td data-field="nome_maquina">${escapeHtml(it.nome_maquina || '')}</td>
+  <td data-field="patrimonio">${escapeHtml(it.patrimonio || '')}</td>
+  <td data-field="local">${escapeHtml(it.local || '')}</td>
+<td data-field="status">
   <div class="status-pill status-${normalizeStatus(it.status)}">
     <span class="status-dot"></span>
     <span class="status-text">${it.status || 'Ativa'}</span>
@@ -1103,7 +1209,7 @@ function exportInventarioExcel(rows) {
 
 
 
-<td>
+<td data-field="descricao">
   <div
     class="desc-preview"
     data-full="${escapeHtml(it.descricao || '')}"
@@ -1299,11 +1405,16 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
 
   function parseMachineName(nome = '') {
     const trimmed = (nome || '').trim();
-    const match = MACHINE_PREFIXES.find(prefix => trimmed.startsWith(`${prefix}-`));
+    const match = MACHINE_PREFIXES.find(prefix => trimmed.startsWith(prefix));
     if (match) {
-      return { prefix: match, numero: trimmed.slice(match.length + 1) };
+      let numero = trimmed.slice(match.length);
+      if (numero.startsWith('-')) {
+        numero = numero.slice(1);
+      }
+      return { prefix: match, numero };
     }
-    return { prefix: MACHINE_PREFIXES[0], numero: trimmed };
+    const numeroMatch = trimmed.match(/(\d+)$/);
+    return { prefix: MACHINE_PREFIXES[0], numero: numeroMatch ? numeroMatch[1] : '' };
   }
 
   function buildMachineName() {
@@ -1660,10 +1771,10 @@ function exportMaquinasExcel(rows) {
 
     if (tabName === 'inventario') {
       document.getElementById('tabInventario').classList.add('active');
-      document.querySelector('.nav a:nth-child(1)').classList.add('active');
+      document.querySelector('.tab-dinamica-wrapper[data-tab-id="inventario"] > a')?.classList.add('active');
     } else {
       document.getElementById('tabMaquinas').classList.add('active');
-      document.querySelector('.nav a:nth-child(2)').classList.add('active');
+      document.querySelector('.tab-dinamica-wrapper[data-tab-id="maquinas"] > a')?.classList.add('active');
       fetchMachines();
     }
   }
@@ -1880,6 +1991,34 @@ function toggleExportMenu(tipo) {
     inv.classList.add('hidden');
     mq.classList.add('hidden');
   }
+}
+
+function toggleSortMenu(tipo) {
+  const menu = document.getElementById('sortMenuMq');
+  const invMenu = document.getElementById('sortMenuInv');
+  const modMenu = document.getElementById('sortMenuMod');
+  const inv = document.getElementById('exportMenuInv');
+  const mq = document.getElementById('exportMenuMq');
+  const mod = document.getElementById('exportMenuMod');
+
+  if (tipo === 'mq' && menu) {
+    menu.classList.toggle('hidden');
+    invMenu?.classList.add('hidden');
+    modMenu?.classList.add('hidden');
+  }
+  if (tipo === 'inv' && invMenu) {
+    invMenu.classList.toggle('hidden');
+    menu?.classList.add('hidden');
+    modMenu?.classList.add('hidden');
+  }
+  if (tipo === 'mod' && modMenu) {
+    modMenu.classList.toggle('hidden');
+    menu?.classList.add('hidden');
+    invMenu?.classList.add('hidden');
+  }
+  inv?.classList.add('hidden');
+  mq?.classList.add('hidden');
+  mod?.classList.add('hidden');
 }
 function openImportModal(type) {
   importType = type;
@@ -2202,7 +2341,10 @@ function mapImportRows() {
 
   if (importType === 'inventario') {
     return importRows.map(r => ({
-      categoria: getValue(r, ['categoria'], 0),
+      categoria: (() => {
+        const value = (getValue(r, ['categoria']) ?? '').toString().trim();
+        return value || 'Prefeitura';
+      })(),
       link: getValue(r, ['link', 'link de internet', 'internet', 'descricao', 'descrição'], 0),
       velocidade: getValue(r, ['velocidade', 'velocidade dl/ul', 'download', 'upload'], 2),
       telefone: getValue(r, ['telefone', 'contato'], 3),
@@ -2216,7 +2358,10 @@ function mapImportRows() {
       nome_maquina: getValue(r, ['nome', 'nome maquina', 'nome da maquina', 'máquina', 'maquina'], 0),
       patrimonio: getValue(r, ['patrimonio', 'patrimônio'], 1),
       local: getValue(r, ['local'], 2),
-      status: getValue(r, ['status'], 3),
+      status: (() => {
+        const value = (getValue(r, ['status'], 3) ?? '').toString().trim();
+        return value || 'Ativa';
+      })(),
       descricao: getValue(r, ['descricao', 'descrição'], 4)
     }));
   }
@@ -2576,11 +2721,12 @@ function renderAbasDinamicas() {
 
   // remove abas dinâmicas antigas
   nav.querySelectorAll('.tab-dinamica').forEach(e => e.remove());
-  nav.querySelectorAll('.tab-dinamica-wrapper').forEach(e => e.remove());
+  nav.querySelectorAll('.tab-dinamica-wrapper[data-tab-type="module"]').forEach(e => e.remove());
 
   modulos.forEach(mod => {
     const wrapper = document.createElement('div');
     wrapper.className = 'tab-dinamica-wrapper';
+    wrapper.dataset.tabType = 'module';
 
     const a = document.createElement('a');
     a.className = 'tab-dinamica';
@@ -2594,18 +2740,37 @@ function renderAbasDinamicas() {
   abrirModulo(mod);
 };
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.className = 'tab-delete';
-    deleteBtn.title = 'Excluir aba';
-    deleteBtn.innerHTML = '✕';
-    deleteBtn.onclick = async (e) => {
+    const menuBtn = document.createElement('button');
+    menuBtn.type = 'button';
+    menuBtn.className = 'tab-menu-btn';
+    menuBtn.title = 'Opções da aba';
+    menuBtn.innerHTML = '⋯';
+    menuBtn.onclick = (e) => {
       e.stopPropagation();
+      toggleTabMenu(menuBtn, e);
+    };
+
+    const menu = document.createElement('div');
+    menu.className = 'tab-menu-dropdown hidden';
+    menu.innerHTML = `
+      <button type="button" data-action="manage">Gerenciar</button>
+      <button type="button" data-action="delete">Excluir</button>
+    `;
+
+    menu.querySelector('[data-action="manage"]').onclick = (e) => {
+      e.stopPropagation();
+      closeTabMenus();
+      openManageModule(mod);
+    };
+    menu.querySelector('[data-action="delete"]').onclick = (e) => {
+      e.stopPropagation();
+      closeTabMenus();
       openConfirmDeleteModulo(mod);
     };
 
     wrapper.appendChild(a);
-    wrapper.appendChild(deleteBtn);
+    wrapper.appendChild(menuBtn);
+    wrapper.appendChild(menu);
     if (addButton) {
       nav.insertBefore(wrapper, addButton);
     } else {
@@ -2695,11 +2860,9 @@ function renderModuloDinamico() {
         <input type="checkbox" id="chkAllMod">
       </th>
       ${moduloCampos.map(c => `
-        <th class="sortable" data-sort-key="${c.nome}">
-          ${c.nome} <span class="sort-indicator"></span>
-        </th>
+        <th>${c.nome}</th>
       `).join('')}
-      <th class="actions-header">Ações</th>
+      <th class="actions-header" style="width:110px; text-align:center">Ações</th>
     </tr>
     <tr class="table-filters">
       <th class="checkbox-cell"></th>
@@ -2726,14 +2889,13 @@ function renderModuloDinamico() {
     });
   });
 
-  thead.querySelectorAll('.sortable').forEach((th) => {
-    th.addEventListener('click', () => {
-      toggleSort(moduloSortState, th.dataset.sortKey);
-      renderModuloDinamico();
-    });
-  });
-
-  updateSortIndicators('#moduloThead', moduloSortState);
+  const sortMenuOptions = document.getElementById('sortMenuModOptions');
+  if (sortMenuOptions) {
+    sortMenuOptions.innerHTML = moduloCampos
+      .map((campo) => `<button type="button" data-sort-key="${campo.nome}">${campo.nome}</button>`)
+      .join('');
+    initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
+  }
 
   // BODY
   tbody.innerHTML = '';
@@ -2741,14 +2903,7 @@ function renderModuloDinamico() {
   let sorted = filtered;
   if (moduloSortState.key) {
     const key = moduloSortState.key;
-    const dir = moduloSortState.dir;
-    sorted = [...filtered].sort((a, b) => {
-      const av = normalizeSortValue(a.row?.[key]);
-      const bv = normalizeSortValue(b.row?.[key]);
-      if (av < bv) return dir === 'asc' ? -1 : 1;
-      if (av > bv) return dir === 'asc' ? 1 : -1;
-      return a.idx - b.idx;
-    });
+    sorted = sortWithIndex(filtered, (item) => item.row?.[key], moduloSortState.dir);
   }
 
   if (!sorted.length) {
@@ -3383,13 +3538,21 @@ function getSelectOptionsForCampo(campo) {
 }
 
 function openCreateTabModal() {
+  manageTabContext = null;
   newTabFields = [];
   window.newTabFields = newTabFields;
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
   document.getElementById('newTabDescription').value = '';
   const templateSelect = document.getElementById('newTabTemplate');
-  if (templateSelect) templateSelect.value = 'custom';
+  if (templateSelect) {
+    templateSelect.value = 'custom';
+    templateSelect.disabled = false;
+  }
+  const titleEl = document.querySelector('#createTabModal h2');
+  if (titleEl) titleEl.textContent = 'Criar nova aba';
+  const submitBtn = document.getElementById('createTabSubmitBtn');
+  if (submitBtn) submitBtn.textContent = 'Criar Aba';
   initFieldDragAndDrop();
   openModalById('createTabModal');
 }
@@ -3398,6 +3561,297 @@ function closeCreateTabModal(e) {
   if (!e || e.target.id === 'createTabModal') {
     document.getElementById('createTabModal').classList.remove('show');
   }
+  manageTabContext = null;
+}
+
+function submitTabModal() {
+  if (manageTabContext?.type === 'module') {
+    saveManagedModule();
+    return;
+  }
+  salvarNovoModulo();
+}
+
+async function openManageModule(mod) {
+  manageTabContext = {
+    type: 'module',
+    id: mod.id,
+    nome: mod.nome,
+    descricao: mod.descricao || '',
+    campos: []
+  };
+  newTabFields = [];
+  window.newTabFields = newTabFields;
+  const container = document.getElementById('fieldsContainer');
+  if (container) container.innerHTML = '';
+
+  const titleEl = document.querySelector('#createTabModal h2');
+  if (titleEl) titleEl.textContent = 'Gerenciar aba';
+  const submitBtn = document.getElementById('createTabSubmitBtn');
+  if (submitBtn) submitBtn.textContent = 'Salvar alterações';
+
+  const templateSelect = document.getElementById('newTabTemplate');
+  if (templateSelect) {
+    templateSelect.value = 'custom';
+    templateSelect.disabled = true;
+  }
+
+  document.getElementById('newTabName').value = mod.nome || '';
+  document.getElementById('newTabDescription').value = mod.descricao || '';
+
+  const campos = await fetch(`${API_MODULOS}/${mod.id}/campos`).then(r => r.json());
+  manageTabContext.campos = campos;
+  campos.forEach(campo => {
+    addFieldWithValues({
+      id: campo.id,
+      nome: campo.nome,
+      tipo: campo.tipo || 'texto',
+      obrigatorio: !!campo.obrigatorio
+    });
+  });
+
+  initFieldDragAndDrop();
+  openModalById('createTabModal');
+}
+
+async function saveManagedModule() {
+  if (!manageTabContext) return;
+  const moduleId = manageTabContext.id;
+  const nome = document.getElementById('newTabName').value.trim();
+  const descricao = document.getElementById('newTabDescription').value.trim();
+
+  if (!nome) {
+    showMessage('Informe o nome da aba.');
+    return;
+  }
+
+  const camposValidos = newTabFields
+    .filter(field => !field.__deleted)
+    .map(field => ({
+      id: field.id || null,
+      nome: field.nome?.trim() || '',
+      tipo: field.tipo || 'texto',
+      obrigatorio: !!field.obrigatorio
+    }))
+    .filter(field => field.nome);
+
+  if (!camposValidos.length) {
+    showMessage('Adicione ao menos um campo com nome válido.');
+    return;
+  }
+
+  if (!validateDuplicateFields(camposValidos)) {
+    return;
+  }
+
+  await fetch(`${API_MODULOS}/${moduleId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nome, descricao })
+  });
+
+  const existingIds = new Set(manageTabContext.campos.map(campo => campo.id));
+  const nextIds = new Set(camposValidos.filter(campo => campo.id).map(campo => campo.id));
+
+  for (const campo of camposValidos) {
+    const payload = {
+      nome: campo.nome,
+      tipo: campo.tipo,
+      obrigatorio: campo.obrigatorio,
+      ordem: camposValidos.indexOf(campo)
+    };
+    if (campo.id) {
+      await fetch(`${API_MODULOS}/${moduleId}/campos/${campo.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      await fetch(`${API_MODULOS}/${moduleId}/campos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+  }
+
+  for (const campoId of existingIds) {
+    if (!nextIds.has(campoId)) {
+      await fetch(`${API_MODULOS}/${moduleId}/campos/${campoId}`, {
+        method: 'DELETE'
+      });
+    }
+  }
+
+  closeCreateTabModal();
+  const currentModuleId = moduleId;
+  manageTabContext = null;
+  await carregarModulos();
+  if (moduloAtual?.id === currentModuleId) {
+    await carregarCamposModulo();
+    await carregarRegistrosModulo();
+    renderModuloDinamico();
+  }
+}
+
+function closeTabMenus() {
+  document.querySelectorAll('.tab-menu-dropdown').forEach(menu => menu.classList.add('hidden'));
+}
+
+function toggleTabMenu(button, event) {
+  event?.stopPropagation();
+  const menu = button?.nextElementSibling;
+  if (!menu) return;
+  const isHidden = menu.classList.contains('hidden');
+  closeTabMenus();
+  if (isHidden) {
+    menu.classList.remove('hidden');
+  }
+}
+
+function getManualTabLabels(tabType) {
+  const stored = localStorage.getItem(`ti-tab-labels-${tabType}`);
+  if (!stored) return {};
+  try {
+    return JSON.parse(stored);
+  } catch (e) {
+    return {};
+  }
+}
+
+function applyManualTabLabels(tabType) {
+  const config = manualTabFieldConfig[tabType];
+  if (!config) return;
+  const { labels, hidden } = getManualTabConfig(tabType);
+  const tabId = tabType === 'inventario' ? 'tabInventario' : 'tabMaquinas';
+  const tab = document.getElementById(tabId);
+  if (!tab) return;
+  config.forEach(({ key, label }) => {
+    const text = labels[key] || label;
+    const th = tab.querySelector(`thead th[data-field="${key}"]`);
+    if (th) th.textContent = text;
+    const input = tab.querySelector(`.table-filter-input[data-field="${key}"]`);
+    if (input) input.placeholder = `Filtrar ${text.toLowerCase()}`;
+    const isHidden = hidden.includes(key);
+    [th, input?.closest('th')].forEach((el) => {
+      if (el) el.style.display = isHidden ? 'none' : '';
+    });
+    tab.querySelectorAll(`[data-field="${key}"]`).forEach((el) => {
+      if (el.tagName !== 'TH' && !el.classList.contains('table-filter-input')) {
+        el.style.display = isHidden ? 'none' : '';
+      }
+    });
+  });
+}
+
+function openManualTabManager(tabType) {
+  closeTabMenus();
+  manualTabContext = { tabType, config: getManualTabConfig(tabType) };
+  const modalTitle = document.getElementById('manageManualTabTitle');
+  if (modalTitle) {
+    modalTitle.textContent = `Gerenciar aba ${tabType === 'inventario' ? 'Inventário' : 'Máquinas'}`;
+  }
+  renderManualTabManager();
+  openModalById('manageManualTabModal');
+}
+
+function renderManualTabManager() {
+  if (!manualTabContext) return;
+  const { tabType, config } = manualTabContext;
+  const container = document.getElementById('manageManualTabFields');
+  if (!container) return;
+  const fields = manualTabFieldConfig[tabType] || [];
+  const fieldMap = new Map(fields.map(field => [field.key, field.label]));
+  const visibleKeys = config.order.filter(key => !config.hidden.includes(key));
+  container.innerHTML = visibleKeys.map(key => `
+    <div class="form-full">
+      <label>${fieldMap.get(key) || key}</label>
+      <div class="manual-tab-row" data-field="${key}">
+        <input type="text" data-field="${key}" value="${escapeHtml(config.labels[key] || fieldMap.get(key) || key)}" />
+        <button type="button" class="btn secondary" onclick="hideManualTabField('${key}')">Ocultar</button>
+      </div>
+    </div>
+  `).join('');
+
+  const select = document.getElementById('manualTabFieldSelect');
+  if (select) {
+    const hiddenKeys = config.order.filter(key => config.hidden.includes(key));
+    select.innerHTML = hiddenKeys.length
+      ? hiddenKeys.map(key => `<option value="${key}">${fieldMap.get(key) || key}</option>`).join('')
+      : `<option value="">Sem campos ocultos</option>`;
+    select.disabled = hiddenKeys.length === 0;
+  }
+  const addButton = document.querySelector('.manual-tab-actions button');
+  if (addButton) {
+    addButton.disabled = select ? select.disabled : true;
+  }
+}
+
+function addManualTabField() {
+  if (!manualTabContext) return;
+  const select = document.getElementById('manualTabFieldSelect');
+  if (!select || !select.value) return;
+  const key = select.value;
+  const { config } = manualTabContext;
+  config.hidden = config.hidden.filter(item => item !== key);
+  if (!config.order.includes(key)) {
+    config.order.push(key);
+  }
+  saveManualTabConfig(manualTabContext.tabType, config);
+  manualTabContext.config = config;
+  renderManualTabManager();
+  applyManualTabLabels(manualTabContext.tabType);
+}
+
+function hideManualTabField(key) {
+  if (!manualTabContext) return;
+  const { config } = manualTabContext;
+  if (!config.hidden.includes(key)) {
+    config.hidden.push(key);
+  }
+  saveManualTabConfig(manualTabContext.tabType, config);
+  manualTabContext.config = config;
+  renderManualTabManager();
+  applyManualTabLabels(manualTabContext.tabType);
+}
+
+function saveManualTabFields() {
+  if (!manualTabContext) return;
+  const container = document.getElementById('manageManualTabFields');
+  if (!container) return;
+  const inputs = container.querySelectorAll('input[data-field]');
+  const labels = { ...manualTabContext.config.labels };
+  inputs.forEach(input => {
+    const key = input.dataset.field;
+    const value = input.value.trim();
+    if (value) {
+      labels[key] = value;
+    } else {
+      delete labels[key];
+    }
+  });
+  const nextConfig = {
+    ...manualTabContext.config,
+    labels
+  };
+  saveManualTabConfig(manualTabContext.tabType, nextConfig);
+  applyManualTabLabels(manualTabContext.tabType);
+  closeManageManualTabModal();
+}
+
+function resetManualTabFields() {
+  if (!manualTabContext) return;
+  localStorage.removeItem(`ti-tab-config-${manualTabContext.tabType}`);
+  manualTabContext.config = getManualTabConfig(manualTabContext.tabType);
+  renderManualTabManager();
+  applyManualTabLabels(manualTabContext.tabType);
+}
+
+function closeManageManualTabModal(e) {
+  if (!e || e.target.id === 'manageManualTabModal') {
+    document.getElementById('manageManualTabModal').classList.remove('show');
+  }
+  manualTabContext = null;
 }
 
 function applyTabTemplate() {
@@ -3416,10 +3870,11 @@ function applyTabTemplate() {
   templateFields.forEach(field => addFieldWithValues(field));
 }
 
-function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } = {}) {
+function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id = null } = {}) {
   const idx = newTabFields.length;
 
   newTabFields.push({
+    id,
     nome,
     tipo,
     obrigatorio
@@ -3497,6 +3952,16 @@ function removeField(idx) {
   rows.forEach(r => {
     if (Number(r.dataset.idx) === idx) r.remove();
   });
+}
+
+function sortFieldsAlphabetically() {
+  const activeFields = newTabFields.filter(field => !field.__deleted);
+  activeFields.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+  newTabFields = activeFields.map(field => ({ ...field }));
+  window.newTabFields = newTabFields;
+  const container = document.getElementById('fieldsContainer');
+  if (container) container.innerHTML = '';
+  newTabFields.forEach(field => addFieldWithValues(field));
 }
 
 
@@ -3666,6 +4131,9 @@ function closeModalByEsc(modalEl) {
     case 'createTabModal':
       closeCreateTabModal();
       break;
+    case 'manageManualTabModal':
+      closeManageManualTabModal();
+      break;
     case 'moduloRegistroModal':
       closeModuloRegistroModal();
       break;
@@ -3708,6 +4176,12 @@ document.addEventListener('click', (e) => {
     document.getElementById('exportMenuInv')?.classList.add('hidden');
     document.getElementById('exportMenuMq')?.classList.add('hidden');
     document.getElementById('exportMenuMod')?.classList.add('hidden');
+    document.getElementById('sortMenuMq')?.classList.add('hidden');
+    document.getElementById('sortMenuInv')?.classList.add('hidden');
+    document.getElementById('sortMenuMod')?.classList.add('hidden');
+  }
+  if (!e.target.closest('.tab-dinamica-wrapper')) {
+    closeTabMenus();
   }
 });
 
@@ -3725,17 +4199,10 @@ document.addEventListener('click', (e) => {
     inv?.classList.add('hidden');
     mq?.classList.add('hidden');
     mod?.classList.add('hidden');
+    document.getElementById('sortMenuMq')?.classList.add('hidden');
+    document.getElementById('sortMenuInv')?.classList.add('hidden');
+    document.getElementById('sortMenuMod')?.classList.add('hidden');
   }
-});
-
-document.addEventListener('click', (e) => {
-  const link = e.target.closest('.help-link');
-  if (!link) return;
-  const tip = link.closest('.help-tip');
-  if (!tip) return;
-  const title = tip.dataset.helpTitle || 'Ajuda';
-  const content = tip.dataset.helpMore || tip.dataset.help || '';
-  openHelpPanel(title, content);
 });
 
 function getActiveSearchInput() {
@@ -3829,6 +4296,7 @@ document.addEventListener('keydown', (e) => {
   window.exportMaquinas = exportMaquinas;
   window.exportModulo = exportModulo;
   window.toggleExportMenu = toggleExportMenu;
+  window.toggleSortMenu = toggleSortMenu;
   window.carregarLogoPrefeitura = carregarLogoPrefeitura;
   window.toggleFilters = toggleFilters;
   window.clearInventoryFilters = clearInventoryFilters;
@@ -3846,6 +4314,16 @@ document.addEventListener('keydown', (e) => {
   window.closeHelpPanel = closeHelpPanel;
 
   window.openCreateTabModal = openCreateTabModal;
+  window.submitTabModal = submitTabModal;
+  window.sortFieldsAlphabetically = sortFieldsAlphabetically;
+  window.openManualTabManager = openManualTabManager;
+  window.saveManualTabFields = saveManualTabFields;
+  window.addManualTabField = addManualTabField;
+  window.hideManualTabField = hideManualTabField;
+  window.resetManualTabFields = resetManualTabFields;
+  window.closeManageManualTabModal = closeManageManualTabModal;
+  window.toggleTabMenu = toggleTabMenu;
+  window.applyFieldPreset = applyFieldPreset;
   window.closeCreateTabModal = closeCreateTabModal;
   window.applyTabTemplate = applyTabTemplate;
   window.addField = addField;
