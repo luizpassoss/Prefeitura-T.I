@@ -27,6 +27,25 @@ let moduloEditId = null;
 let moduloDeleteTarget = null;
 let moduloColumnFilters = {};
 let moduloSortState = { key: null, dir: 'asc' };
+let manageTabContext = null;
+let manualTabContext = null;
+
+const manualTabFieldConfig = {
+  inventario: [
+    { key: 'link', label: 'Link de Internet' },
+    { key: 'velocidade', label: 'Velocidade (DL/UL)' },
+    { key: 'telefone', label: 'Telefone' },
+    { key: 'local', label: 'Local' },
+    { key: 'endereco', label: 'Endereço' }
+  ],
+  maquinas: [
+    { key: 'nome_maquina', label: 'Nome Máquina' },
+    { key: 'patrimonio', label: 'Patrimônio' },
+    { key: 'local', label: 'Local' },
+    { key: 'status', label: 'Status' },
+    { key: 'descricao', label: 'Descrição' }
+  ]
+};
 
 const sortState = {
   inventory: { key: null, dir: 'asc' },
@@ -89,6 +108,8 @@ if (btnNovaAba) {
   initSortOrderToggle('inventory', sortState.inventory, applyFilters);
   initSortOrderToggle('machines', sortState.machines, applyMachineFilters);
   initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
+  applyManualTabLabels('inventario');
+  applyManualTabLabels('maquinas');
 
 
   /* ===========================
@@ -2683,18 +2704,37 @@ function renderAbasDinamicas() {
   abrirModulo(mod);
 };
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.className = 'tab-delete';
-    deleteBtn.title = 'Excluir aba';
-    deleteBtn.innerHTML = '✕';
-    deleteBtn.onclick = async (e) => {
+    const menuBtn = document.createElement('button');
+    menuBtn.type = 'button';
+    menuBtn.className = 'tab-menu-btn';
+    menuBtn.title = 'Opções da aba';
+    menuBtn.innerHTML = '⋯';
+    menuBtn.onclick = (e) => {
       e.stopPropagation();
+      toggleTabMenu(menuBtn);
+    };
+
+    const menu = document.createElement('div');
+    menu.className = 'tab-menu-dropdown hidden';
+    menu.innerHTML = `
+      <button type="button" data-action="manage">Gerenciar</button>
+      <button type="button" data-action="delete">Excluir</button>
+    `;
+
+    menu.querySelector('[data-action="manage"]').onclick = (e) => {
+      e.stopPropagation();
+      closeTabMenus();
+      openManageModule(mod);
+    };
+    menu.querySelector('[data-action="delete"]').onclick = (e) => {
+      e.stopPropagation();
+      closeTabMenus();
       openConfirmDeleteModulo(mod);
     };
 
     wrapper.appendChild(a);
-    wrapper.appendChild(deleteBtn);
+    wrapper.appendChild(menuBtn);
+    wrapper.appendChild(menu);
     if (addButton) {
       nav.insertBefore(wrapper, addButton);
     } else {
@@ -3462,13 +3502,21 @@ function getSelectOptionsForCampo(campo) {
 }
 
 function openCreateTabModal() {
+  manageTabContext = null;
   newTabFields = [];
   window.newTabFields = newTabFields;
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
   document.getElementById('newTabDescription').value = '';
   const templateSelect = document.getElementById('newTabTemplate');
-  if (templateSelect) templateSelect.value = 'custom';
+  if (templateSelect) {
+    templateSelect.value = 'custom';
+    templateSelect.disabled = false;
+  }
+  const titleEl = document.querySelector('#createTabModal h2');
+  if (titleEl) titleEl.textContent = 'Criar nova aba';
+  const submitBtn = document.getElementById('createTabSubmitBtn');
+  if (submitBtn) submitBtn.textContent = 'Criar Aba';
   initFieldDragAndDrop();
   openModalById('createTabModal');
 }
@@ -3477,6 +3525,228 @@ function closeCreateTabModal(e) {
   if (!e || e.target.id === 'createTabModal') {
     document.getElementById('createTabModal').classList.remove('show');
   }
+  manageTabContext = null;
+}
+
+function submitTabModal() {
+  if (manageTabContext?.type === 'module') {
+    saveManagedModule();
+    return;
+  }
+  salvarNovoModulo();
+}
+
+async function openManageModule(mod) {
+  manageTabContext = {
+    type: 'module',
+    id: mod.id,
+    nome: mod.nome,
+    descricao: mod.descricao || '',
+    campos: []
+  };
+  newTabFields = [];
+  window.newTabFields = newTabFields;
+  const container = document.getElementById('fieldsContainer');
+  if (container) container.innerHTML = '';
+
+  const titleEl = document.querySelector('#createTabModal h2');
+  if (titleEl) titleEl.textContent = 'Gerenciar aba';
+  const submitBtn = document.getElementById('createTabSubmitBtn');
+  if (submitBtn) submitBtn.textContent = 'Salvar alterações';
+
+  const templateSelect = document.getElementById('newTabTemplate');
+  if (templateSelect) {
+    templateSelect.value = 'custom';
+    templateSelect.disabled = true;
+  }
+
+  document.getElementById('newTabName').value = mod.nome || '';
+  document.getElementById('newTabDescription').value = mod.descricao || '';
+
+  const campos = await fetch(`${API_MODULOS}/${mod.id}/campos`).then(r => r.json());
+  manageTabContext.campos = campos;
+  campos.forEach(campo => {
+    addFieldWithValues({
+      id: campo.id,
+      nome: campo.nome,
+      tipo: campo.tipo || 'texto',
+      obrigatorio: !!campo.obrigatorio
+    });
+  });
+
+  initFieldDragAndDrop();
+  openModalById('createTabModal');
+}
+
+async function saveManagedModule() {
+  if (!manageTabContext) return;
+  const moduleId = manageTabContext.id;
+  const nome = document.getElementById('newTabName').value.trim();
+  const descricao = document.getElementById('newTabDescription').value.trim();
+
+  if (!nome) {
+    showMessage('Informe o nome da aba.');
+    return;
+  }
+
+  const camposValidos = newTabFields
+    .filter(field => !field.__deleted)
+    .map(field => ({
+      id: field.id || null,
+      nome: field.nome?.trim() || '',
+      tipo: field.tipo || 'texto',
+      obrigatorio: !!field.obrigatorio
+    }))
+    .filter(field => field.nome);
+
+  if (!camposValidos.length) {
+    showMessage('Adicione ao menos um campo com nome válido.');
+    return;
+  }
+
+  if (!validateDuplicateFields(camposValidos)) {
+    return;
+  }
+
+  await fetch(`${API_MODULOS}/${moduleId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nome, descricao })
+  });
+
+  const existingIds = new Set(manageTabContext.campos.map(campo => campo.id));
+  const nextIds = new Set(camposValidos.filter(campo => campo.id).map(campo => campo.id));
+
+  for (const campo of camposValidos) {
+    const payload = {
+      nome: campo.nome,
+      tipo: campo.tipo,
+      obrigatorio: campo.obrigatorio,
+      ordem: camposValidos.indexOf(campo)
+    };
+    if (campo.id) {
+      await fetch(`${API_MODULOS}/${moduleId}/campos/${campo.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      await fetch(`${API_MODULOS}/${moduleId}/campos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+  }
+
+  for (const campoId of existingIds) {
+    if (!nextIds.has(campoId)) {
+      await fetch(`${API_MODULOS}/${moduleId}/campos/${campoId}`, {
+        method: 'DELETE'
+      });
+    }
+  }
+
+  closeCreateTabModal();
+  const currentModuleId = moduleId;
+  manageTabContext = null;
+  await carregarModulos();
+  if (moduloAtual?.id === currentModuleId) {
+    await carregarCamposModulo();
+    await carregarRegistrosModulo();
+    renderModuloDinamico();
+  }
+}
+
+function closeTabMenus() {
+  document.querySelectorAll('.tab-menu-dropdown').forEach(menu => menu.classList.add('hidden'));
+}
+
+function toggleTabMenu(button, event) {
+  event?.stopPropagation();
+  const menu = button?.nextElementSibling;
+  if (!menu) return;
+  const isHidden = menu.classList.contains('hidden');
+  closeTabMenus();
+  if (isHidden) {
+    menu.classList.remove('hidden');
+  }
+}
+
+function getManualTabLabels(tabType) {
+  const stored = localStorage.getItem(`ti-tab-labels-${tabType}`);
+  if (!stored) return {};
+  try {
+    return JSON.parse(stored);
+  } catch (e) {
+    return {};
+  }
+}
+
+function applyManualTabLabels(tabType) {
+  const config = manualTabFieldConfig[tabType];
+  if (!config) return;
+  const labels = getManualTabLabels(tabType);
+  const tabId = tabType === 'inventario' ? 'tabInventario' : 'tabMaquinas';
+  const tab = document.getElementById(tabId);
+  if (!tab) return;
+  config.forEach(({ key, label }) => {
+    const text = labels[key] || label;
+    const th = tab.querySelector(`thead th[data-field="${key}"]`);
+    if (th) th.textContent = text;
+    const input = tab.querySelector(`.table-filter-input[data-field="${key}"]`);
+    if (input) input.placeholder = `Filtrar ${text.toLowerCase()}`;
+  });
+}
+
+function openManualTabManager(tabType) {
+  closeTabMenus();
+  manualTabContext = tabType;
+  const modalTitle = document.getElementById('manageManualTabTitle');
+  if (modalTitle) {
+    modalTitle.textContent = `Gerenciar aba ${tabType === 'inventario' ? 'Inventário' : 'Máquinas'}`;
+  }
+  const container = document.getElementById('manageManualTabFields');
+  if (!container) return;
+  const labels = getManualTabLabels(tabType);
+  const fields = manualTabFieldConfig[tabType] || [];
+  container.innerHTML = fields.map(field => `
+    <div class="form-full">
+      <label>${field.label}</label>
+      <input type="text" data-field="${field.key}" value="${escapeHtml(labels[field.key] || field.label)}" />
+    </div>
+  `).join('');
+  openModalById('manageManualTabModal');
+}
+
+function saveManualTabFields() {
+  if (!manualTabContext) return;
+  const container = document.getElementById('manageManualTabFields');
+  if (!container) return;
+  const inputs = container.querySelectorAll('input[data-field]');
+  const labels = {};
+  inputs.forEach(input => {
+    const key = input.dataset.field;
+    const value = input.value.trim();
+    if (value) labels[key] = value;
+  });
+  localStorage.setItem(`ti-tab-labels-${manualTabContext}`, JSON.stringify(labels));
+  applyManualTabLabels(manualTabContext);
+  closeManageManualTabModal();
+}
+
+function resetManualTabFields() {
+  if (!manualTabContext) return;
+  localStorage.removeItem(`ti-tab-labels-${manualTabContext}`);
+  openManualTabManager(manualTabContext);
+  applyManualTabLabels(manualTabContext);
+}
+
+function closeManageManualTabModal(e) {
+  if (!e || e.target.id === 'manageManualTabModal') {
+    document.getElementById('manageManualTabModal').classList.remove('show');
+  }
+  manualTabContext = null;
 }
 
 function applyTabTemplate() {
@@ -3495,10 +3765,11 @@ function applyTabTemplate() {
   templateFields.forEach(field => addFieldWithValues(field));
 }
 
-function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false } = {}) {
+function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id = null } = {}) {
   const idx = newTabFields.length;
 
   newTabFields.push({
+    id,
     nome,
     tipo,
     obrigatorio
@@ -3576,6 +3847,16 @@ function removeField(idx) {
   rows.forEach(r => {
     if (Number(r.dataset.idx) === idx) r.remove();
   });
+}
+
+function sortFieldsAlphabetically() {
+  const activeFields = newTabFields.filter(field => !field.__deleted);
+  activeFields.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+  newTabFields = activeFields.map(field => ({ ...field }));
+  window.newTabFields = newTabFields;
+  const container = document.getElementById('fieldsContainer');
+  if (container) container.innerHTML = '';
+  newTabFields.forEach(field => addFieldWithValues(field));
 }
 
 
@@ -3745,6 +4026,9 @@ function closeModalByEsc(modalEl) {
     case 'createTabModal':
       closeCreateTabModal();
       break;
+    case 'manageManualTabModal':
+      closeManageManualTabModal();
+      break;
     case 'moduloRegistroModal':
       closeModuloRegistroModal();
       break;
@@ -3790,6 +4074,9 @@ document.addEventListener('click', (e) => {
     document.getElementById('sortMenuMq')?.classList.add('hidden');
     document.getElementById('sortMenuInv')?.classList.add('hidden');
     document.getElementById('sortMenuMod')?.classList.add('hidden');
+  }
+  if (!e.target.closest('.tab-dinamica-wrapper')) {
+    closeTabMenus();
   }
 });
 
@@ -3922,6 +4209,13 @@ document.addEventListener('keydown', (e) => {
   window.closeHelpPanel = closeHelpPanel;
 
   window.openCreateTabModal = openCreateTabModal;
+  window.submitTabModal = submitTabModal;
+  window.sortFieldsAlphabetically = sortFieldsAlphabetically;
+  window.openManualTabManager = openManualTabManager;
+  window.saveManualTabFields = saveManualTabFields;
+  window.resetManualTabFields = resetManualTabFields;
+  window.closeManageManualTabModal = closeManageManualTabModal;
+  window.toggleTabMenu = toggleTabMenu;
   window.closeCreateTabModal = closeCreateTabModal;
   window.applyTabTemplate = applyTabTemplate;
   window.addField = addField;

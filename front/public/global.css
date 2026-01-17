@@ -258,20 +258,21 @@ body.theme-dark {
   display: flex;
   align-items: center;
   gap: 6px;
+  position: relative;
 }
 
 .tab-dinamica-wrapper .tab-dinamica {
   flex: 1;
 }
 
-.tab-delete {
+.tab-menu-btn {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   color: #94a3b8;
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
@@ -280,10 +281,43 @@ body.theme-dark {
   transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
-.tab-delete:hover {
-  color: #ef4444;
-  background: #fee2e2;
-  border-color: #fca5a5;
+.tab-menu-btn:hover {
+  color: #64748b;
+  background: rgba(148, 163, 184, 0.18);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.tab-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 160px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  padding: 6px;
+  z-index: 120;
+}
+
+.tab-menu-dropdown.hidden {
+  display: none;
+}
+
+.tab-menu-dropdown button {
+  all: unset;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: var(--font-xs);
+  color: #1f2937;
+  cursor: pointer;
+}
+
+.tab-menu-dropdown button:hover {
+  background: #f1f5f9;
 }
 
 /* Hover suave */
@@ -645,6 +679,30 @@ body.theme-dark .module-record-card label {
 
 body.theme-dark .brand {
   color: #e2e8f0;
+}
+
+body.theme-dark .tab-menu-btn {
+  color: #94a3b8;
+}
+
+body.theme-dark .tab-menu-btn:hover {
+  color: #e2e8f0;
+  background: rgba(148, 163, 184, 0.18);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+body.theme-dark .tab-menu-dropdown {
+  background: #0f172a;
+  border-color: #1f2a3a;
+  box-shadow: 0 12px 24px rgba(5, 10, 20, 0.45);
+}
+
+body.theme-dark .tab-menu-dropdown button {
+  color: #e2e8f0;
+}
+
+body.theme-dark .tab-menu-dropdown button:hover {
+  background: rgba(148, 163, 184, 0.16);
 }
 
 body.theme-dark .brand::after {
@@ -1089,6 +1147,12 @@ body.theme-dark .file-input-name {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.create-tab-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .btn.secondary {
