@@ -103,23 +103,20 @@
               Filtros
               <span class="filter-count" data-filter-badge="inventory" aria-label="Filtros ativos"></span>
             </button>
-            <div class="export-wrapper sort-wrapper">
-              <button class="btn secondary sort-btn" type="button" onclick="toggleSortMenu('inv')">
-                Ordenar
+            <div class="sort-quick" role="group" aria-label="Ordenar inventário">
+              <span class="sort-quick-label">Ordenar:</span>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="inventory" data-sort-key="issues" data-sort-dir="desc">
+                Pendências
               </button>
-              <div id="sortMenuInv" class="export-menu hidden" role="menu" aria-label="Ordenar por">
-                <div class="export-menu-title sort-menu-header">
-                  Ordenar por
-                  <button type="button" class="sort-order-toggle" data-sort-scope="inventory">
-                    Crescente (A→Z / 0→9)
-                  </button>
-                </div>
-                <button type="button" data-sort-key="link">Link de Internet</button>
-                <button type="button" data-sort-key="velocidade">Velocidade (DL/UL)</button>
-                <button type="button" data-sort-key="telefone">Telefone</button>
-                <button type="button" data-sort-key="local">Local</button>
-                <button type="button" data-sort-key="endereco">Endereço</button>
-              </div>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="inventory" data-sort-key="recent" data-sort-dir="desc">
+                Recentes
+              </button>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="inventory" data-sort-key="link" data-sort-dir="asc">
+                A–Z
+              </button>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="inventory" data-sort-key="link" data-sort-dir="desc">
+                Z–A
+              </button>
             </div>
             <button class="btn secondary import-btn" onclick="openImportModal('inventario')">
               <span class="icon excel-icon" aria-hidden="true"></span>
@@ -251,23 +248,23 @@
               Filtros
               <span class="filter-count" data-filter-badge="machines" aria-label="Filtros ativos"></span>
             </button>
-            <div class="export-wrapper sort-wrapper">
-              <button class="btn secondary sort-btn" type="button" onclick="toggleSortMenu('mq')">
-                Ordenar
+            <div class="sort-quick" role="group" aria-label="Ordenar máquinas">
+              <span class="sort-quick-label">Ordenar:</span>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="machines" data-sort-key="issues" data-sort-dir="desc">
+                Pendências
               </button>
-              <div id="sortMenuMq" class="export-menu hidden" role="menu" aria-label="Ordenar por">
-                <div class="export-menu-title sort-menu-header">
-                  Ordenar por
-                  <button type="button" class="sort-order-toggle" data-sort-scope="machines">
-                    Crescente (A→Z / 0→9)
-                  </button>
-                </div>
-                <button type="button" data-sort-key="nome_maquina">Nome da Máquina</button>
-                <button type="button" data-sort-key="patrimonio">Patrimônio</button>
-                <button type="button" data-sort-key="local">Local</button>
-                <button type="button" data-sort-key="status">Status</button>
-                <button type="button" data-sort-key="descricao">Descrição</button>
-              </div>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="machines" data-sort-key="recent" data-sort-dir="desc">
+                Recentes
+              </button>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="machines" data-sort-key="status_priority" data-sort-dir="asc">
+                Status (prioridade)
+              </button>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="machines" data-sort-key="nome_maquina" data-sort-dir="asc">
+                A–Z
+              </button>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="machines" data-sort-key="nome_maquina" data-sort-dir="desc">
+                Z–A
+              </button>
             </div>
             <button class="btn secondary import-btn" onclick="openImportModal('maquinas')">
               <span class="icon excel-icon" aria-hidden="true"></span>
@@ -844,6 +841,12 @@
 
     <div id="fieldsContainer"></div>
 
+    <div class="create-tab-header">
+      <label>Opções de ordenação</label>
+      <span class="small">Escolha quais campos devem aparecer no menu Ordenar.</span>
+    </div>
+    <div id="sortOptionsContainer" class="sort-options-grid"></div>
+
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeCreateTabModal()">Cancelar</button>
       <button id="createTabSubmitBtn" class="btn-salvar" onclick="submitTabModal()">Criar Aba</button>
@@ -909,7 +912,19 @@
 <div id="systemMessageModal" class="modal" onclick="closeSystemMessageModal(event)">
   <div class="card" onclick="event.stopPropagation()">
     <div class="modal-heading">
-      <h2 id="systemMessageTitle">Aviso</h2>
+      <div class="system-message-title">
+        <span class="system-message-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation">
+            <path d="M6 12.5l4 4 8-9" />
+          </svg>
+        </span>
+        <span class="system-message-icon system-message-icon-error" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation">
+            <path d="M6 6l12 12M18 6l-12 12" />
+          </svg>
+        </span>
+        <h2 id="systemMessageTitle">Aviso</h2>
+      </div>
       <p class="modal-subtitle" id="systemMessageText"></p>
     </div>
 
@@ -929,6 +944,55 @@
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeSystemConfirmModal()">Cancelar</button>
       <button class="btn-salvar danger" onclick="confirmSystemAction()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="fieldTypeHelpModal" class="modal" onclick="closeFieldTypeHelpModal(event)">
+  <div class="card" onclick="event.stopPropagation()">
+    <div class="modal-heading">
+      <h2>Tipos de campo</h2>
+      <p class="modal-subtitle">Entenda o que cada tipo representa na tabela.</p>
+    </div>
+    <div class="field-type-help-list">
+      <div class="field-type-help-item">
+        <span class="field-type-help-icon">Abc</span>
+        <div>
+          <strong>Texto</strong>
+          <p>Para palavras e frases. Ideal para nomes, locais e descrições.</p>
+        </div>
+      </div>
+      <div class="field-type-help-item">
+        <span class="field-type-help-icon">123</span>
+        <div>
+          <strong>Número</strong>
+          <p>Para valores numéricos e patrimônios sem letras.</p>
+        </div>
+      </div>
+      <div class="field-type-help-item">
+        <span class="field-type-help-icon">📅</span>
+        <div>
+          <strong>Data</strong>
+          <p>Para registrar datas como aquisição, troca ou revisão.</p>
+        </div>
+      </div>
+      <div class="field-type-help-item">
+        <span class="field-type-help-icon">@</span>
+        <div>
+          <strong>E-mail</strong>
+          <p>Para contatos que precisam ser validados como e-mail.</p>
+        </div>
+      </div>
+      <div class="field-type-help-item">
+        <span class="field-type-help-icon">≡</span>
+        <div>
+          <strong>Lista</strong>
+          <p>Para escolher valores pré-definidos em uma lista.</p>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-salvar" onclick="closeFieldTypeHelpModal()">Entendi</button>
     </div>
   </div>
 </div>
