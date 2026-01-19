@@ -4685,7 +4685,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
     </div>
     <div class="field-type-options ${tipo === 'select' ? 'is-visible' : ''}">
       <span class="field-options-summary" id="fieldOptionsSummary-${idx}">Nenhuma opção definida.</span>
-      <button type="button" class="btn-secondary" onclick="openFieldOptionsModal(${idx})">Definir opções</button>
+      <button type="button" class="btn secondary" onclick="openFieldOptionsModal(${idx})">Definir opções</button>
     </div>
 
     <label class="field-required-label">
@@ -4906,9 +4906,8 @@ async function salvarNovoModulo() {
     return;
   }
 
-  const fieldRows = [...document.querySelectorAll('#fieldsContainer .field-row')];
-
-  if (!fieldRows.length) {
+  const hasFields = newTabFields.some(field => !field.__deleted && field.nome?.trim());
+  if (!hasFields) {
     showErrorMessage('Adicione ao menos um campo.');
     return;
   }
@@ -4921,38 +4920,39 @@ async function salvarNovoModulo() {
 
   const modulo = await res.json();
 
-const camposValidos = fieldRows
-  .map(row => ({
-    nome: row.querySelector('.field-name')?.value.trim(),
-    tipo: row.querySelector('.field-type')?.value || 'texto',
-    obrigatorio: !!row.querySelector('.field-required')?.checked,
-    opcoes: normalizeFieldOptionsInput(row.querySelector('.field-type-options input')?.value || '')
-  }))
-  .filter(f => f.nome);
+  const camposValidos = newTabFields
+    .filter(field => !field.__deleted)
+    .map(field => ({
+      nome: field.nome?.trim() || '',
+      tipo: field.tipo || 'texto',
+      obrigatorio: !!field.obrigatorio,
+      opcoes: Array.isArray(field.opcoes) ? field.opcoes : []
+    }))
+    .filter(field => field.nome);
 
-if (!camposValidos.length) {
-  showErrorMessage('Adicione ao menos um campo com nome válido.');
-  return;
-}
+  if (!camposValidos.length) {
+    showErrorMessage('Adicione ao menos um campo com nome válido.');
+    return;
+  }
 
-if (!validateDuplicateFields(camposValidos)) {
-  return;
-}
+  if (!validateDuplicateFields(camposValidos)) {
+    return;
+  }
 
-for (let i = 0; i < camposValidos.length; i++) {
-  const f = camposValidos[i];
+  for (let i = 0; i < camposValidos.length; i++) {
+    const f = camposValidos[i];
 
-  await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      nome: f.nome,
-      tipo: f.tipo,
-      obrigatorio: f.obrigatorio,
-      ordem: i
-    })
-  });
-}
+    await fetch(`${API_MODULOS}/${modulo.id}/campos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: f.nome,
+        tipo: f.tipo,
+        obrigatorio: f.obrigatorio,
+        ordem: i
+      })
+    });
+  }
 
   const sortCandidates = getSortOptionCandidates();
   const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
