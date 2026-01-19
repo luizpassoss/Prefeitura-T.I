@@ -103,23 +103,20 @@
               Filtros
               <span class="filter-count" data-filter-badge="inventory" aria-label="Filtros ativos"></span>
             </button>
-            <div class="export-wrapper sort-wrapper">
-              <button class="btn secondary sort-btn" type="button" onclick="toggleSortMenu('inv')">
-                Ordenar
+            <div class="sort-quick" role="group" aria-label="Ordenar inventário">
+              <span class="sort-quick-label">Ordenar:</span>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="inventory" data-sort-key="issues" data-sort-dir="desc">
+                Pendências
               </button>
-              <div id="sortMenuInv" class="export-menu hidden" role="menu" aria-label="Ordenar por">
-                <div class="export-menu-title sort-menu-header">
-                  Ordenar por
-                  <button type="button" class="sort-order-toggle" data-sort-scope="inventory">
-                    Crescente (A→Z / 0→9)
-                  </button>
-                </div>
-                <button type="button" data-sort-key="link">Link de Internet</button>
-                <button type="button" data-sort-key="velocidade">Velocidade (DL/UL)</button>
-                <button type="button" data-sort-key="telefone">Telefone</button>
-                <button type="button" data-sort-key="local">Local</button>
-                <button type="button" data-sort-key="endereco">Endereço</button>
-              </div>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="inventory" data-sort-key="recent" data-sort-dir="desc">
+                Recentes
+              </button>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="inventory" data-sort-key="link" data-sort-dir="asc">
+                A–Z
+              </button>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="inventory" data-sort-key="link" data-sort-dir="desc">
+                Z–A
+              </button>
             </div>
             <button class="btn secondary import-btn" onclick="openImportModal('inventario')">
               <span class="icon excel-icon" aria-hidden="true"></span>
@@ -251,23 +248,23 @@
               Filtros
               <span class="filter-count" data-filter-badge="machines" aria-label="Filtros ativos"></span>
             </button>
-            <div class="export-wrapper sort-wrapper">
-              <button class="btn secondary sort-btn" type="button" onclick="toggleSortMenu('mq')">
-                Ordenar
+            <div class="sort-quick" role="group" aria-label="Ordenar máquinas">
+              <span class="sort-quick-label">Ordenar:</span>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="machines" data-sort-key="issues" data-sort-dir="desc">
+                Pendências
               </button>
-              <div id="sortMenuMq" class="export-menu hidden" role="menu" aria-label="Ordenar por">
-                <div class="export-menu-title sort-menu-header">
-                  Ordenar por
-                  <button type="button" class="sort-order-toggle" data-sort-scope="machines">
-                    Crescente (A→Z / 0→9)
-                  </button>
-                </div>
-                <button type="button" data-sort-key="nome_maquina">Nome da Máquina</button>
-                <button type="button" data-sort-key="patrimonio">Patrimônio</button>
-                <button type="button" data-sort-key="local">Local</button>
-                <button type="button" data-sort-key="status">Status</button>
-                <button type="button" data-sort-key="descricao">Descrição</button>
-              </div>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="machines" data-sort-key="recent" data-sort-dir="desc">
+                Recentes
+              </button>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="machines" data-sort-key="status_priority" data-sort-dir="asc">
+                Status (prioridade)
+              </button>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="machines" data-sort-key="nome_maquina" data-sort-dir="asc">
+                A–Z
+              </button>
+              <button class="btn secondary sort-quick-btn" type="button" data-sort-scope="machines" data-sort-key="nome_maquina" data-sort-dir="desc">
+                Z–A
+              </button>
             </div>
             <button class="btn secondary import-btn" onclick="openImportModal('maquinas')">
               <span class="icon excel-icon" aria-hidden="true"></span>
