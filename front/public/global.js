@@ -349,6 +349,27 @@ if (btnNovaAba) {
 let selectedInvIds = new Set();
 let selectedMaqIds = new Set();
 let selectedModuloIds = new Set();
+let actionToastTimeout = null;
+
+function showActionToast(message, duration = 3200) {
+  const toast = document.getElementById('actionToast');
+  if (!toast) return;
+  const text = toast.querySelector('.action-toast-text');
+  if (text) text.textContent = message;
+  toast.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+  if (actionToastTimeout) {
+    clearTimeout(actionToastTimeout);
+  }
+  actionToastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      toast.classList.add('hidden');
+    }, 250);
+  }, duration);
+}
 
 function updateBulkUI() {
   const bulk = document.getElementById('bulkActions');
@@ -2982,7 +3003,16 @@ function renderAbasDinamicas() {
     menuBtn.setAttribute('aria-controls', menu.id);
     menu.innerHTML = `
       <button type="button" data-action="manage">Gerenciar</button>
-      <button type="button" data-action="delete">Excluir</button>
+      <button type="button" data-action="delete">
+        <svg class="menu-icon delete-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 6h18"/>
+          <path d="M8 6v12"/>
+          <path d="M16 6v12"/>
+          <path d="M6 6l1 14h10l1-14"/>
+          <path d="M9 6V4h6v2"/>
+        </svg>
+        Excluir
+      </button>
     `;
 
     menu.querySelector('[data-action="manage"]').onclick = (e) => {
@@ -4080,6 +4110,7 @@ function addManualTabCustomField() {
     applyMachineFilters();
   }
   if (input) input.value = '';
+  showActionToast('Nova coluna adicionada com sucesso.');
 }
 
 function hideManualTabField(key) {
@@ -4228,6 +4259,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
 
 function addField() {
   addFieldWithValues();
+  showActionToast('Nova coluna adicionada com sucesso.');
 }
 function removeField(idx) {
   // marca como removido
@@ -4324,6 +4356,7 @@ async function createNewTab() {
 
   closeCreateTabModal();
   loadDynamicTabs(); // upgrade, não quebra nada
+  showActionToast(`Aba "${nome}" criada com sucesso.`);
 }
 async function openModulo(modulo) {
   switchTab('modulo');
@@ -4395,6 +4428,7 @@ for (let i = 0; i < camposValidos.length; i++) {
 
   closeCreateTabModal();
   await carregarModulos();
+  showActionToast(`Aba "${nome}" criada com sucesso.`);
 }
 function closeAllModals() {
   document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));

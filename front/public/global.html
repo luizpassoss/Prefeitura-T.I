@@ -663,6 +663,12 @@
   <span id="undoToastText"></span>
   <button id="undoToastButton" type="button">Desfazer</button>
 </div>
+<div id="actionToast" class="action-toast hidden" role="status" aria-live="polite">
+  <svg class="action-toast-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M5 13l4 4 10-10"></path>
+  </svg>
+  <span class="action-toast-text"></span>
+</div>
 <!-- MODAL DESCRIÇÃO COMPLETA -->
 <div id="descModal" class="modal" onclick="closeDescModal(event)">
   <div class="card" style="max-width: 600px" onclick="event.stopPropagation()">
