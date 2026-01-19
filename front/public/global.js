@@ -5197,6 +5197,7 @@ document.addEventListener('keydown', (e) => {
   window.closeManageManualTabModal = closeManageManualTabModal;
   window.toggleTabMenu = toggleTabMenu;
   window.applyFieldPreset = applyFieldPreset;
+  window.updateFieldType = updateFieldType;
   window.closeCreateTabModal = closeCreateTabModal;
   window.applyTabTemplate = applyTabTemplate;
   window.addField = addField;
