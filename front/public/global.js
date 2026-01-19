@@ -1096,7 +1096,7 @@ let PREFEITURA_LOGO = null;
 
 async function carregarLogoPrefeitura() {
   try {
-    const res = await fetch('Imagens/logo-prefeitura.svg');
+    const res = await fetch('Imagens/brasao_sem_fundo.png');
     const blob = await res.blob();
 
     PREFEITURA_LOGO = await new Promise(resolve => {
