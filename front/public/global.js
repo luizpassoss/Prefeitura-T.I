@@ -1864,14 +1864,18 @@ function drawHeader(doc, titulo, logoBase64) {
   /* ===== LOGO ===== */
   if (logoBase64) {
     const imageType = logoBase64.startsWith('data:image/svg+xml') ? 'SVG' : 'PNG';
-    doc.addImage(
-      logoBase64,
-      imageType,
-      pageMargin,   // X
-      18,   // Y
-      16,   // largura
-      16    // altura
-    );
+    try {
+      doc.addImage(
+        logoBase64,
+        imageType,
+        pageMargin,   // X
+        18,   // Y
+        16,   // largura
+        16    // altura
+      );
+    } catch (err) {
+      console.warn('Erro ao inserir logo no PDF:', err);
+    }
   }
 
   /* ===== TEXTO INSTITUCIONAL ===== */
