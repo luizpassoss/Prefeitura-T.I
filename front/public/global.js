@@ -1380,7 +1380,7 @@ function exportInventarioPDF(data) {
     },
 
     headStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [71, 85, 105],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       halign: 'center'
@@ -1994,7 +1994,7 @@ function exportMaquinasPDF(data) {
     },
 
     headStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [71, 85, 105],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       halign: 'center'
@@ -3040,7 +3040,7 @@ function exportModuloPDF() {
       cellWidth: 'wrap'
     },
     headStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [71, 85, 105],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       halign: 'center'
