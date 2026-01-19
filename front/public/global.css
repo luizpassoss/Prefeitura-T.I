@@ -1250,6 +1250,10 @@ body.theme-dark .file-input-name {
   display: inline-flex;
 }
 
+#systemMessageModal.system-message-success .system-message-icon-error {
+  display: none;
+}
+
 #systemMessageModal.system-message-success .system-message-icon svg {
   animation: drawCheck 0.55s ease forwards;
 }

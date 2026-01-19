@@ -4643,6 +4643,9 @@ function closeFieldTypeHelpModal(e) {
   }
 }
 
+window.openFieldTypeHelpModal = openFieldTypeHelpModal;
+window.closeFieldTypeHelpModal = closeFieldTypeHelpModal;
+
 function addField() {
   addFieldWithValues();
   showActionToast('Nova coluna adicionada com sucesso.');
