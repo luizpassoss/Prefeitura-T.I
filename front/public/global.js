@@ -12,6 +12,8 @@ let camposModuloAtual = [];
   let importRows = [];
   let importHeaders = [];
   let importFileName = '';
+  let importColumnMap = [];
+  let importHasHeaderRow = false;
 
 /* ===========================
    MÓDULOS DINÂMICOS
@@ -350,9 +352,10 @@ let selectedInvIds = new Set();
 let selectedMaqIds = new Set();
 let selectedModuloIds = new Set();
 let actionToastTimeout = null;
+let actionToastLeftTimeout = null;
 
-function showActionToast(message, duration = 3200) {
-  const toast = document.getElementById('actionToast');
+function showActionToastWithId(toastId, message, duration, getTimeoutRef, setTimeoutRef) {
+  const toast = document.getElementById(toastId);
   if (!toast) return;
   const text = toast.querySelector('.action-toast-text');
   if (text) text.textContent = message;
@@ -360,15 +363,35 @@ function showActionToast(message, duration = 3200) {
   requestAnimationFrame(() => {
     toast.classList.add('show');
   });
-  if (actionToastTimeout) {
-    clearTimeout(actionToastTimeout);
-  }
-  actionToastTimeout = setTimeout(() => {
+  const currentTimeout = getTimeoutRef();
+  if (currentTimeout) clearTimeout(currentTimeout);
+  const nextTimeout = setTimeout(() => {
     toast.classList.remove('show');
     setTimeout(() => {
       toast.classList.add('hidden');
     }, 250);
   }, duration);
+  setTimeoutRef(nextTimeout);
+}
+
+function showActionToast(message, duration = 3200) {
+  showActionToastWithId(
+    'actionToast',
+    message,
+    duration,
+    () => actionToastTimeout,
+    (value) => { actionToastTimeout = value; }
+  );
+}
+
+function showActionToastLeft(message, duration = 3200) {
+  showActionToastWithId(
+    'actionToastLeft',
+    message,
+    duration,
+    () => actionToastLeftTimeout,
+    (value) => { actionToastLeftTimeout = value; }
+  );
 }
 
 function updateBulkUI() {
@@ -1198,6 +1221,7 @@ if (mLocalSelect && mLocalOutro) {
   safeAdd('inpTel', 'input', function() { this.value = applyPhoneMask(this.value); });
 
   async function saveItem(){
+    const isEdit = editIndex >= 0;
     const categoria = (document.getElementById('inpCategoria').value || '').trim();
     let link = (document.getElementById('inpLink').value || '').trim(); const linkOutro = (document.getElementById('inpLinkOutro') ? document.getElementById('inpLinkOutro').value.trim() : '');
     if(link==='Outro' && linkOutro) link = linkOutro;
@@ -1228,7 +1252,7 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
     const customValues = collectManualCustomFieldValues('inventario');
 
     try {
-      if(editIndex >= 0){
+      if(isEdit){
         const id = data[editIndex].id;
         await fetch(`${API_URL}/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item) });
         setManualCustomValuesForItem('inventario', id, customValues);
@@ -1240,6 +1264,7 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
       }
       await fetchData();
       closeModal();
+      showActionToast(isEdit ? 'Registro atualizado com sucesso.' : 'Registro criado com sucesso.');
     } catch(err){
       console.error('Erro salvar item:', err);
       showMessage('Erro ao salvar item.');
@@ -1738,6 +1763,7 @@ if (localSelect && [...localSelect.options].some(o => o.value === it.local)) {
      CRUD MÁQUINAS
      =========================== */
 async function saveMachine(){
+  const isEdit = machineEditIndex >= 0;
   let local = (document.getElementById('mLocal')?.value || '').trim();
   const localOutro = (document.getElementById('mLocalOutro')?.value || '').trim();
   const machineNumber = (document.getElementById('mNomeNumero')?.value || '').trim();
@@ -1771,7 +1797,7 @@ if(!item.local){
   }
 
   try {
-    if(machineEditIndex >= 0){
+    if(isEdit){
       const id = machineData[machineEditIndex].id;
 
       await fetch(`${API_MAQUINAS}/${id}`, {
@@ -1796,6 +1822,7 @@ if(!item.local){
 
     await fetchMachines();
     closeMachineModal();
+    showActionToast(isEdit ? 'Máquina atualizada com sucesso.' : 'Máquina criada com sucesso.');
 
   } catch (err) {
     console.error("Erro ao salvar máquina:", err);
@@ -2057,7 +2084,12 @@ let undoState = { timer: null, payload: null };
 
 function hideUndoToast() {
   const toast = document.getElementById('undoToast');
-  if (toast) toast.classList.add('hidden');
+  if (toast) {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      toast.classList.add('hidden');
+    }, 250);
+  }
   if (undoState.timer) clearTimeout(undoState.timer);
   undoState = { timer: null, payload: null };
 }
@@ -2114,6 +2146,9 @@ function showUndoToast(payload) {
   button.onclick = () => restoreDeletedItems(payload);
 
   toast.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
   if (undoState.timer) clearTimeout(undoState.timer);
   undoState = {
     payload,
@@ -2278,6 +2313,8 @@ function openImportModal(type) {
   importRows = [];
   importHeaders = [];
   importFileName = '';
+  importColumnMap = [];
+  importHasHeaderRow = false;
 
   document.getElementById('importTitle').innerText =
     type === 'inventario'
@@ -2314,6 +2351,8 @@ function closeImportModal() {
   document.getElementById('importStepPreview')?.classList.add('hidden');
   document.getElementById('importStepUpload')?.classList.remove('hidden');
   importFileName = '';
+  importColumnMap = [];
+  importHasHeaderRow = false;
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -2331,6 +2370,48 @@ function closeImportModal() {
 function closeImportModalIfClicked(e) {
   if (e.target.id === 'importModal') closeImportModal();
 }
+
+function getImportFieldOptions() {
+  if (importType === 'inventario') {
+    return [
+      { key: 'categoria', label: 'Categoria', aliases: ['categoria'] },
+      { key: 'link', label: 'Link', aliases: ['link', 'link de internet', 'internet', 'descricao', 'descrição'] },
+      { key: 'velocidade', label: 'Velocidade', aliases: ['velocidade', 'velocidade dl/ul', 'download', 'upload'] },
+      { key: 'telefone', label: 'Telefone', aliases: ['telefone', 'contato'] },
+      { key: 'local', label: 'Local', aliases: ['local'] },
+      { key: 'endereco', label: 'Endereço', aliases: ['endereco', 'endereço'] }
+    ];
+  }
+
+  if (importType === 'maquinas') {
+    return [
+      { key: 'nome_maquina', label: 'Nome da Máquina', aliases: ['nome', 'nome maquina', 'nome da maquina', 'maquina', 'máquina'] },
+      { key: 'patrimonio', label: 'Patrimônio', aliases: ['patrimonio', 'patrimônio'] },
+      { key: 'local', label: 'Local', aliases: ['local'] },
+      { key: 'status', label: 'Status', aliases: ['status'] },
+      { key: 'descricao', label: 'Descrição', aliases: ['descricao', 'descrição'] }
+    ];
+  }
+
+  if (importType === 'modulo') {
+    return (moduloCampos || []).map(c => ({
+      key: c.nome,
+      label: c.nome,
+      aliases: [normalizeHeader(c.nome)]
+    }));
+  }
+
+  return [];
+}
+
+function buildImportColumnMap(headers) {
+  const options = getImportFieldOptions();
+  return headers.map((header) => {
+    const normalized = normalizeHeader(header);
+    const match = options.find(opt => opt.aliases.some(alias => normalizeHeader(alias) === normalized));
+    return match ? match.key : '';
+  });
+}
 function handleImportFile() {
   const file = document.getElementById('importFile').files[0];
   const fileName = document.getElementById('importFileName');
@@ -2347,19 +2428,17 @@ function handleImportFile() {
     const sheet = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
     const cleaned = data.map(row => (row || []).map(cell => (cell ?? '').toString().trim()));
-    const validHeaders = {
-      inventario: ['categoria', 'link', 'link de internet', 'descricao', 'descrição', 'quantidade', 'velocidade', 'telefone', 'local', 'endereco', 'endereço', 'observacoes', 'observações'],
-      maquinas: ['nome', 'maquina', 'máquina', 'nome maquina', 'nome da maquina', 'patrimonio', 'patrimônio', 'local', 'status', 'descricao', 'descrição', 'observacoes', 'observações'],
-      modulo: (moduloCampos || []).map(c => normalizeHeader(c.nome))
-    };
+    const options = getImportFieldOptions();
+    const dataRows = cleaned.filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
+    let maxCols = dataRows.reduce((max, row) => Math.max(max, row.length), 0);
 
     const headerCandidates = cleaned.map((row, index) => {
       const normalized = row.map(cell => normalizeHeader(cell));
       const nonEmptyCount = normalized.filter(cell => cell).length;
       const score = normalized.reduce((acc, cell) => {
         if (!cell) return acc;
-        const list = validHeaders[importType] || [];
-        return list.includes(cell) ? acc + 1 : acc;
+        const hasMatch = options.some(opt => opt.aliases.some(alias => normalizeHeader(alias) === cell));
+        return hasMatch ? acc + 1 : acc;
       }, 0);
       return { index, score, row, normalized, nonEmptyCount };
     });
@@ -2369,17 +2448,19 @@ function handleImportFile() {
       .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
 
     if (!bestCandidate) {
-      const fallbackIndex = cleaned.findIndex(row => row.filter(cell => cell).length > 1);
-      const headerIndex = fallbackIndex >= 0 ? fallbackIndex : cleaned.findIndex(row => row.some(cell => cell));
-      importHeaders = headerIndex >= 0 ? cleaned[headerIndex] : [];
-      importRows = cleaned
-        .slice((headerIndex >= 0 ? headerIndex + 1 : 0))
-        .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
+      importHeaders = Array.from({ length: maxCols }, (_, idx) => `Coluna ${columnLetter(idx)}`);
+      importRows = dataRows;
+      importColumnMap = Array.from({ length: maxCols }, () => '');
+      importHasHeaderRow = false;
       renderImportPreview();
       return;
     }
 
-    importHeaders = bestCandidate.row;
+    maxCols = Math.max(maxCols, bestCandidate.row.length);
+    importHeaders = Array.from({ length: maxCols }, (_, idx) => {
+      const header = (bestCandidate.row || [])[idx] ?? '';
+      return header || `Coluna ${columnLetter(idx)}`;
+    });
     importRows = cleaned
       .slice(bestCandidate.index + 1)
       .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''))
@@ -2388,6 +2469,8 @@ function handleImportFile() {
         return normalizedRow.join('|') !== bestCandidate.normalized.join('|');
       });
 
+    importColumnMap = buildImportColumnMap(importHeaders);
+    importHasHeaderRow = true;
     renderImportPreview();
   };
 
@@ -2429,24 +2512,42 @@ function resolveImportColumnIndex(headerMap, keys, fallbackIndex) {
 
 function validateImportRows() {
   if (importType === 'modulo') {
-    return { issues: [], cellIssues: new Set(), errorCount: 0 };
+    const issues = [];
+    if (!importColumnMap.some((value) => value)) {
+      issues.push('Selecione ao menos um campo para mapear.');
+    }
+    return { issues, cellIssues: new Set(), errorCount: 0 };
   }
 
   const issues = [];
   const cellIssues = new Set();
   let errorCount = 0;
 
-  const mappedRows = mapImportRows();
   const requiredFields =
     importType === 'inventario'
-      ? ['link', 'local']
-      : ['nome_maquina', 'local'];
+      ? [
+          { key: 'link', label: 'Link' },
+          { key: 'local', label: 'Local' }
+        ]
+      : [
+          { key: 'nome_maquina', label: 'Nome da Máquina' },
+          { key: 'local', label: 'Local' }
+        ];
 
-  mappedRows.forEach((row) => {
+  requiredFields.forEach((field) => {
+    if (!importColumnMap.includes(field.key)) {
+      issues.push(`Campo obrigatório não mapeado: ${field.label}`);
+    }
+  });
+
+  importRows.forEach((row, rowIndex) => {
     requiredFields.forEach((field) => {
-      const value = (row[field] ?? '').toString().trim();
+      const colIndex = importColumnMap.indexOf(field.key);
+      if (colIndex === -1) return;
+      const value = (row[colIndex] ?? '').toString().trim();
       if (!value) {
         errorCount += 1;
+        cellIssues.add(`${rowIndex}-${colIndex}`);
       }
     });
   });
@@ -2460,8 +2561,30 @@ function renderImportPreview() {
   const actionBtn = document.getElementById('importActionBtn');
   const uploadStep = document.getElementById('importStepUpload');
   const validationEl = document.getElementById('importValidation');
+  const fieldOptions = getImportFieldOptions();
+
+  if (!importColumnMap.length) {
+    importColumnMap = Array.from({ length: importHeaders.length }, () => '');
+  }
+
+  const mappingOptions = (selected) => `
+    <option value="">Ignorar</option>
+    ${fieldOptions.map(opt => `
+      <option value="${opt.key}" ${selected === opt.key ? 'selected' : ''}>${opt.label}</option>
+    `).join('')}
+  `;
 
   thead.innerHTML = `
+    <tr class="import-mapping-row">
+      ${importHeaders.map((_, idx) => `
+        <th>
+          <select data-col="${idx}" onchange="updateImportMapping(${idx}, this.value)">
+            ${mappingOptions(importColumnMap[idx])}
+          </select>
+        </th>
+      `).join('')}
+      <th>Mapeamento</th>
+    </tr>
     <tr>
       ${importHeaders.map(h => `<th>${h}</th>`).join('')}
       <th>Ação</th>
@@ -2531,6 +2654,11 @@ function updateImportCell(row, col, value) {
   applyImportValidation();
 }
 
+function updateImportMapping(col, value) {
+  importColumnMap[col] = value;
+  applyImportValidation();
+}
+
 function removeImportRow(index) {
   importRows.splice(index, 1);
   renderImportPreview();
@@ -2567,46 +2695,37 @@ function applyImportValidation() {
   }
 }
 function mapImportRows() {
-  const headerMap = importHeaders.reduce((acc, header, idx) => {
-    const key = normalizeHeader(header);
-    if (key) acc[key] = idx;
-    return acc;
-  }, {});
-  const hasHeaders = Object.keys(headerMap).length > 0;
-
-  const getValue = (row, keys, fallbackIndex) => {
-    for (const key of keys) {
-      const idx = headerMap[normalizeHeader(key)];
-      if (idx !== undefined) return row[idx];
-    }
-    if (hasHeaders || fallbackIndex === undefined || fallbackIndex >= row.length) return '';
+  const getValue = (row, fieldKey, fallbackIndex) => {
+    const idx = importColumnMap.indexOf(fieldKey);
+    if (idx !== -1) return row[idx];
+    if (importHasHeaderRow || fallbackIndex === undefined || fallbackIndex >= row.length) return '';
     return row[fallbackIndex];
   };
 
   if (importType === 'inventario') {
     return importRows.map(r => ({
       categoria: (() => {
-        const value = (getValue(r, ['categoria']) ?? '').toString().trim();
+        const value = (getValue(r, 'categoria', 0) ?? '').toString().trim();
         return value || 'Prefeitura';
       })(),
-      link: getValue(r, ['link', 'link de internet', 'internet', 'descricao', 'descrição'], 0),
-      velocidade: getValue(r, ['velocidade', 'velocidade dl/ul', 'download', 'upload'], 2),
-      telefone: getValue(r, ['telefone', 'contato'], 3),
-      local: getValue(r, ['local'], 4),
-      endereco: getValue(r, ['endereco', 'endereço'], 5)
+      link: getValue(r, 'link', 1),
+      velocidade: getValue(r, 'velocidade', 2),
+      telefone: getValue(r, 'telefone', 3),
+      local: getValue(r, 'local', 4),
+      endereco: getValue(r, 'endereco', 5)
     }));
   }
 
   if (importType === 'maquinas') {
     return importRows.map(r => ({
-      nome_maquina: getValue(r, ['nome', 'nome maquina', 'nome da maquina', 'máquina', 'maquina'], 0),
-      patrimonio: getValue(r, ['patrimonio', 'patrimônio'], 1),
-      local: getValue(r, ['local'], 2),
+      nome_maquina: getValue(r, 'nome_maquina', 0),
+      patrimonio: getValue(r, 'patrimonio', 1),
+      local: getValue(r, 'local', 2),
       status: (() => {
-        const value = (getValue(r, ['status'], 3) ?? '').toString().trim();
+        const value = (getValue(r, 'status', 3) ?? '').toString().trim();
         return value || 'Ativa';
       })(),
-      descricao: getValue(r, ['descricao', 'descrição'], 4)
+      descricao: getValue(r, 'descricao', 4)
     }));
   }
 
@@ -2614,22 +2733,11 @@ function mapImportRows() {
 }
 
 function mapModuloImportRows() {
-  const headerMap = {};
-  importHeaders.forEach((h, idx) => {
-    const key = normalizeHeader(h);
-    if (key) headerMap[key] = idx;
-  });
-
-  const camposMap = moduloCampos.map(c => ({
-    nome: c.nome,
-    key: normalizeHeader(c.nome)
-  }));
-
   return importRows.map((row) => {
     const valores = {};
-    camposMap.forEach(campo => {
-      const idx = headerMap[campo.key];
-      valores[campo.nome] = idx !== undefined ? row[idx] : '';
+    importColumnMap.forEach((fieldKey, idx) => {
+      if (!fieldKey) return;
+      valores[fieldKey] = row[idx] ?? '';
     });
     return valores;
   });
@@ -2842,20 +2950,9 @@ async function importarRegistrosModulo() {
     return;
   }
 
-  const headerMap = {};
-  importHeaders.forEach((h, idx) => {
-    const key = normalizeHeader(h);
-    if (key) headerMap[key] = idx;
-  });
-
-  const camposMap = moduloCampos.map(c => ({
-    nome: c.nome,
-    key: normalizeHeader(c.nome)
-  }));
-
-  const hasMatch = camposMap.some(c => headerMap[c.key] !== undefined);
+  const hasMatch = importColumnMap.some((value) => value);
   if (!hasMatch) {
-    showImportWarning('Os cabeçalhos da planilha não correspondem aos campos do módulo. Os dados serão importados em branco para os campos ausentes.');
+    showImportWarning('Selecione ao menos um campo para mapear antes de importar.');
   }
 
   const rows = mapModuloImportRows();
@@ -3004,6 +3101,7 @@ function renderAbasDinamicas() {
     menu.innerHTML = `
       <button type="button" data-action="manage">Gerenciar</button>
       <button type="button" data-action="delete">
+        Excluir
         <svg class="menu-icon delete-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M3 6h18"/>
           <path d="M8 6v12"/>
@@ -3011,7 +3109,6 @@ function renderAbasDinamicas() {
           <path d="M6 6l1 14h10l1-14"/>
           <path d="M9 6V4h6v2"/>
         </svg>
-        Excluir
       </button>
     `;
 
@@ -3061,6 +3158,7 @@ async function confirmDeleteModulo() {
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     switchTab('inventario');
+    showActionToastLeft(`Aba "${moduloDeleteTarget.nome}" excluída.`);
   } catch (e) {
     console.error('Erro ao excluir módulo:', e);
     showMessage('Erro ao excluir a aba.');
@@ -3094,12 +3192,33 @@ async function carregarCamposModulo() {
 }
 
 async function carregarRegistrosModulo() {
-  const colspan = (moduloCampos?.length || 0) + 2;
+  const { displayCampos } = getModuloDisplayConfig();
+  const colspan = (displayCampos?.length || 0) + 2;
   if (colspan > 1) {
     setTableLoading('moduloTbody', true, colspan);
   }
   const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`);
   moduloRegistros = await res.json();
+}
+
+function getModuloDisplayConfig() {
+  const normalizeFieldKey = (name) => normalizeHeader(name || '').replace(/\s+/g, '');
+  const linkField = moduloCampos.find((campo) => {
+    const key = normalizeFieldKey(campo.nome);
+    return key === 'link' || key === 'linkdeinternet' || key === 'internet';
+  });
+  const categoriaField = moduloCampos.find(
+    (campo) => normalizeFieldKey(campo.nome) === 'categoria'
+  );
+  const shouldMergeCategoria = Boolean(linkField && categoriaField);
+  const displayCampos = shouldMergeCategoria
+    ? moduloCampos.filter((campo) => campo.nome !== categoriaField.nome)
+    : moduloCampos;
+  return {
+    displayCampos,
+    categoriaFieldName: categoriaField?.nome || '',
+    shouldMergeCategoria
+  };
 }
 
 function renderModuloDinamico() {
@@ -3111,6 +3230,7 @@ function renderModuloDinamico() {
   tab.classList.add('active');
 
   const filtered = getModuloFiltrado();
+  const { displayCampos, categoriaFieldName } = getModuloDisplayConfig();
 
   // HEADER
   thead.innerHTML = `
@@ -3118,14 +3238,14 @@ function renderModuloDinamico() {
       <th class="checkbox-cell">
         <input type="checkbox" id="chkAllMod">
       </th>
-      ${moduloCampos.map(c => `
+      ${displayCampos.map(c => `
         <th>${c.nome}</th>
       `).join('')}
       <th class="actions-header" style="width:110px; text-align:center">Ações</th>
     </tr>
     <tr class="table-filters">
       <th class="checkbox-cell"></th>
-      ${moduloCampos.map(c => `
+      ${displayCampos.map(c => `
         <th>
           <input
             class="table-filter-input"
@@ -3150,7 +3270,7 @@ function renderModuloDinamico() {
 
   const sortMenuOptions = document.getElementById('sortMenuModOptions');
   if (sortMenuOptions) {
-    sortMenuOptions.innerHTML = moduloCampos
+    sortMenuOptions.innerHTML = displayCampos
       .map((campo) => `<button type="button" data-sort-key="${campo.nome}">${campo.nome}</button>`)
       .join('');
     initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
@@ -3168,7 +3288,7 @@ function renderModuloDinamico() {
   if (!sorted.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="${moduloCampos.length + 2}" style="padding:22px;color:#9fb6d9">
+        <td colspan="${displayCampos.length + 2}" style="padding:22px;color:#9fb6d9">
           Nenhum registro encontrado.
         </td>
       </tr>`;
@@ -3190,8 +3310,8 @@ function renderModuloDinamico() {
           ${selectedModuloIds.has(row.id) ? 'checked' : ''}
         >
       </td>
-      ${moduloCampos.map(c => `
-        <td>${renderModuloCell(c.nome, row[c.nome])}</td>
+      ${displayCampos.map(c => `
+        <td>${renderModuloCell(c.nome, row[c.nome], row, categoriaFieldName)}</td>
       `).join('')}
       <td class="actions">
         <div class="action-group">
@@ -3263,10 +3383,22 @@ if (moduloTbody) {
   });
 }
 
-function renderModuloCell(fieldName, value) {
+function renderModuloCell(fieldName, value, row = {}, categoriaFieldName = '') {
   const label = (value ?? '').toString();
   const formatted = formatDateForTable(label);
-  const normalizedField = (fieldName || '').toString().toLowerCase();
+  const normalizedField = normalizeHeader(fieldName).replace(/\s+/g, '');
+  if (
+    categoriaFieldName &&
+    (normalizedField === 'link' || normalizedField === 'linkdeinternet' || normalizedField === 'internet')
+  ) {
+    const categoriaValue = (row?.[categoriaFieldName] ?? '').toString().trim();
+    return `
+      <div class="link-cell">
+        <div class="link-text">${escapeHtml(formatted)}</div>
+        ${categoriaValue ? `<div class="link-category">${escapeHtml(categoriaValue)}</div>` : ''}
+      </div>
+    `;
+  }
   if (normalizedField.includes('status')) {
     const display = label || 'Ativa';
     return `
@@ -3526,6 +3658,7 @@ async function salvarRegistroModulo() {
     return;
   }
 
+  const isEdit = Boolean(moduloEditId);
   const inputs = [...document.querySelectorAll('#moduloFormFields [data-field]')];
   const valores = {};
 
@@ -3572,6 +3705,7 @@ async function salvarRegistroModulo() {
   closeModuloRegistroModal();
   await carregarRegistrosModulo();
   renderModuloDinamico();
+  showActionToast(isEdit ? 'Registro atualizado com sucesso.' : 'Registro criado com sucesso.');
 }
 
 function openNovoRegistroModulo() {
@@ -4640,6 +4774,8 @@ document.addEventListener('keydown', (e) => {
   window.confirmImport = confirmImport;
   window.removeImportRow = removeImportRow;
   window.updateImportCell = updateImportCell;
+  window.updateImportMapping = updateImportMapping;
+  window.showActionToastLeft = showActionToastLeft;
   window.closeHelpPanel = closeHelpPanel;
 
   window.openCreateTabModal = openCreateTabModal;

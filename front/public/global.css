@@ -5,8 +5,8 @@
   --muted: #475569;
   --text: #1f2937;
   --text-muted: #475569;
-  --accent: #1d4ed8;
-  --info: #2563eb;
+  --accent: #3b6fdc;
+  --info: #4a7be8;
   --danger: #dc2626;
   --success: #16a34a;
   --warning: #d97706;
@@ -166,7 +166,7 @@ body.theme-dark {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 52px;
+  min-height: 68px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-weight: 600;
   font-size: var(--font-md);
@@ -174,7 +174,7 @@ body.theme-dark {
   cursor: default;
   transition: color 0.3s ease, transform 0.3s ease;
   margin-bottom: 20px;
-  padding: 6px 4px 20px;
+  padding: 6px 6px 28px;
   border-radius: 14px;
   background: transparent;
   border: none;
@@ -184,19 +184,28 @@ body.theme-dark {
 }
 
 .brand::after {
-  content: none;
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 6px;
+  height: 34px;
+  background: url('Imagens/cidade-sao-francisco.svg') center bottom / contain no-repeat;
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .brand-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 0;
   background: transparent;
   border: none;
   box-shadow: none;
+  z-index: 1;
 }
 
 .brand-icon svg {
@@ -205,29 +214,31 @@ body.theme-dark {
 }
 
 .brand-icon img {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
 }
 
 .brand-text {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 2px;
   line-height: 1.05;
+  z-index: 1;
 }
 
 .brand-text strong {
-  font-size: 16px;
+  font-size: 14px;
   letter-spacing: 0.2px;
-  white-space: nowrap;
+  text-transform: none;
 }
 
 .brand-text small {
   font-size: 11px;
   color: #94a3b8;
   font-weight: 500;
+  text-align: center;
 }
 
 .brand:hover {
@@ -395,7 +406,7 @@ body.theme-dark h1 {
 
 /* Botões gerais */
 .btn {
-  background: #1d4ed8;
+  background: var(--accent);
   border: 1px solid #d9e2ec;
   border-radius: 10px;
   padding: 8px 14px;
@@ -411,7 +422,7 @@ body.theme-dark h1 {
   height: 38px;
 }
 .btn:hover {
-  background: #1e40af;
+  background: #2f5fc5;
   color: #ffffff;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
@@ -422,7 +433,7 @@ body.theme-dark h1 {
   color: white;
 }
 .btn.primary:hover {
-  background: #1e40af;
+  background: #2f5fc5;
   transform: translateY(-0.3px);
   box-shadow: 0 6px 18px rgba(26, 115, 232, 0.35);
 }
@@ -738,16 +749,17 @@ body.theme-dark .tab-menu-dropdown button:hover {
 
 body.theme-dark .brand::after {
   opacity: 0.35;
+  filter: brightness(0.9);
 }
 
 body.theme-dark .btn {
-  background: #1f4dd6;
+  background: #3359b8;
   border-color: #1f2a3a;
   box-shadow: 0 6px 16px rgba(5, 10, 20, 0.4);
 }
 
 body.theme-dark .btn:hover {
-  background: #1a3faa;
+  background: #2b4ea6;
 }
 
 body.theme-dark .btn.secondary {
@@ -858,12 +870,12 @@ body.theme-dark .btn-cancelar {
 }
 
 body.theme-dark .btn-salvar {
-  background: #2563eb;
+  background: #3359b8;
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
 }
 
 body.theme-dark .btn-salvar:hover {
-  background: #1d4ed8;
+  background: #2b4ea6;
 }
 
 body.theme-dark .btn-salvar.danger {
@@ -1316,7 +1328,7 @@ label {
 }
 
 .btn-salvar {
-  background: #1d4ed8;
+  background: var(--accent);
   color: white;
   border: none;
   padding: 7px 14px;
@@ -1328,7 +1340,7 @@ label {
 }
 
 .btn-salvar:hover {
-  background: #1e40af;
+  background: #2f5fc5;
 }
 
 .btn-salvar:disabled {
@@ -1786,15 +1798,24 @@ body.theme-dark input[type="checkbox"]:checked {
   position: fixed;
   bottom: 22px;
   left: 22px;
-  background: #111827;
-  color: #f9fafb;
+  background: #ffffff;
+  color: #1f2937;
   border-radius: 12px;
   padding: 12px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.15);
   z-index: 9999;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.undo-toast.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .undo-toast.hidden {
@@ -1802,7 +1823,7 @@ body.theme-dark input[type="checkbox"]:checked {
 }
 
 .undo-toast button {
-  background: #2563eb;
+  background: var(--accent);
   border: none;
   color: #fff;
   border-radius: 999px;
@@ -1812,11 +1833,13 @@ body.theme-dark input[type="checkbox"]:checked {
 }
 
 .undo-toast button:hover {
-  background: #1d4ed8;
+  background: #2f5fc5;
 }
 
 body.theme-dark .undo-toast {
   background: #0f172a;
+  color: #f8fafc;
+  border-color: #1f2a3a;
   box-shadow: 0 18px 45px rgba(5, 10, 20, 0.55);
 }
 
@@ -1824,11 +1847,12 @@ body.theme-dark .undo-toast {
   position: fixed;
   right: 22px;
   bottom: 22px;
-  background: #0f172a;
-  color: #f8fafc;
+  background: #ffffff;
+  color: #1f2937;
   border-radius: 12px;
   padding: 12px 16px;
-  box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.15);
   z-index: 9999;
   opacity: 0;
   transform: translateY(12px);
@@ -1836,6 +1860,11 @@ body.theme-dark .undo-toast {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+}
+
+.action-toast-left {
+  right: auto;
+  left: 22px;
 }
 
 .action-toast.show {
@@ -1849,6 +1878,8 @@ body.theme-dark .undo-toast {
 
 body.theme-dark .action-toast {
   background: #0b1220;
+  color: #f8fafc;
+  border-color: #1f2a3a;
   box-shadow: 0 18px 45px rgba(5, 10, 20, 0.55);
 }
 
@@ -2477,6 +2508,20 @@ body.theme-dark .status-inativa .status-dot {
   margin-bottom: 12px;
 }
 
+.import-mapping-row th {
+  background: #f8fafc;
+}
+
+.import-mapping-row select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 12px;
+  color: #111827;
+}
+
 .import-validation.hidden {
   display: none;
 }
@@ -2491,6 +2536,16 @@ body.theme-dark .import-validation {
   border-color: rgba(251, 191, 36, 0.5);
   background: rgba(251, 191, 36, 0.08);
   color: #fcd34d;
+}
+
+body.theme-dark .import-mapping-row th {
+  background: #0f172a;
+}
+
+body.theme-dark .import-mapping-row select {
+  background: #0b1220;
+  border-color: #1f2a3a;
+  color: #f8fafc;
 }
 
 body.theme-dark .import-error {
