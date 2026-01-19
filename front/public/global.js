@@ -565,11 +565,20 @@ function showMessage(message, title = 'Aviso', type = 'info') {
     if (textEl) textEl.textContent = message;
     if (modalEl) {
       modalEl.classList.toggle('system-message-success', type === 'success');
+      modalEl.classList.toggle('system-message-error', type === 'error');
       openModalById('systemMessageModal');
     } else {
       console.warn('[UI] Modal systemMessageModal não encontrado.');
     }
   }
+
+function showSuccessMessage(message, title = 'Sucesso') {
+  showMessage(message, title, 'success');
+}
+
+function showErrorMessage(message, title = 'Erro') {
+  showMessage(message, title, 'error');
+}
 
   function closeSystemMessageModal(e) {
     const modalEl = document.getElementById('systemMessageModal');
@@ -1356,12 +1365,12 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
     if (!link) missingFields.push('Link');
     if (!local) missingFields.push('Local');
     if (missingFields.length) {
-      showMessage(`Campo${missingFields.length > 1 ? 's' : ''} obrigatório${missingFields.length > 1 ? 's' : ''}: ${missingFields.join(' e ')}.`);
+      showErrorMessage(`Campo${missingFields.length > 1 ? 's' : ''} obrigatório${missingFields.length > 1 ? 's' : ''}: ${missingFields.join(' e ')}.`);
       return;
     }
 
     if (telefone && !isValidPhoneNumber(telefone)) {
-      showMessage('Telefone inválido. Informe DDD + número (8 a 11 dígitos).');
+      showErrorMessage('Telefone inválido. Informe DDD + número (8 a 11 dígitos).');
       return;
     }
 
@@ -1384,7 +1393,7 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
       showActionToast(isEdit ? 'Registro atualizado com sucesso.' : 'Registro criado com sucesso.');
     } catch(err){
       console.error('Erro salvar item:', err);
-      showMessage('Erro ao salvar item.');
+      showErrorMessage('Erro ao salvar item.');
     }
   }
 
@@ -1409,7 +1418,7 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
         }
       } catch(err){
         console.error('Erro remover item:', err);
-        showMessage('Erro ao remover item.');
+        showErrorMessage('Erro ao remover item.');
       }
     }, 'Confirmar exclusão');
   }
@@ -1892,17 +1901,17 @@ async function saveMachine(){
   const customValues = collectManualCustomFieldValues('maquinas');
 
 if(!item.local){
-  showMessage("Informe o local da máquina.");
+  showErrorMessage("Informe o local da máquina.");
   return;
 }
 
   if(!machineNumber){
-    showMessage("Informe o número da máquina.");
+    showErrorMessage("Informe o número da máquina.");
     return;
   }
 
   if (!/^\d+$/.test(machineNumber)) {
-    showMessage("Número da máquina inválido. Use apenas números.");
+    showErrorMessage("Número da máquina inválido. Use apenas números.");
     return;
   }
 
@@ -1936,7 +1945,7 @@ if(!item.local){
 
   } catch (err) {
     console.error("Erro ao salvar máquina:", err);
-    showMessage("Erro ao salvar máquina.");
+    showErrorMessage("Erro ao salvar máquina.");
   }
 }
 
@@ -1961,7 +1970,7 @@ if(!item.local){
         }
       } catch(err){
         console.error('Erro deletar máquina:', err);
-        showMessage('Erro ao deletar máquina.');
+        showErrorMessage('Erro ao deletar máquina.');
       }
     }, 'Confirmar exclusão');
   }
@@ -2245,10 +2254,10 @@ async function restoreDeletedItems(payload) {
       await carregarRegistrosModulo();
       renderModuloDinamico();
     }
-    showMessage('Exclusão desfeita com sucesso.');
+    showSuccessMessage('Exclusão desfeita com sucesso.');
   } catch (err) {
     console.error('Erro ao desfazer exclusão:', err);
-    showMessage('Não foi possível desfazer a exclusão.');
+    showErrorMessage('Não foi possível desfazer a exclusão.');
   } finally {
     hideUndoToast();
   }
@@ -2316,7 +2325,7 @@ async function deleteSelected() {
   showConfirm(`Excluir ${ids.length} item(ns)?`, async () => {
     try {
       if (isModulo && !moduloAtual?.id) {
-        showMessage('Selecione uma aba personalizada.');
+        showErrorMessage('Selecione uma aba personalizada.');
         return;
       }
       for (const id of ids) {
@@ -2353,7 +2362,7 @@ async function deleteSelected() {
 
     } catch (err) {
       console.error('Erro ao excluir selecionados:', err);
-      showMessage('Erro ao excluir itens.');
+      showErrorMessage('Erro ao excluir itens.');
     }
   }, 'Confirmar exclusão');
 }
@@ -2923,7 +2932,7 @@ async function reprocessImport(id) {
   const history = loadImportHistory();
   const entry = history.find(item => item.id === id);
   if (!entry) {
-    showMessage('Importação não encontrada no histórico.');
+    showErrorMessage('Importação não encontrada no histórico.');
     return;
   }
 
@@ -2954,10 +2963,10 @@ async function reprocessImport(id) {
       await fetchMachines();
     }
 
-    showMessage(`Reprocessamento concluído (${result.statusLabel}).`);
+    showSuccessMessage(`Reprocessamento concluído (${result.statusLabel}).`);
   } catch (err) {
     console.error(err);
-    showMessage('Erro ao reprocessar importação.');
+    showErrorMessage('Erro ao reprocessar importação.');
     recordImportHistory({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       date: new Date().toISOString(),
@@ -3019,7 +3028,7 @@ async function confirmImport() {
       showImportWarning(`Importação concluída com ${result.errorCount || result.errors?.length || 0} erro(s).`);
       if (result.errors?.length) console.table(result.errors);
     } else {
-      showMessage('Importação realizada com sucesso!', 'Importação concluída', 'success');
+      showSuccessMessage('Importação realizada com sucesso!', 'Importação concluída');
     }
 
     recordImportHistory({
@@ -3045,7 +3054,7 @@ async function confirmImport() {
     }
   } catch (err) {
     console.error(err);
-    showMessage('Erro ao importar dados.');
+    showErrorMessage('Erro ao importar dados.');
     recordImportHistory({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       date: new Date().toISOString(),
@@ -3081,9 +3090,9 @@ async function importarRegistrosModulo() {
 
   if (result.errorCount > 0) {
     console.table(result.errors);
-    showMessage(`Importação concluída com ${result.errorCount} erro(s).`);
+    showErrorMessage(`Importação concluída com ${result.errorCount} erro(s).`, 'Importação com erro');
   } else {
-    showMessage(`Importação concluída: ${result.successCount} registro(s).`);
+    showSuccessMessage(`Importação concluída: ${result.successCount} registro(s).`, 'Importação concluída');
   }
 
   await carregarRegistrosModulo();
@@ -3282,7 +3291,7 @@ async function confirmDeleteModulo() {
     showActionToastLeft(`Aba "${moduloDeleteTarget.nome}" excluída.`);
   } catch (e) {
     console.error('Erro ao excluir módulo:', e);
-    showMessage('Erro ao excluir a aba.');
+    showErrorMessage('Erro ao excluir a aba.');
   } finally {
     moduloDeleteTarget = null;
     closeConfirmDeleteModulo();
@@ -3792,7 +3801,7 @@ function renderFormularioModulo(valores = {}) {
 
 async function salvarRegistroModulo() {
   if (!moduloAtual?.id) {
-    showMessage('Selecione uma aba personalizada.');
+    showErrorMessage('Selecione uma aba personalizada.');
     return;
   }
 
@@ -3805,22 +3814,22 @@ async function salvarRegistroModulo() {
     const valor = input.value?.trim();
     const tipo = input.dataset.type || 'texto';
     if (input.dataset.required === 'true' && !valor) {
-      showMessage(`Preencha o campo obrigatório: ${nome}`);
+      showErrorMessage(`Preencha o campo obrigatório: ${nome}`);
       return;
     }
     const normalizedFieldName = normalizeHeader(nome);
     if (valor && tipo === 'email' && !isValidEmail(valor)) {
-      showMessage(`E-mail inválido no campo: ${nome}`);
+      showErrorMessage(`E-mail inválido no campo: ${nome}`);
       return;
     }
     if (valor && normalizedFieldName.includes('telefone') && !isValidPhoneNumber(valor)) {
-      showMessage(`Telefone inválido no campo: ${nome}`);
+      showErrorMessage(`Telefone inválido no campo: ${nome}`);
       return;
     }
     if (valor && tipo === 'data') {
       const normalized = normalizeDateValue(valor);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
-        showMessage(`Data inválida no campo: ${nome}`);
+        showErrorMessage(`Data inválida no campo: ${nome}`);
         return;
       }
       valores[nome] = normalized;
@@ -4016,7 +4025,7 @@ function validateDuplicateFields(fields) {
     }
   });
   if (duplicates.size) {
-    showMessage(`Campos duplicados encontrados: ${[...duplicates].join(', ')}`);
+    showErrorMessage(`Campos duplicados encontrados: ${[...duplicates].join(', ')}`);
     return false;
   }
   return true;
@@ -4236,7 +4245,7 @@ async function saveManagedModule() {
   const descricao = document.getElementById('newTabDescription').value.trim();
 
   if (!nome) {
-    showMessage('Informe o nome da aba.');
+    showErrorMessage('Informe o nome da aba.');
     return;
   }
 
@@ -4251,7 +4260,7 @@ async function saveManagedModule() {
     .filter(field => field.nome);
 
   if (!camposValidos.length) {
-    showMessage('Adicione ao menos um campo com nome válido.');
+    showErrorMessage('Adicione ao menos um campo com nome válido.');
     return;
   }
 
@@ -4439,12 +4448,12 @@ function addManualTabCustomField() {
   const input = document.getElementById('manualTabNewFieldInput');
   const label = (input?.value || '').trim();
   if (!label) {
-    showMessage('Informe o nome do novo campo.');
+    showErrorMessage('Informe o nome do novo campo.');
     return;
   }
   const baseKey = normalizeManualFieldKey(label);
   if (!baseKey) {
-    showMessage('Nome inválido. Use letras e números.');
+    showErrorMessage('Nome inválido. Use letras e números.');
     return;
   }
   const tabType = manualTabContext.tabType;
@@ -4581,13 +4590,18 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
       oninput="window.newTabFields[${idx}].nome = this.value; renderSortOptionsPicker();"
     />
 
-    <select class="field-type" onchange="window.newTabFields[${idx}].tipo = this.value">
+    <div class="field-type-wrapper">
+      <select class="field-type" onchange="window.newTabFields[${idx}].tipo = this.value">
       <option value="texto">Texto</option>
       <option value="numero">Número</option>
       <option value="data">Data</option>
       <option value="email">E-mail</option>
       <option value="select">Lista</option>
-    </select>
+      </select>
+      <button type="button" class="field-type-help" onclick="openFieldTypeHelpModal()" aria-label="Explicações sobre tipos de campo">
+        ?
+      </button>
+    </div>
 
     <label class="field-required-label">
       <input class="field-required" type="checkbox" ${obrigatorio ? 'checked' : ''} onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
@@ -4616,6 +4630,16 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
   const typeSelect = row.querySelector('.field-type');
   if (typeSelect) {
     typeSelect.value = tipo;
+  }
+}
+
+function openFieldTypeHelpModal() {
+  openModalById('fieldTypeHelpModal');
+}
+
+function closeFieldTypeHelpModal(e) {
+  if (!e || e.target.id === 'fieldTypeHelpModal') {
+    document.getElementById('fieldTypeHelpModal')?.classList.remove('show');
   }
 }
 
@@ -4672,7 +4696,7 @@ async function createNewTab() {
   const nome = document.getElementById('newTabName').value.trim();
   const descricao = document.getElementById('newTabDescription').value.trim();
   if (!nome) {
-    showMessage('Informe o nome da aba');
+    showErrorMessage('Informe o nome da aba');
     return;
   }
 
@@ -4694,7 +4718,7 @@ async function createNewTab() {
   })).filter(field => field.nome);
 
   if (!fieldsData.length) {
-    showMessage('Adicione ao menos um campo com nome válido.');
+    showErrorMessage('Adicione ao menos um campo com nome válido.');
     return;
   }
 
@@ -4738,14 +4762,14 @@ async function salvarNovoModulo() {
   const descricao = document.getElementById('newTabDescription').value.trim();
 
   if (!nome) {
-    showMessage('Informe o nome da aba.');
+    showErrorMessage('Informe o nome da aba.');
     return;
   }
 
   const fieldRows = [...document.querySelectorAll('#fieldsContainer .field-row')];
 
   if (!fieldRows.length) {
-    showMessage('Adicione ao menos um campo.');
+    showErrorMessage('Adicione ao menos um campo.');
     return;
   }
 
@@ -4766,7 +4790,7 @@ const camposValidos = fieldRows
   .filter(f => f.nome);
 
 if (!camposValidos.length) {
-  showMessage('Adicione ao menos um campo com nome válido.');
+  showErrorMessage('Adicione ao menos um campo com nome válido.');
   return;
 }
 
@@ -4828,6 +4852,9 @@ function closeModalByEsc(modalEl) {
       break;
     case 'confirmDeleteModuloModal':
       closeConfirmDeleteModulo();
+      break;
+    case 'fieldTypeHelpModal':
+      closeFieldTypeHelpModal();
       break;
     case 'systemMessageModal':
       closeSystemMessageModal();

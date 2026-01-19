@@ -918,6 +918,11 @@
             <path d="M6 12.5l4 4 8-9" />
           </svg>
         </span>
+        <span class="system-message-icon system-message-icon-error" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation">
+            <path d="M6 6l12 12M18 6l-12 12" />
+          </svg>
+        </span>
         <h2 id="systemMessageTitle">Aviso</h2>
       </div>
       <p class="modal-subtitle" id="systemMessageText"></p>
@@ -939,6 +944,55 @@
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeSystemConfirmModal()">Cancelar</button>
       <button class="btn-salvar danger" onclick="confirmSystemAction()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="fieldTypeHelpModal" class="modal" onclick="closeFieldTypeHelpModal(event)">
+  <div class="card" onclick="event.stopPropagation()">
+    <div class="modal-heading">
+      <h2>Tipos de campo</h2>
+      <p class="modal-subtitle">Entenda o que cada tipo representa na tabela.</p>
+    </div>
+    <div class="field-type-help-list">
+      <div class="field-type-help-item">
+        <span class="field-type-help-icon">Abc</span>
+        <div>
+          <strong>Texto</strong>
+          <p>Para palavras e frases. Ideal para nomes, locais e descrições.</p>
+        </div>
+      </div>
+      <div class="field-type-help-item">
+        <span class="field-type-help-icon">123</span>
+        <div>
+          <strong>Número</strong>
+          <p>Para valores numéricos e patrimônios sem letras.</p>
+        </div>
+      </div>
+      <div class="field-type-help-item">
+        <span class="field-type-help-icon">📅</span>
+        <div>
+          <strong>Data</strong>
+          <p>Para registrar datas como aquisição, troca ou revisão.</p>
+        </div>
+      </div>
+      <div class="field-type-help-item">
+        <span class="field-type-help-icon">@</span>
+        <div>
+          <strong>E-mail</strong>
+          <p>Para contatos que precisam ser validados como e-mail.</p>
+        </div>
+      </div>
+      <div class="field-type-help-item">
+        <span class="field-type-help-icon">≡</span>
+        <div>
+          <strong>Lista</strong>
+          <p>Para escolher valores pré-definidos em uma lista.</p>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-salvar" onclick="closeFieldTypeHelpModal()">Entendi</button>
     </div>
   </div>
 </div>

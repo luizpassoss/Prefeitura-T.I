@@ -1222,6 +1222,30 @@ body.theme-dark .file-input-name {
   stroke-dashoffset: 30;
 }
 
+.system-message-icon-error {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.system-message-icon-error svg {
+  stroke: #dc2626;
+}
+
+#systemMessageModal.system-message-error .system-message-icon {
+  display: none;
+}
+
+#systemMessageModal.system-message-error .system-message-icon-error {
+  display: inline-flex;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+#systemMessageModal.system-message-error .system-message-icon-error svg {
+  stroke: #dc2626;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: drawCross 0.55s ease forwards;
+}
+
 #systemMessageModal.system-message-success .system-message-icon {
   display: inline-flex;
 }
@@ -1281,6 +1305,11 @@ body.theme-dark .file-input-name {
 
 @keyframes drawCheck {
   from { stroke-dashoffset: 30; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes drawCross {
+  from { stroke-dashoffset: 40; }
   to { stroke-dashoffset: 0; }
 }
 
@@ -2678,6 +2707,81 @@ body.theme-dark .sort-quick-btn.is-active {
   width: 16px;
   height: 16px;
   accent-color: #2563eb;
+}
+
+.field-type-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-type-help {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.field-type-help:hover {
+  background: #e2e8f0;
+  border-color: rgba(100, 116, 139, 0.7);
+  transform: translateY(-1px);
+}
+
+.field-type-help-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.field-type-help-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #f8fafc;
+}
+
+.field-type-help-item p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.field-type-help-icon {
+  min-width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+body.theme-dark .field-type-help {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(51, 65, 85, 0.7);
+  color: #e2e8f0;
+}
+
+body.theme-dark .field-type-help-item {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(51, 65, 85, 0.7);
+}
+
+body.theme-dark .field-type-help-icon {
+  background: rgba(59, 130, 246, 0.25);
+  color: #bfdbfe;
 }
 
 body.theme-dark .sort-option-item {
