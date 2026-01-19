@@ -956,35 +956,57 @@
     </div>
     <div class="field-type-help-list">
       <div class="field-type-help-item">
-        <span class="field-type-help-icon">Abc</span>
+        <span class="field-type-help-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img">
+            <path d="M5 7h14M5 12h10M5 17h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </span>
         <div>
           <strong>Texto</strong>
           <p>Para palavras e frases. Ideal para nomes, locais e descrições.</p>
         </div>
       </div>
       <div class="field-type-help-item">
-        <span class="field-type-help-icon">123</span>
+        <span class="field-type-help-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img">
+            <path d="M9 5l-2 14M17 5l-2 14M5 9h14M4 15h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </span>
         <div>
           <strong>Número</strong>
           <p>Para valores numéricos e patrimônios sem letras.</p>
         </div>
       </div>
       <div class="field-type-help-item">
-        <span class="field-type-help-icon">📅</span>
+        <span class="field-type-help-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img">
+            <rect x="4" y="6.5" width="16" height="13" rx="2.5" stroke="currentColor" stroke-width="1.8" fill="none"/>
+            <path d="M8 4v5M16 4v5M4 10h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </span>
         <div>
           <strong>Data</strong>
           <p>Para registrar datas como aquisição, troca ou revisão.</p>
         </div>
       </div>
       <div class="field-type-help-item">
-        <span class="field-type-help-icon">@</span>
+        <span class="field-type-help-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img">
+            <path d="M4 7.5l8 6 8-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+            <rect x="4" y="6.5" width="16" height="11" rx="2.5" stroke="currentColor" stroke-width="1.8" fill="none"/>
+          </svg>
+        </span>
         <div>
           <strong>E-mail</strong>
           <p>Para contatos que precisam ser validados como e-mail.</p>
         </div>
       </div>
       <div class="field-type-help-item">
-        <span class="field-type-help-icon">≡</span>
+        <span class="field-type-help-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img">
+            <path d="M6 7h12M6 12h12M6 17h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </span>
         <div>
           <strong>Lista</strong>
           <p>Para escolher valores pré-definidos em uma lista.</p>
@@ -993,6 +1015,23 @@
     </div>
     <div class="modal-footer">
       <button class="btn-salvar" onclick="closeFieldTypeHelpModal()">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<div id="fieldOptionsModal" class="modal" onclick="closeFieldOptionsModal(event)">
+  <div class="card" onclick="event.stopPropagation()">
+    <div class="modal-heading">
+      <h2>Opções da lista</h2>
+      <p class="modal-subtitle">Separe cada opção por vírgula.</p>
+    </div>
+    <div class="field-options-modal-body">
+      <label class="field-options-label" for="fieldOptionsInput">Opções</label>
+      <textarea id="fieldOptionsInput" class="field-options-input" rows="4" placeholder="Ex.: Ativo, Em manutenção, Baixado"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeFieldOptionsModal()">Cancelar</button>
+      <button class="btn-salvar" onclick="saveFieldOptionsModal()">Salvar opções</button>
     </div>
   </div>
 </div>

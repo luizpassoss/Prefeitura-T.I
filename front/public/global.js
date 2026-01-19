@@ -3921,9 +3921,10 @@ function updateFieldOptions(idx, value) {
   if (newTabFields[idx]) {
     newTabFields[idx].opcoes = options;
   }
+  updateFieldOptionsSummary(idx);
 }
 
-function updateFieldType(idx, value) {
+function updateFieldType(idx, value, shouldOpenModal = false) {
   if (newTabFields[idx]) {
     newTabFields[idx].tipo = value;
     if (value !== 'select') {
@@ -3935,6 +3936,12 @@ function updateFieldType(idx, value) {
   const optionsWrapper = row.querySelector('.field-type-options');
   if (!optionsWrapper) return;
   optionsWrapper.classList.toggle('is-visible', value === 'select');
+  if (value === 'select') {
+    updateFieldOptionsSummary(idx);
+    if (shouldOpenModal) {
+      openFieldOptionsModal(idx);
+    }
+  }
 }
 
 function getSortOptionCandidates() {
@@ -4039,16 +4046,21 @@ function applyFieldPreset(idx, presetKey) {
     newTabFields[idx].tipo = preset.tipo;
     newTabFields[idx].obrigatorio = preset.obrigatorio;
   }
+  updateFieldType(idx, preset.tipo);
+  updateFieldOptionsSummary(idx);
 }
 
 function getFieldRowsData() {
   const rows = [...document.querySelectorAll('#fieldsContainer .field-row')];
-  return rows.map(row => ({
-    nome: row.querySelector('.field-name')?.value.trim() || '',
-    tipo: row.querySelector('.field-type')?.value || 'texto',
-    obrigatorio: !!row.querySelector('.field-required')?.checked,
-    opcoes: normalizeFieldOptionsInput(row.querySelector('.field-type-options input')?.value || '')
-  }));
+  return rows.map(row => {
+    const idx = Number(row.dataset.idx);
+    return {
+      nome: row.querySelector('.field-name')?.value.trim() || '',
+      tipo: row.querySelector('.field-type')?.value || 'texto',
+      obrigatorio: !!row.querySelector('.field-required')?.checked,
+      opcoes: Array.isArray(newTabFields[idx]?.opcoes) ? newTabFields[idx].opcoes : []
+    };
+  });
 }
 
 function rebuildFieldRowsFromDOM() {
@@ -4660,7 +4672,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
     />
 
     <div class="field-type-wrapper">
-      <select class="field-type" onchange="updateFieldType(${idx}, this.value)">
+      <select class="field-type" onchange="updateFieldType(${idx}, this.value, true)">
       <option value="texto">Texto</option>
       <option value="numero">Número</option>
       <option value="data">Data</option>
@@ -4672,12 +4684,8 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
       </button>
     </div>
     <div class="field-type-options ${tipo === 'select' ? 'is-visible' : ''}">
-      <input
-        type="text"
-        placeholder="Opções separadas por vírgula"
-        value="${escapeHtml((opcoes || []).join(', '))}"
-        oninput="updateFieldOptions(${idx}, this.value)"
-      />
+      <span class="field-options-summary" id="fieldOptionsSummary-${idx}">Nenhuma opção definida.</span>
+      <button type="button" class="btn-secondary" onclick="openFieldOptionsModal(${idx})">Definir opções</button>
     </div>
 
     <label class="field-required-label">
@@ -4709,10 +4717,16 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
     typeSelect.value = tipo;
   }
   updateFieldType(idx, tipo);
+  updateFieldOptionsSummary(idx);
 }
 
 function openFieldTypeHelpModal() {
-  openModalById('fieldTypeHelpModal');
+  const el = document.getElementById('fieldTypeHelpModal');
+  if (el) {
+    el.classList.remove('hidden');
+    el.classList.add('show');
+    focusFirstField(el);
+  }
 }
 
 function closeFieldTypeHelpModal(e) {
@@ -4723,6 +4737,51 @@ function closeFieldTypeHelpModal(e) {
 
 window.openFieldTypeHelpModal = openFieldTypeHelpModal;
 window.closeFieldTypeHelpModal = closeFieldTypeHelpModal;
+
+let fieldOptionsModalIndex = null;
+
+function updateFieldOptionsSummary(idx) {
+  const summary = document.getElementById(`fieldOptionsSummary-${idx}`);
+  if (!summary) return;
+  const options = newTabFields[idx]?.opcoes || [];
+  summary.textContent = options.length
+    ? `Opções: ${options.join(', ')}`
+    : 'Nenhuma opção definida.';
+}
+
+function openFieldOptionsModal(idx) {
+  fieldOptionsModalIndex = idx;
+  const input = document.getElementById('fieldOptionsInput');
+  if (input) {
+    const options = newTabFields[idx]?.opcoes || [];
+    input.value = options.join(', ');
+  }
+  const modal = document.getElementById('fieldOptionsModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('show');
+    focusFirstField(modal);
+  }
+}
+
+function closeFieldOptionsModal(e) {
+  if (!e || e.target.id === 'fieldOptionsModal') {
+    document.getElementById('fieldOptionsModal')?.classList.remove('show');
+  }
+  fieldOptionsModalIndex = null;
+}
+
+function saveFieldOptionsModal() {
+  if (fieldOptionsModalIndex === null) return;
+  const input = document.getElementById('fieldOptionsInput');
+  const value = input ? input.value : '';
+  updateFieldOptions(fieldOptionsModalIndex, value);
+  closeFieldOptionsModal();
+}
+
+window.openFieldOptionsModal = openFieldOptionsModal;
+window.closeFieldOptionsModal = closeFieldOptionsModal;
+window.saveFieldOptionsModal = saveFieldOptionsModal;
 
 function addField() {
   addFieldWithValues();
@@ -4939,6 +4998,9 @@ function closeModalByEsc(modalEl) {
       break;
     case 'fieldTypeHelpModal':
       closeFieldTypeHelpModal();
+      break;
+    case 'fieldOptionsModal':
+      closeFieldOptionsModal();
       break;
     case 'systemMessageModal':
       closeSystemMessageModal();
