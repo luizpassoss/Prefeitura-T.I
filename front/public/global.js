@@ -3381,7 +3381,7 @@ function renderFormularioModulo(valores = {}) {
     };
 
     let input;
-    const normalizedName = normalizeHeader(campo.nome);
+    const normalizedName = normalizeHeader(campo.nome).replace(/\s+/g, '');
     const isNomeMaquina = normalizedName.includes('nomemaquina');
     if (isNomeMaquina) {
       const wrapper = document.createElement('div');
@@ -3756,7 +3756,7 @@ const selectOptionsMap = {
 };
 
 function getSelectOptionsForCampo(campo) {
-  const nome = (campo.nome || '').toLowerCase();
+  const nome = normalizeHeader(campo.nome || '');
   if (nome === 'local') {
     return Array.from(new Set([...inventoryLocalOptions, ...machineLocalOptions]));
   }
