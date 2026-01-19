@@ -352,9 +352,10 @@ let selectedInvIds = new Set();
 let selectedMaqIds = new Set();
 let selectedModuloIds = new Set();
 let actionToastTimeout = null;
+let actionToastLeftTimeout = null;
 
-function showActionToast(message, duration = 3200) {
-  const toast = document.getElementById('actionToast');
+function showActionToastWithId(toastId, message, duration, getTimeoutRef, setTimeoutRef) {
+  const toast = document.getElementById(toastId);
   if (!toast) return;
   const text = toast.querySelector('.action-toast-text');
   if (text) text.textContent = message;
@@ -362,15 +363,35 @@ function showActionToast(message, duration = 3200) {
   requestAnimationFrame(() => {
     toast.classList.add('show');
   });
-  if (actionToastTimeout) {
-    clearTimeout(actionToastTimeout);
-  }
-  actionToastTimeout = setTimeout(() => {
+  const currentTimeout = getTimeoutRef();
+  if (currentTimeout) clearTimeout(currentTimeout);
+  const nextTimeout = setTimeout(() => {
     toast.classList.remove('show');
     setTimeout(() => {
       toast.classList.add('hidden');
     }, 250);
   }, duration);
+  setTimeoutRef(nextTimeout);
+}
+
+function showActionToast(message, duration = 3200) {
+  showActionToastWithId(
+    'actionToast',
+    message,
+    duration,
+    () => actionToastTimeout,
+    (value) => { actionToastTimeout = value; }
+  );
+}
+
+function showActionToastLeft(message, duration = 3200) {
+  showActionToastWithId(
+    'actionToastLeft',
+    message,
+    duration,
+    () => actionToastLeftTimeout,
+    (value) => { actionToastLeftTimeout = value; }
+  );
 }
 
 function updateBulkUI() {
@@ -3137,6 +3158,7 @@ async function confirmDeleteModulo() {
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     switchTab('inventario');
+    showActionToastLeft(`Aba "${moduloDeleteTarget.nome}" excluída.`);
   } catch (e) {
     console.error('Erro ao excluir módulo:', e);
     showMessage('Erro ao excluir a aba.');
@@ -3170,12 +3192,33 @@ async function carregarCamposModulo() {
 }
 
 async function carregarRegistrosModulo() {
-  const colspan = (moduloCampos?.length || 0) + 2;
+  const { displayCampos } = getModuloDisplayConfig();
+  const colspan = (displayCampos?.length || 0) + 2;
   if (colspan > 1) {
     setTableLoading('moduloTbody', true, colspan);
   }
   const res = await fetch(`${API_MODULOS}/${moduloAtual.id}/registros`);
   moduloRegistros = await res.json();
+}
+
+function getModuloDisplayConfig() {
+  const normalizeFieldKey = (name) => normalizeHeader(name || '').replace(/\s+/g, '');
+  const linkField = moduloCampos.find((campo) => {
+    const key = normalizeFieldKey(campo.nome);
+    return key === 'link' || key === 'linkdeinternet' || key === 'internet';
+  });
+  const categoriaField = moduloCampos.find(
+    (campo) => normalizeFieldKey(campo.nome) === 'categoria'
+  );
+  const shouldMergeCategoria = Boolean(linkField && categoriaField);
+  const displayCampos = shouldMergeCategoria
+    ? moduloCampos.filter((campo) => campo.nome !== categoriaField.nome)
+    : moduloCampos;
+  return {
+    displayCampos,
+    categoriaFieldName: categoriaField?.nome || '',
+    shouldMergeCategoria
+  };
 }
 
 function renderModuloDinamico() {
@@ -3187,6 +3230,7 @@ function renderModuloDinamico() {
   tab.classList.add('active');
 
   const filtered = getModuloFiltrado();
+  const { displayCampos, categoriaFieldName } = getModuloDisplayConfig();
 
   // HEADER
   thead.innerHTML = `
@@ -3194,14 +3238,14 @@ function renderModuloDinamico() {
       <th class="checkbox-cell">
         <input type="checkbox" id="chkAllMod">
       </th>
-      ${moduloCampos.map(c => `
+      ${displayCampos.map(c => `
         <th>${c.nome}</th>
       `).join('')}
       <th class="actions-header" style="width:110px; text-align:center">Ações</th>
     </tr>
     <tr class="table-filters">
       <th class="checkbox-cell"></th>
-      ${moduloCampos.map(c => `
+      ${displayCampos.map(c => `
         <th>
           <input
             class="table-filter-input"
@@ -3226,7 +3270,7 @@ function renderModuloDinamico() {
 
   const sortMenuOptions = document.getElementById('sortMenuModOptions');
   if (sortMenuOptions) {
-    sortMenuOptions.innerHTML = moduloCampos
+    sortMenuOptions.innerHTML = displayCampos
       .map((campo) => `<button type="button" data-sort-key="${campo.nome}">${campo.nome}</button>`)
       .join('');
     initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
@@ -3244,7 +3288,7 @@ function renderModuloDinamico() {
   if (!sorted.length) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="${moduloCampos.length + 2}" style="padding:22px;color:#9fb6d9">
+        <td colspan="${displayCampos.length + 2}" style="padding:22px;color:#9fb6d9">
           Nenhum registro encontrado.
         </td>
       </tr>`;
@@ -3266,8 +3310,8 @@ function renderModuloDinamico() {
           ${selectedModuloIds.has(row.id) ? 'checked' : ''}
         >
       </td>
-      ${moduloCampos.map(c => `
-        <td>${renderModuloCell(c.nome, row[c.nome])}</td>
+      ${displayCampos.map(c => `
+        <td>${renderModuloCell(c.nome, row[c.nome], row, categoriaFieldName)}</td>
       `).join('')}
       <td class="actions">
         <div class="action-group">
@@ -3339,10 +3383,22 @@ if (moduloTbody) {
   });
 }
 
-function renderModuloCell(fieldName, value) {
+function renderModuloCell(fieldName, value, row = {}, categoriaFieldName = '') {
   const label = (value ?? '').toString();
   const formatted = formatDateForTable(label);
-  const normalizedField = (fieldName || '').toString().toLowerCase();
+  const normalizedField = normalizeHeader(fieldName).replace(/\s+/g, '');
+  if (
+    categoriaFieldName &&
+    (normalizedField === 'link' || normalizedField === 'linkdeinternet' || normalizedField === 'internet')
+  ) {
+    const categoriaValue = (row?.[categoriaFieldName] ?? '').toString().trim();
+    return `
+      <div class="link-cell">
+        <div class="link-text">${escapeHtml(formatted)}</div>
+        ${categoriaValue ? `<div class="link-category">${escapeHtml(categoriaValue)}</div>` : ''}
+      </div>
+    `;
+  }
   if (normalizedField.includes('status')) {
     const display = label || 'Ativa';
     return `
@@ -3602,6 +3658,7 @@ async function salvarRegistroModulo() {
     return;
   }
 
+  const isEdit = Boolean(moduloEditId);
   const inputs = [...document.querySelectorAll('#moduloFormFields [data-field]')];
   const valores = {};
 
@@ -3648,6 +3705,7 @@ async function salvarRegistroModulo() {
   closeModuloRegistroModal();
   await carregarRegistrosModulo();
   renderModuloDinamico();
+  showActionToast(isEdit ? 'Registro atualizado com sucesso.' : 'Registro criado com sucesso.');
 }
 
 function openNovoRegistroModulo() {
@@ -4717,6 +4775,7 @@ document.addEventListener('keydown', (e) => {
   window.removeImportRow = removeImportRow;
   window.updateImportCell = updateImportCell;
   window.updateImportMapping = updateImportMapping;
+  window.showActionToastLeft = showActionToastLeft;
   window.closeHelpPanel = closeHelpPanel;
 
   window.openCreateTabModal = openCreateTabModal;
