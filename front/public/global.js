@@ -47,9 +47,91 @@ const manualTabFieldConfig = {
   ]
 };
 
+const manualCustomFieldsKey = (tabType) => `ti-tab-custom-fields-${tabType}`;
+const manualCustomValuesKey = (tabType) => `ti-tab-custom-values-${tabType}`;
+
+function getManualCustomFields(tabType) {
+  const stored = localStorage.getItem(manualCustomFieldsKey(tabType));
+  if (!stored) return [];
+  try {
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(field => field?.key && field?.label);
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveManualCustomFields(tabType, fields) {
+  localStorage.setItem(manualCustomFieldsKey(tabType), JSON.stringify(fields));
+}
+
+function getManualCustomValues(tabType) {
+  const stored = localStorage.getItem(manualCustomValuesKey(tabType));
+  if (!stored) return {};
+  try {
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveManualCustomValues(tabType, values) {
+  localStorage.setItem(manualCustomValuesKey(tabType), JSON.stringify(values));
+}
+
+function setManualCustomValuesForItem(tabType, itemId, values) {
+  if (!itemId) return;
+  const allValues = getManualCustomValues(tabType);
+  const sanitized = {};
+  Object.entries(values || {}).forEach(([key, value]) => {
+    const nextValue = String(value || '').trim();
+    if (nextValue) {
+      sanitized[key] = nextValue;
+    }
+  });
+  if (Object.keys(sanitized).length) {
+    allValues[itemId] = sanitized;
+  } else {
+    delete allValues[itemId];
+  }
+  saveManualCustomValues(tabType, allValues);
+}
+
+function removeManualCustomValuesForItem(tabType, itemId) {
+  if (!itemId) return;
+  const allValues = getManualCustomValues(tabType);
+  if (allValues[itemId]) {
+    delete allValues[itemId];
+    saveManualCustomValues(tabType, allValues);
+  }
+}
+
+function getManualFieldDefinitions(tabType) {
+  const baseFields = manualTabFieldConfig[tabType] || [];
+  return [...baseFields, ...getManualCustomFields(tabType)];
+}
+
+function normalizeManualFieldKey(value = '') {
+  return normalizeHeader(value)
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function generateUniqueManualFieldKey(tabType, baseKey) {
+  const existing = new Set(getManualFieldDefinitions(tabType).map(field => field.key));
+  if (!existing.has(baseKey)) return baseKey;
+  let counter = 2;
+  while (existing.has(`${baseKey}_${counter}`)) {
+    counter += 1;
+  }
+  return `${baseKey}_${counter}`;
+}
+
 function getManualTabConfig(tabType) {
   const stored = localStorage.getItem(`ti-tab-config-${tabType}`);
-  const defaults = manualTabFieldConfig[tabType] || [];
+  const defaults = getManualFieldDefinitions(tabType);
   const defaultOrder = defaults.map(field => field.key);
   if (!stored) {
     return { order: defaultOrder, labels: {}, hidden: [] };
@@ -74,6 +156,116 @@ function getManualTabConfig(tabType) {
 
 function saveManualTabConfig(tabType, config) {
   localStorage.setItem(`ti-tab-config-${tabType}`, JSON.stringify(config));
+}
+
+function ensureManualTabColumns(tabType) {
+  const tabId = tabType === 'inventario' ? 'tabInventario' : 'tabMaquinas';
+  const tab = document.getElementById(tabId);
+  if (!tab) return;
+  const headerRow = tab.querySelector('thead tr');
+  const filterRow = tab.querySelector('thead tr.table-filters');
+  if (!headerRow || !filterRow) return;
+  const actionsHeader = headerRow.querySelector('th.actions-header');
+  const filterActions = filterRow.querySelector('th.actions-header');
+  const allowedKeys = new Set(getManualFieldDefinitions(tabType).map(field => field.key));
+  headerRow.querySelectorAll('th[data-field]').forEach((th) => {
+    if (!allowedKeys.has(th.dataset.field)) {
+      th.remove();
+    }
+  });
+  filterRow.querySelectorAll('th').forEach((th) => {
+    const input = th.querySelector('[data-field]');
+    if (input && !allowedKeys.has(input.dataset.field)) {
+      th.remove();
+    }
+  });
+  const customFields = getManualCustomFields(tabType);
+  customFields.forEach((field) => {
+    if (headerRow.querySelector(`th[data-field="${field.key}"]`)) return;
+    const th = document.createElement('th');
+    th.dataset.field = field.key;
+    th.textContent = field.label;
+    headerRow.insertBefore(th, actionsHeader);
+
+    const filterTh = document.createElement('th');
+    const input = document.createElement('input');
+    input.className = 'table-filter-input';
+    input.dataset.field = field.key;
+    input.dataset.custom = 'true';
+    input.placeholder = `Filtrar ${field.label.toLowerCase()}`;
+    input.addEventListener('input', () => {
+      if (tabType === 'inventario') {
+        applyFilters();
+      } else {
+        applyMachineFilters();
+      }
+    });
+    filterTh.appendChild(input);
+    filterRow.insertBefore(filterTh, filterActions);
+  });
+}
+
+function getManualTableColspan(tabType) {
+  const baseCount = 7;
+  return baseCount + getManualCustomFields(tabType).length;
+}
+
+function countManualCustomFilters(tabType) {
+  const tabId = tabType === 'inventario' ? 'tabInventario' : 'tabMaquinas';
+  const tab = document.getElementById(tabId);
+  if (!tab) return 0;
+  return [...tab.querySelectorAll('.table-filter-input[data-custom="true"]')]
+    .filter((input) => input.value.trim()).length;
+}
+
+function applyManualCustomFilters(list, tabType) {
+  const customFields = getManualCustomFields(tabType);
+  if (!customFields.length) return list;
+  const values = getManualCustomValues(tabType);
+  const tabId = tabType === 'inventario' ? 'tabInventario' : 'tabMaquinas';
+  const tab = document.getElementById(tabId);
+  if (!tab) return list;
+  return list.filter((item) => {
+    return customFields.every((field) => {
+      const input = tab.querySelector(`.table-filter-input[data-field="${field.key}"]`);
+      const filterValue = (input?.value || '').trim().toLowerCase();
+      if (!filterValue) return true;
+      const itemValue = (values[item.id]?.[field.key] || '').toLowerCase();
+      return itemValue.includes(filterValue);
+    });
+  });
+}
+
+function renderManualCustomFields(tabType, itemId = null) {
+  const containerId = tabType === 'inventario' ? 'manualCustomFieldsInv' : 'manualCustomFieldsMaq';
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const fields = getManualCustomFields(tabType);
+  if (!fields.length) {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    return;
+  }
+  const values = getManualCustomValues(tabType);
+  const itemValues = itemId ? values[itemId] || {} : {};
+  container.classList.remove('hidden');
+  container.innerHTML = fields.map(field => `
+    <div>
+      <label>${escapeHtml(field.label)}</label>
+      <input type="text" data-manual-custom-field="${field.key}" value="${escapeHtml(itemValues[field.key] || '')}" />
+    </div>
+  `).join('');
+}
+
+function collectManualCustomFieldValues(tabType) {
+  const containerId = tabType === 'inventario' ? 'manualCustomFieldsInv' : 'manualCustomFieldsMaq';
+  const container = document.getElementById(containerId);
+  if (!container) return {};
+  const values = {};
+  container.querySelectorAll('input[data-manual-custom-field]').forEach((input) => {
+    values[input.dataset.manualCustomField] = input.value;
+  });
+  return values;
 }
 
 const sortState = {
@@ -137,6 +329,8 @@ if (btnNovaAba) {
   initSortOrderToggle('inventory', sortState.inventory, applyFilters);
   initSortOrderToggle('machines', sortState.machines, applyMachineFilters);
   initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
+  ensureManualTabColumns('inventario');
+  ensureManualTabColumns('maquinas');
   applyManualTabLabels('inventario');
   applyManualTabLabels('maquinas');
 
@@ -155,6 +349,27 @@ if (btnNovaAba) {
 let selectedInvIds = new Set();
 let selectedMaqIds = new Set();
 let selectedModuloIds = new Set();
+let actionToastTimeout = null;
+
+function showActionToast(message, duration = 3200) {
+  const toast = document.getElementById('actionToast');
+  if (!toast) return;
+  const text = toast.querySelector('.action-toast-text');
+  if (text) text.textContent = message;
+  toast.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+  if (actionToastTimeout) {
+    clearTimeout(actionToastTimeout);
+  }
+  actionToastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => {
+      toast.classList.add('hidden');
+    }, 250);
+  }, duration);
+}
 
 function updateBulkUI() {
   const bulk = document.getElementById('bulkActions');
@@ -176,7 +391,7 @@ function updateBulkUI() {
      =========================== */
   async function fetchData(){
     try{
-      setTableLoading('tbody', true, 7);
+      setTableLoading('tbody', true, getManualTableColspan('inventario'));
       const res = await fetch(API_URL);
       data = await res.json();
       applyFilters();
@@ -189,7 +404,7 @@ function updateBulkUI() {
 
   async function fetchMachines(){
     try{
-      setTableLoading('mtbody', true, 7);
+      setTableLoading('mtbody', true, getManualTableColspan('maquinas'));
       const res = await fetch(API_MAQUINAS);
       machineData = await res.json();
       applyMachineFilters();
@@ -403,10 +618,13 @@ function showMessage(message, title = 'Aviso') {
   function renderTable(list){
     tbody.innerHTML = '';
     if(!list || list.length === 0){
-      tbody.innerHTML = '<tr><td colspan="7" style="padding:22px;color:#9fb6d9">Nenhum registro encontrado.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="${getManualTableColspan('inventario')}" style="padding:22px;color:#9fb6d9">Nenhum registro encontrado.</td></tr>`;
       updateBulkUI();
       return;
     }
+
+    const customFields = getManualCustomFields('inventario');
+    const customValues = getManualCustomValues('inventario');
 
     list.forEach((it, idx) => {
       const tr = document.createElement('tr');
@@ -433,6 +651,9 @@ function showMessage(message, title = 'Aviso') {
   <td class="small" data-field="telefone">${escapeHtml(it.telefone)}</td>
   <td data-field="local">${escapeHtml(it.local)}</td>
   <td data-field="endereco">${escapeHtml(it.endereco)}</td>
+  ${customFields.map((field) => `
+    <td data-field="${field.key}">${escapeHtml(customValues[it.id]?.[field.key] || '')}</td>
+  `).join('')}
   <td class="actions">
     <div class="action-group">
     <button class="icon-btn edit" title="Editar" data-idx="${idx}">
@@ -786,6 +1007,8 @@ if (cat !== "All") {
     list = list.filter(x => (x.endereco || '').toLowerCase().includes(enderecoColumnFilter));
   }
 
+  list = applyManualCustomFilters(list, 'inventario');
+
   return list;
 }
 
@@ -809,7 +1032,8 @@ function updateFilterBadges() {
   const invTel = (document.getElementById('invFilterTel')?.value || '').trim();
   const invLocal = (document.getElementById('invFilterLocal')?.value || '').trim();
   const invEnd = (document.getElementById('invFilterEndereco')?.value || '').trim();
-  const invCount = [q, invLink, invVel, invTel, invLocal, invEnd].filter(Boolean).length + (cat !== 'All' ? 1 : 0);
+  const invCustomCount = countManualCustomFilters('inventario');
+  const invCount = [q, invLink, invVel, invTel, invLocal, invEnd].filter(Boolean).length + invCustomCount + (cat !== 'All' ? 1 : 0);
 
   const mq = (document.getElementById('mq')?.value || '').trim();
   const status = (document.getElementById('filterMachineStatus')?.value || 'All');
@@ -818,7 +1042,8 @@ function updateFilterBadges() {
   const mqLocalCol = (document.getElementById('mqFilterLocal')?.value || '').trim();
   const mqStatusCol = (document.getElementById('mqFilterStatus')?.value || '').trim();
   const mqDescricao = (document.getElementById('mqFilterDescricao')?.value || '').trim();
-  const mqCount = [mq, mqNome, mqPatrimonio, mqLocalCol, mqStatusCol, mqDescricao].filter(Boolean).length + (status !== 'All' ? 1 : 0);
+  const mqCustomCount = countManualCustomFilters('maquinas');
+  const mqCount = [mq, mqNome, mqPatrimonio, mqLocalCol, mqStatusCol, mqDescricao].filter(Boolean).length + mqCustomCount + (status !== 'All' ? 1 : 0);
 
   const modSearch = (document.getElementById('moduloSearch')?.value || '').trim();
   const modColumnFilters = Object.values(moduloColumnFilters || {}).filter(value => value?.trim());
@@ -836,6 +1061,9 @@ function clearInventoryFilters() {
   headerFilters.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = '';
+  });
+  document.querySelectorAll('#tabInventario .table-filter-input[data-custom="true"]').forEach((input) => {
+    input.value = '';
   });
   applyFilters();
 }
@@ -890,6 +1118,7 @@ async function carregarLogoPrefeitura() {
     editIndex = -1;
     document.getElementById('modalTitle').innerText = 'Novo Registro';
     resetModal();
+    renderManualCustomFields('inventario');
     showModal(modal);
     focusFirstField(modal);
   }
@@ -904,6 +1133,7 @@ async function carregarLogoPrefeitura() {
     safe('inpVel',''); safe('inpVelOutro',''); if(document.getElementById('inpVelOutro')) document.getElementById('inpVelOutro').style.display='none';
     safe('inpTel',''); safe('inpLocal',''); safe('inpLocalOutro',''); if(document.getElementById('inpLocalOutro')) document.getElementById('inpLocalOutro').style.display='none';
     safe('inpEnd','');
+    renderManualCustomFields('inventario');
   }
 
   function openEdit(idx){
@@ -935,6 +1165,7 @@ async function carregarLogoPrefeitura() {
     document.getElementById('inpTel').value = it.telefone||'';
     document.getElementById('inpEnd').value = it.endereco||'';
 
+    renderManualCustomFields('inventario', it.id);
     showModal(modal);
     focusFirstField(modal);
   }
@@ -994,15 +1225,18 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
     }
 
     const item = { categoria, link, velocidade, telefone, local, endereco };
+    const customValues = collectManualCustomFieldValues('inventario');
 
     try {
       if(editIndex >= 0){
         const id = data[editIndex].id;
         await fetch(`${API_URL}/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item) });
+        setManualCustomValuesForItem('inventario', id, customValues);
       } else {
         const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item) });
         const novo = await res.json();
         data.push(novo);
+        setManualCustomValuesForItem('inventario', novo.id, customValues);
       }
       await fetchData();
       closeModal();
@@ -1026,6 +1260,7 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
       try {
         const id = data[idx].id;
         await fetch(`${API_URL}/${id}`, { method:'DELETE' });
+        removeManualCustomValuesForItem('inventario', id);
         await fetchData();
         if (deletedItem) {
           showUndoToast({ type: 'inventario', items: [deletedItem] });
@@ -1182,9 +1417,12 @@ function exportInventarioExcel(rows) {
   function renderMachines(list){
     mtbody.innerHTML = '';
     if(!list || list.length===0){
-      mtbody.innerHTML = `<tr><td colspan="7" style="padding:22px;color:#9fb6d9">Nenhuma máquina encontrada.</td></tr>`;
+      mtbody.innerHTML = `<tr><td colspan="${getManualTableColspan('maquinas')}" style="padding:22px;color:#9fb6d9">Nenhuma máquina encontrada.</td></tr>`;
       return;
     }
+
+    const customFields = getManualCustomFields('maquinas');
+    const customValues = getManualCustomValues('maquinas');
 
     list.forEach((it, idx) => {
       const tr = document.createElement('tr');
@@ -1217,6 +1455,9 @@ function exportInventarioExcel(rows) {
     ${escapeHtml(it.descricao || '')}
   </div>
 </td>
+${customFields.map((field) => `
+  <td data-field="${field.key}">${escapeHtml(customValues[it.id]?.[field.key] || '')}</td>
+`).join('')}
 
       <td class="actions">
  <div class="action-group">
@@ -1371,6 +1612,8 @@ mtbody.addEventListener('click', (e) => {
     list = list.filter(x => (x.descricao || '').toLowerCase().includes(descricaoColumnFilter));
   }
 
+  list = applyManualCustomFilters(list, 'maquinas');
+
   if (sortState.machines.key) {
     const key = sortState.machines.key;
     list = sortWithIndex(list, item => item[key], sortState.machines.dir);
@@ -1390,6 +1633,9 @@ function clearMachineFilters(){
   headerFilters.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = '';
+  });
+  document.querySelectorAll('#tabMaquinas .table-filter-input[data-custom="true"]').forEach((input) => {
+    input.value = '';
   });
   applyMachineFilters();
   }
@@ -1437,6 +1683,7 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
   document.getElementById('mStatus').value = 'Ativa';
 }
 
+    renderManualCustomFields('maquinas');
 
     showModal(machineModal);
     focusFirstField(machineModal);
@@ -1482,6 +1729,7 @@ if (localSelect && [...localSelect.options].some(o => o.value === it.local)) {
   document.getElementById('mStatus').value = it.status || 'Ativa';
 }
 
+    renderManualCustomFields('maquinas', it.id);
     showModal(machineModal);
     focusFirstField(machineModal);
   }
@@ -1505,6 +1753,7 @@ async function saveMachine(){
     descricao: (document.getElementById('mDescricao')?.value || '').trim(),
     status: document.getElementById('mStatus').value
   };
+  const customValues = collectManualCustomFieldValues('maquinas');
 
 if(!item.local){
   showMessage("Informe o local da máquina.");
@@ -1530,6 +1779,7 @@ if(!item.local){
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(item)
       });
+      setManualCustomValuesForItem('maquinas', id, customValues);
 
     } else {
 
@@ -1541,6 +1791,7 @@ if(!item.local){
 
       const novo = await res.json();
       machineData.push(novo);
+      setManualCustomValuesForItem('maquinas', novo.id, customValues);
     }
 
     await fetchMachines();
@@ -1566,6 +1817,7 @@ if(!item.local){
       try{
         const id = machineData[idx].id;
         await fetch(`${API_MAQUINAS}/${id}`, { method:'DELETE' });
+        removeManualCustomValuesForItem('maquinas', id);
         await fetchMachines();
         if (deletedItem) {
           showUndoToast({ type: 'maquinas', items: [deletedItem] });
@@ -1766,6 +2018,7 @@ function exportMaquinasExcel(rows) {
      TABS
      =========================== */
   function switchTab(tabName) {
+    closeTabMenus();
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
 
@@ -2735,6 +2988,8 @@ function renderAbasDinamicas() {
     menuBtn.type = 'button';
     menuBtn.className = 'tab-menu-btn';
     menuBtn.title = 'Opções da aba';
+    menuBtn.setAttribute('aria-haspopup', 'menu');
+    menuBtn.setAttribute('aria-expanded', 'false');
     menuBtn.innerHTML = '⋯';
     menuBtn.onclick = (e) => {
       e.stopPropagation();
@@ -2743,9 +2998,21 @@ function renderAbasDinamicas() {
 
     const menu = document.createElement('div');
     menu.className = 'tab-menu-dropdown hidden';
+    menu.id = `tabMenuModulo-${mod.id}`;
+    menu.setAttribute('role', 'menu');
+    menuBtn.setAttribute('aria-controls', menu.id);
     menu.innerHTML = `
       <button type="button" data-action="manage">Gerenciar</button>
-      <button type="button" data-action="delete">Excluir</button>
+      <button type="button" data-action="delete">
+        <svg class="menu-icon delete-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 6h18"/>
+          <path d="M8 6v12"/>
+          <path d="M16 6v12"/>
+          <path d="M6 6l1 14h10l1-14"/>
+          <path d="M9 6V4h6v2"/>
+        </svg>
+        Excluir
+      </button>
     `;
 
     menu.querySelector('[data-action="manage"]').onclick = (e) => {
@@ -2804,6 +3071,7 @@ async function confirmDeleteModulo() {
 }
 
 async function abrirModulo(mod) {
+  closeTabMenus();
   moduloAtual = mod;
 
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -3143,7 +3411,7 @@ function renderFormularioModulo(valores = {}) {
     };
 
     let input;
-    const normalizedName = normalizeHeader(campo.nome);
+    const normalizedName = normalizeHeader(campo.nome).replace(/\s+/g, '');
     const isNomeMaquina = normalizedName.includes('nomemaquina');
     if (isNomeMaquina) {
       const wrapper = document.createElement('div');
@@ -3518,7 +3786,7 @@ const selectOptionsMap = {
 };
 
 function getSelectOptionsForCampo(campo) {
-  const nome = (campo.nome || '').toLowerCase();
+  const nome = normalizeHeader(campo.nome || '');
   if (nome === 'local') {
     return Array.from(new Set([...inventoryLocalOptions, ...machineLocalOptions]));
   }
@@ -3686,7 +3954,13 @@ async function saveManagedModule() {
 }
 
 function closeTabMenus() {
-  document.querySelectorAll('.tab-menu-dropdown').forEach(menu => menu.classList.add('hidden'));
+  document.querySelectorAll('.tab-menu-dropdown').forEach(menu => {
+    menu.classList.add('hidden');
+    const trigger = menu.previousElementSibling;
+    if (trigger?.classList?.contains('tab-menu-btn')) {
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+  });
 }
 
 function toggleTabMenu(button, event) {
@@ -3697,6 +3971,9 @@ function toggleTabMenu(button, event) {
   closeTabMenus();
   if (isHidden) {
     menu.classList.remove('hidden');
+    button.setAttribute('aria-expanded', 'true');
+  } else {
+    button.setAttribute('aria-expanded', 'false');
   }
 }
 
@@ -3711,8 +3988,9 @@ function getManualTabLabels(tabType) {
 }
 
 function applyManualTabLabels(tabType) {
-  const config = manualTabFieldConfig[tabType];
-  if (!config) return;
+  const config = getManualFieldDefinitions(tabType);
+  if (!config.length) return;
+  ensureManualTabColumns(tabType);
   const { labels, hidden } = getManualTabConfig(tabType);
   const tabId = tabType === 'inventario' ? 'tabInventario' : 'tabMaquinas';
   const tab = document.getElementById(tabId);
@@ -3742,6 +4020,8 @@ function openManualTabManager(tabType) {
   if (modalTitle) {
     modalTitle.textContent = `Gerenciar aba ${tabType === 'inventario' ? 'Inventário' : 'Máquinas'}`;
   }
+  const newFieldInput = document.getElementById('manualTabNewFieldInput');
+  if (newFieldInput) newFieldInput.value = '';
   renderManualTabManager();
   openModalById('manageManualTabModal');
 }
@@ -3751,7 +4031,7 @@ function renderManualTabManager() {
   const { tabType, config } = manualTabContext;
   const container = document.getElementById('manageManualTabFields');
   if (!container) return;
-  const fields = manualTabFieldConfig[tabType] || [];
+  const fields = getManualFieldDefinitions(tabType);
   const fieldMap = new Map(fields.map(field => [field.key, field.label]));
   const visibleKeys = config.order.filter(key => !config.hidden.includes(key));
   container.innerHTML = visibleKeys.map(key => `
@@ -3794,6 +4074,45 @@ function addManualTabField() {
   applyManualTabLabels(manualTabContext.tabType);
 }
 
+function addManualTabCustomField() {
+  if (!manualTabContext) return;
+  const input = document.getElementById('manualTabNewFieldInput');
+  const label = (input?.value || '').trim();
+  if (!label) {
+    showMessage('Informe o nome do novo campo.');
+    return;
+  }
+  const baseKey = normalizeManualFieldKey(label);
+  if (!baseKey) {
+    showMessage('Nome inválido. Use letras e números.');
+    return;
+  }
+  const tabType = manualTabContext.tabType;
+  const uniqueKey = generateUniqueManualFieldKey(tabType, baseKey);
+  const customFields = getManualCustomFields(tabType);
+  customFields.push({ key: uniqueKey, label });
+  saveManualCustomFields(tabType, customFields);
+
+  const { config } = manualTabContext;
+  if (!config.order.includes(uniqueKey)) {
+    config.order.push(uniqueKey);
+  }
+  config.hidden = config.hidden.filter(item => item !== uniqueKey);
+  config.labels = { ...config.labels, [uniqueKey]: label };
+  saveManualTabConfig(tabType, config);
+  manualTabContext.config = config;
+  ensureManualTabColumns(tabType);
+  renderManualTabManager();
+  applyManualTabLabels(tabType);
+  if (tabType === 'inventario') {
+    applyFilters();
+  } else {
+    applyMachineFilters();
+  }
+  if (input) input.value = '';
+  showActionToast('Nova coluna adicionada com sucesso.');
+}
+
 function hideManualTabField(key) {
   if (!manualTabContext) return;
   const { config } = manualTabContext;
@@ -3833,9 +4152,17 @@ function saveManualTabFields() {
 function resetManualTabFields() {
   if (!manualTabContext) return;
   localStorage.removeItem(`ti-tab-config-${manualTabContext.tabType}`);
+  localStorage.removeItem(manualCustomFieldsKey(manualTabContext.tabType));
+  localStorage.removeItem(manualCustomValuesKey(manualTabContext.tabType));
   manualTabContext.config = getManualTabConfig(manualTabContext.tabType);
+  ensureManualTabColumns(manualTabContext.tabType);
   renderManualTabManager();
   applyManualTabLabels(manualTabContext.tabType);
+  if (manualTabContext.tabType === 'inventario') {
+    applyFilters();
+  } else {
+    applyMachineFilters();
+  }
 }
 
 function closeManageManualTabModal(e) {
@@ -3932,6 +4259,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
 
 function addField() {
   addFieldWithValues();
+  showActionToast('Nova coluna adicionada com sucesso.');
 }
 function removeField(idx) {
   // marca como removido
@@ -4028,6 +4356,7 @@ async function createNewTab() {
 
   closeCreateTabModal();
   loadDynamicTabs(); // upgrade, não quebra nada
+  showActionToast(`Aba "${nome}" criada com sucesso.`);
 }
 async function openModulo(modulo) {
   switchTab('modulo');
@@ -4099,6 +4428,7 @@ for (let i = 0; i < camposValidos.length; i++) {
 
   closeCreateTabModal();
   await carregarModulos();
+  showActionToast(`Aba "${nome}" criada com sucesso.`);
 }
 function closeAllModals() {
   document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));
@@ -4221,7 +4551,15 @@ document.addEventListener('keydown', (e) => {
     const topModal = openModals[openModals.length - 1];
     if (topModal) {
       closeModalByEsc(topModal);
+      return;
     }
+    closeTabMenus();
+    document.getElementById('exportMenuInv')?.classList.add('hidden');
+    document.getElementById('exportMenuMq')?.classList.add('hidden');
+    document.getElementById('exportMenuMod')?.classList.add('hidden');
+    document.getElementById('sortMenuMq')?.classList.add('hidden');
+    document.getElementById('sortMenuInv')?.classList.add('hidden');
+    document.getElementById('sortMenuMod')?.classList.add('hidden');
     return;
   }
 
@@ -4310,6 +4648,7 @@ document.addEventListener('keydown', (e) => {
   window.openManualTabManager = openManualTabManager;
   window.saveManualTabFields = saveManualTabFields;
   window.addManualTabField = addManualTabField;
+  window.addManualTabCustomField = addManualTabCustomField;
   window.hideManualTabField = hideManualTabField;
   window.resetManualTabFields = resetManualTabFields;
   window.closeManageManualTabModal = closeManageManualTabModal;
