@@ -2641,21 +2641,7 @@ function renderImportPreview() {
     actionBtn.disabled = false;
   }
 
-  if (validationEl) {
-    if (validation.issues.length || validation.errorCount > 0) {
-      const issuesText = validation.issues.length
-        ? `<div>Campos ausentes serão importados em branco:</div><ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul>`
-        : '';
-      const rowsText = validation.errorCount > 0
-        ? `<div>Existem ${validation.errorCount} célula(s) obrigatória(s) vazia(s). Você pode importar e editar depois.</div>`
-        : '';
-      validationEl.innerHTML = `${issuesText}${rowsText}`;
-      validationEl.classList.remove('hidden');
-    } else {
-      validationEl.classList.add('hidden');
-      validationEl.innerHTML = '';
-    }
-  }
+  renderImportValidation(validation, validationEl);
 }
 
 function updateImportCell(row, col, value) {
@@ -2687,20 +2673,36 @@ function applyImportValidation() {
     actionBtn.disabled = false;
   }
 
-  if (validationEl) {
-    if (validation.issues.length || validation.errorCount > 0) {
-      const issuesText = validation.issues.length
-        ? `<div>Campos ausentes serão importados em branco:</div><ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul>`
-        : '';
-      const rowsText = validation.errorCount > 0
-        ? `<div>Existem ${validation.errorCount} célula(s) obrigatória(s) vazia(s). Você pode importar e editar depois.</div>`
-        : '';
-      validationEl.innerHTML = `${issuesText}${rowsText}`;
-      validationEl.classList.remove('hidden');
-    } else {
-      validationEl.classList.add('hidden');
-      validationEl.innerHTML = '';
-    }
+  renderImportValidation(validation, validationEl);
+}
+
+function renderImportValidation(validation, validationEl) {
+  if (!validationEl) return;
+  if (validation.issues.length || validation.errorCount > 0) {
+    const issuesText = validation.issues.length
+      ? `<div class="import-validation-section"><span class="import-validation-label">Campos ausentes serão importados em branco:</span><ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul></div>`
+      : '';
+    const rowsText = validation.errorCount > 0
+      ? `<div class="import-validation-section">Existem ${validation.errorCount} célula(s) obrigatória(s) vazia(s). Você pode importar e editar depois.</div>`
+      : '';
+    const title = validation.errorCount > 0
+      ? 'Há campos obrigatórios vazios'
+      : 'Alguns campos não foram mapeados';
+    validationEl.innerHTML = `
+      <div class="import-validation-header">
+        <span class="import-validation-icon" aria-hidden="true">!</span>
+        <div>
+          <strong>${title}</strong>
+          <span class="import-validation-subtitle">Revise os dados antes de importar.</span>
+        </div>
+      </div>
+      ${issuesText}
+      ${rowsText}
+    `;
+    validationEl.classList.remove('hidden');
+  } else {
+    validationEl.classList.add('hidden');
+    validationEl.innerHTML = '';
   }
 }
 function mapImportRows() {
@@ -3390,6 +3392,13 @@ if (moduloTbody) {
 
     updateBulkUI();
   });
+
+  moduloTbody.addEventListener('click', (e) => {
+    const el = e.target.closest('.desc-preview');
+    if (!el) return;
+
+    openDescModal(el);
+  });
 }
 
 function renderModuloCell(fieldName, value, row = {}, categoriaFieldName = '') {
@@ -3414,6 +3423,13 @@ function renderModuloCell(fieldName, value, row = {}, categoriaFieldName = '') {
       <div class="status-pill status-${normalizeStatus(display)}">
         <span class="status-dot"></span>
         <span class="status-text">${escapeHtml(display)}</span>
+      </div>
+    `;
+  }
+  if (normalizedField.includes('descricao')) {
+    return `
+      <div class="desc-preview" data-full="${escapeHtml(label)}">
+        ${escapeHtml(label)}
       </div>
     `;
   }

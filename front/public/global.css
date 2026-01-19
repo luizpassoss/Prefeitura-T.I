@@ -817,6 +817,23 @@ body.theme-dark #descModalContent {
   color: #e2e8f0;
 }
 
+body.theme-dark #descModal .card {
+  border-color: rgba(51, 65, 85, 0.7);
+  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.65);
+}
+
+body.theme-dark #descModal h2::before {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(14, 116, 144, 0.25));
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.3);
+}
+
+body.theme-dark #descModalContent {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(51, 65, 85, 0.7);
+  box-shadow: inset 0 1px 2px rgba(2, 6, 23, 0.35);
+}
+
 body.theme-dark .card,
 body.theme-dark .create-tab-card {
   background: #121826;
@@ -973,22 +990,24 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(15, 23, 42, 0.45);
   display: none;
   align-items: center;
   justify-content: center;
   padding: var(--space-5);
   z-index: 9999;
+  backdrop-filter: blur(6px);
+  transition: opacity 0.25s ease;
 }
 
 .modal.show {
   display: flex !important;
-  animation: fadeIn 0.2s ease;
+  animation: fadeIn 0.25s ease;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: scale(0.98) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .card {
@@ -997,7 +1016,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   background: #fff;
   border-radius: 14px;
   padding: var(--space-5);
-  box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .modal.hidden {
   display: none !important;
@@ -1188,6 +1208,53 @@ body.theme-dark .file-input-name {
   color: #1f2937;
 }
 
+#descModal .card {
+  max-width: 640px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.22);
+  animation: popIn 0.28s ease;
+}
+
+#descModal h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+#descModal h2::before {
+  content: '';
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(14, 116, 144, 0.2));
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+#descModalContent {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+  font-size: 14px;
+  line-height: 1.7;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#descModalContent:hover {
+  border-color: rgba(148, 163, 184, 0.6);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .create-tab-header {
   margin-top: 18px;
   display: flex;
@@ -1329,6 +1396,13 @@ label {
   font-weight: bold;
   cursor: pointer;
   font-size: 12px ;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.btn-cancelar:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
 }
 
 .btn-salvar {
@@ -1341,10 +1415,13 @@ label {
   font-weight: bold;
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .btn-salvar:hover {
   background: #2f5fc5;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.2);
 }
 
 .btn-salvar:disabled {
@@ -2503,13 +2580,67 @@ body.theme-dark .status-inativa .status-dot {
 }
 
 .import-validation {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #f59e0b;
-  background: rgba(251, 191, 36, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: linear-gradient(120deg, rgba(251, 191, 36, 0.18), rgba(251, 191, 36, 0.06));
   color: #92400e;
   font-size: 13px;
   margin-bottom: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.import-validation::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 0;
+  border-left: 4px solid rgba(245, 158, 11, 0.7);
+  pointer-events: none;
+}
+
+.import-validation-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.import-validation-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #92400e;
+  background: rgba(251, 191, 36, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.25);
+}
+
+.import-validation-subtitle {
+  display: block;
+  font-size: 12px;
+  color: #a16207;
+  margin-top: 2px;
+}
+
+.import-validation-section {
+  font-size: 12.5px;
+  color: #7c2d12;
+}
+
+.import-validation-section ul {
+  margin: 6px 0 0 18px;
+  padding: 0;
+}
+
+.import-validation-label {
+  font-weight: 600;
 }
 
 .import-mapping-row th {
@@ -2538,8 +2669,27 @@ body.theme-dark .status-inativa .status-dot {
 
 body.theme-dark .import-validation {
   border-color: rgba(251, 191, 36, 0.5);
-  background: rgba(251, 191, 36, 0.08);
+  background: linear-gradient(120deg, rgba(251, 191, 36, 0.16), rgba(15, 23, 42, 0.2));
   color: #fcd34d;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.4);
+}
+
+body.theme-dark .import-validation::before {
+  border-left-color: rgba(251, 191, 36, 0.75);
+}
+
+body.theme-dark .import-validation-icon {
+  color: #facc15;
+  background: rgba(251, 191, 36, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.4);
+}
+
+body.theme-dark .import-validation-subtitle {
+  color: #fde68a;
+}
+
+body.theme-dark .import-validation-section {
+  color: #fef3c7;
 }
 
 body.theme-dark .import-mapping-row th {
