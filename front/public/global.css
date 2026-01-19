@@ -2614,6 +2614,37 @@ body.theme-dark .sort-quick-btn.is-active {
   box-shadow: 0 10px 22px rgba(59, 130, 246, 0.35);
 }
 
+.sort-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.sort-option-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #f8fafc;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.sort-option-item input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+}
+
+body.theme-dark .sort-option-item {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(51, 65, 85, 0.7);
+  color: #e2e8f0;
+}
+
 .import-validation {
   display: flex;
   flex-direction: column;

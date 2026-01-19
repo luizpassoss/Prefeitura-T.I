@@ -1018,6 +1018,17 @@ function applyMachineSort(list) {
   return sortWithIndex(list, item => item[key], dir);
 }
 
+function getModuleSortMenuOptions(displayCampos) {
+  const candidates = (displayCampos || []).map(campo => ({
+    key: normalizeModuloSortKey(campo.nome),
+    label: campo.nome
+  }));
+  const stored = loadModuleSortOptions(moduloAtual?.id);
+  const selectedKeys = resolveSortOptionsSelection(candidates, stored);
+  const filtered = candidates.filter(candidate => selectedKeys.includes(candidate.key));
+  return filtered.length ? filtered : candidates;
+}
+
 function toggleSort(state, key) {
   if (state.key === key) {
     state.dir = state.dir === 'asc' ? 'desc' : 'asc';
@@ -3379,8 +3390,9 @@ function renderModuloDinamico() {
 
   const sortMenuOptions = document.getElementById('sortMenuModOptions');
   if (sortMenuOptions) {
-    sortMenuOptions.innerHTML = displayCampos
-      .map((campo) => `<button type="button" data-sort-key="${campo.nome}">${campo.nome}</button>`)
+    const availableOptions = getModuleSortMenuOptions(displayCampos);
+    sortMenuOptions.innerHTML = availableOptions
+      .map((campo) => `<button type="button" data-sort-key="${campo.label}">${campo.label}</button>`)
       .join('');
     initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
   }
@@ -3841,6 +3853,84 @@ function openNovoRegistroModulo() {
 }
 
 let newTabFields = window.newTabFields;
+let newTabSortOptions = [];
+
+const moduleSortOptionsKey = (moduleId) => `ti-module-sort-options-${moduleId}`;
+
+function normalizeModuloSortKey(name) {
+  return normalizeHeader(name || '').replace(/\s+/g, '');
+}
+
+function loadModuleSortOptions(moduleId) {
+  if (!moduleId) return [];
+  const stored = localStorage.getItem(moduleSortOptionsKey(moduleId));
+  if (!stored) return [];
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveModuleSortOptions(moduleId, options) {
+  if (!moduleId) return;
+  localStorage.setItem(moduleSortOptionsKey(moduleId), JSON.stringify(options || []));
+}
+
+function getSortOptionCandidates() {
+  const fields = getFieldRowsData().filter(field => field.nome);
+  const seen = new Set();
+  return fields.reduce((acc, field) => {
+    const key = normalizeModuloSortKey(field.nome);
+    if (!key || seen.has(key)) return acc;
+    seen.add(key);
+    acc.push({ key, label: field.nome });
+    return acc;
+  }, []);
+}
+
+function resolveSortOptionsSelection(candidates, selectedKeys) {
+  if (!candidates.length) return [];
+  const validKeys = new Set(candidates.map(item => item.key));
+  const normalizedSelected = (selectedKeys || []).filter(key => validKeys.has(key));
+  return normalizedSelected.length ? normalizedSelected : candidates.map(item => item.key);
+}
+
+function renderSortOptionsPicker(selectedKeys = null) {
+  const container = document.getElementById('sortOptionsContainer');
+  if (!container) return;
+
+  const candidates = getSortOptionCandidates();
+  newTabSortOptions = resolveSortOptionsSelection(candidates, selectedKeys || newTabSortOptions);
+
+  if (!candidates.length) {
+    container.innerHTML = '<span class="small">Adicione campos para liberar opções de ordenação.</span>';
+    return;
+  }
+
+  container.innerHTML = candidates.map(option => `
+    <label class="sort-option-item">
+      <input
+        type="checkbox"
+        value="${option.key}"
+        ${newTabSortOptions.includes(option.key) ? 'checked' : ''}
+        onchange="toggleSortOption(this)"
+      />
+      ${escapeHtml(option.label)}
+    </label>
+  `).join('');
+}
+
+function toggleSortOption(input) {
+  const key = input.value;
+  if (!key) return;
+  if (input.checked) {
+    if (!newTabSortOptions.includes(key)) newTabSortOptions.push(key);
+  } else {
+    newTabSortOptions = newTabSortOptions.filter(item => item !== key);
+  }
+}
 
 const tabTemplates = {
   inventario: [
@@ -3909,6 +3999,7 @@ function rebuildFieldRowsFromDOM() {
   window.newTabFields = newTabFields;
   container.innerHTML = '';
   rowsData.forEach(row => addFieldWithValues(row));
+  renderSortOptionsPicker();
 }
 
 function validateDuplicateFields(fields) {
@@ -4059,6 +4150,7 @@ function openCreateTabModal() {
   manageTabContext = null;
   newTabFields = [];
   window.newTabFields = newTabFields;
+  newTabSortOptions = [];
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
   document.getElementById('newTabDescription').value = '';
@@ -4072,6 +4164,7 @@ function openCreateTabModal() {
   const submitBtn = document.getElementById('createTabSubmitBtn');
   if (submitBtn) submitBtn.textContent = 'Criar Aba';
   initFieldDragAndDrop();
+  renderSortOptionsPicker();
   openModalById('createTabModal');
 }
 
@@ -4100,6 +4193,7 @@ async function openManageModule(mod) {
   };
   newTabFields = [];
   window.newTabFields = newTabFields;
+  newTabSortOptions = [];
   const container = document.getElementById('fieldsContainer');
   if (container) container.innerHTML = '';
 
@@ -4128,6 +4222,8 @@ async function openManageModule(mod) {
     });
   });
 
+  newTabSortOptions = loadModuleSortOptions(mod.id);
+  renderSortOptionsPicker(newTabSortOptions);
   initFieldDragAndDrop();
   openModalById('createTabModal');
 }
@@ -4200,6 +4296,10 @@ async function saveManagedModule() {
       });
     }
   }
+
+  const sortCandidates = getSortOptionCandidates();
+  const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
+  saveModuleSortOptions(moduleId, resolvedSortOptions);
 
   closeCreateTabModal();
   const currentModuleId = moduleId;
@@ -4445,6 +4545,7 @@ function applyTabTemplate() {
   if (templateKey === 'custom') return;
   const templateFields = tabTemplates[templateKey] || [];
   templateFields.forEach(field => addFieldWithValues(field));
+  renderSortOptionsPicker();
 }
 
 function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id = null } = {}) {
@@ -4476,7 +4577,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
       class="field-name"
       placeholder="Nome do campo"
       value="${escapeHtml(nome)}"
-      oninput="window.newTabFields[${idx}].nome = this.value"
+      oninput="window.newTabFields[${idx}].nome = this.value; renderSortOptionsPicker();"
     />
 
     <select class="field-type" onchange="window.newTabFields[${idx}].tipo = this.value">
@@ -4509,6 +4610,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
 
   document.getElementById('fieldsContainer').appendChild(row);
   initFieldDragAndDrop();
+  renderSortOptionsPicker();
 
   const typeSelect = row.querySelector('.field-type');
   if (typeSelect) {
@@ -4530,6 +4632,7 @@ function removeField(idx) {
   rows.forEach(r => {
     if (Number(r.dataset.idx) === idx) r.remove();
   });
+  renderSortOptionsPicker();
 }
 
 function sortFieldsAlphabetically() {
@@ -4540,6 +4643,7 @@ function sortFieldsAlphabetically() {
   const container = document.getElementById('fieldsContainer');
   if (container) container.innerHTML = '';
   newTabFields.forEach(field => addFieldWithValues(field));
+  renderSortOptionsPicker();
 }
 
 
@@ -4683,6 +4787,10 @@ for (let i = 0; i < camposValidos.length; i++) {
     })
   });
 }
+
+  const sortCandidates = getSortOptionCandidates();
+  const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
+  saveModuleSortOptions(modulo.id, resolvedSortOptions);
 
 
   closeCreateTabModal();
