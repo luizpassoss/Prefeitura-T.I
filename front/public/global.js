@@ -1096,7 +1096,7 @@ let PREFEITURA_LOGO = null;
 
 async function carregarLogoPrefeitura() {
   try {
-    const res = await fetch('Imagens/cidade-sao-francisco.svg');
+    const res = await fetch('Imagens/logo-prefeitura.svg');
     const blob = await res.blob();
 
     PREFEITURA_LOGO = await new Promise(resolve => {
