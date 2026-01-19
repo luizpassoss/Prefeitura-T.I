@@ -219,6 +219,10 @@ body.theme-dark {
   object-fit: contain;
 }
 
+body.theme-dark .brand-icon img {
+  mix-blend-mode: multiply;
+}
+
 .brand-text {
   display: flex;
   flex-direction: column;
