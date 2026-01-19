@@ -331,6 +331,8 @@ if (btnNovaAba) {
   initSortOrderToggle('inventory', sortState.inventory, applyFilters);
   initSortOrderToggle('machines', sortState.machines, applyMachineFilters);
   initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
+  initSortQuickButtons('inventory', sortState.inventory, applyFilters);
+  initSortQuickButtons('machines', sortState.machines, applyMachineFilters);
   ensureManualTabColumns('inventario');
   ensureManualTabColumns('maquinas');
   applyManualTabLabels('inventario');
@@ -911,6 +913,122 @@ function updateSortIndicators(scopeSelector, state) {
   });
 }
 
+function updateSortQuickButtons(scope, state) {
+  document.querySelectorAll(`.sort-quick-btn[data-sort-scope="${scope}"]`).forEach((btn) => {
+    const isActive =
+      btn.dataset.sortKey === state.key &&
+      (btn.dataset.sortDir || 'asc') === state.dir;
+    btn.classList.toggle('is-active', isActive);
+  });
+}
+
+function initSortQuickButtons(scope, state, onApply) {
+  const buttons = document.querySelectorAll(`.sort-quick-btn[data-sort-scope="${scope}"]`);
+  if (!buttons.length) return;
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setSort(state, btn.dataset.sortKey, btn.dataset.sortDir || 'asc');
+      updateSortQuickButtons(scope, state);
+      if (typeof onApply === 'function') onApply();
+    });
+  });
+  updateSortQuickButtons(scope, state);
+}
+
+function toTimestamp(value) {
+  if (!value) return null;
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isNaN(numeric) && numeric > 0) return numeric;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function getItemTimestamp(item) {
+  const candidates = [
+    item.updated_at,
+    item.updatedAt,
+    item.data_atualizacao,
+    item.dataAtualizacao,
+    item.created_at,
+    item.createdAt,
+    item.data_criacao,
+    item.dataCriacao
+  ];
+  for (const candidate of candidates) {
+    const timestamp = toTimestamp(candidate);
+    if (timestamp !== null) return timestamp;
+  }
+  if (typeof item.id === 'number') return item.id;
+  return 0;
+}
+
+function getInventoryIssueScore(item) {
+  let score = 0;
+  if (!normalizeSortValue(item.link)) score += 2;
+  if (!normalizeSortValue(item.telefone)) score += 2;
+  if (!normalizeSortValue(item.local)) score += 1;
+  if (!normalizeSortValue(item.endereco)) score += 1;
+  if (!normalizeSortValue(item.velocidade)) score += 1;
+  return score;
+}
+
+function getMachineIssueScore(item) {
+  let score = 0;
+  const status = normalizeSortValue(item.status).toLowerCase();
+  if (status === 'manutenção') score += 3;
+  if (status === 'inativa') score += 2;
+  if (!normalizeSortValue(item.patrimonio)) score += 2;
+  if (!normalizeSortValue(item.descricao)) score += 1;
+  if (!normalizeSortValue(item.local)) score += 1;
+  return score;
+}
+
+function getMachineStatusPriority(item) {
+  const status = normalizeSortValue(item.status).toLowerCase();
+  if (status === 'manutenção') return 0;
+  if (status === 'inativa') return 1;
+  if (status === 'ativa') return 2;
+  return 3;
+}
+
+function applyInventorySort(list) {
+  if (!sortState.inventory.key) return list;
+  const { key, dir } = sortState.inventory;
+  if (key === 'issues') {
+    return sortWithIndex(list, item => getInventoryIssueScore(item), dir);
+  }
+  if (key === 'recent') {
+    return sortWithIndex(list, item => getItemTimestamp(item), dir);
+  }
+  return sortWithIndex(list, item => item[key], dir);
+}
+
+function applyMachineSort(list) {
+  if (!sortState.machines.key) return list;
+  const { key, dir } = sortState.machines;
+  if (key === 'issues') {
+    return sortWithIndex(list, item => getMachineIssueScore(item), dir);
+  }
+  if (key === 'recent') {
+    return sortWithIndex(list, item => getItemTimestamp(item), dir);
+  }
+  if (key === 'status_priority') {
+    return sortWithIndex(list, item => getMachineStatusPriority(item), dir);
+  }
+  return sortWithIndex(list, item => item[key], dir);
+}
+
+function getModuleSortMenuOptions(displayCampos) {
+  const candidates = (displayCampos || []).map(campo => ({
+    key: normalizeModuloSortKey(campo.nome),
+    label: campo.nome
+  }));
+  const stored = loadModuleSortOptions(moduloAtual?.id);
+  const selectedKeys = resolveSortOptionsSelection(candidates, stored);
+  const filtered = candidates.filter(candidate => selectedKeys.includes(candidate.key));
+  return filtered.length ? filtered : candidates;
+}
+
 function toggleSort(state, key) {
   if (state.key === key) {
     state.dir = state.dir === 'asc' ? 'desc' : 'asc';
@@ -1114,12 +1232,10 @@ async function carregarLogoPrefeitura() {
 
   function applyFilters(){
     let filtered = getFiltered();
-    if (sortState.inventory.key) {
-      const key = sortState.inventory.key;
-      filtered = sortWithIndex(filtered, item => item[key], sortState.inventory.dir);
-    }
+    filtered = applyInventorySort(filtered);
     renderTable(filtered);
     updateSortIndicators('#tb thead', sortState.inventory);
+    updateSortQuickButtons('inventory', sortState.inventory);
     updateFilterBadges();
   }
   function renderPills({q, cat, tel, vmin, vmax}){
@@ -1612,11 +1728,6 @@ mtbody.addEventListener('click', (e) => {
     list = list.filter(x => (x.descricao || '').toLowerCase().includes(descricaoColumnFilter));
   }
 
-  if (sortState.machines.key) {
-    const key = sortState.machines.key;
-    list = sortWithIndex(list, item => item[key], sortState.machines.dir);
-  }
-
   if (nomeColumnFilter) {
     list = list.filter(x => (x.nome_maquina || '').toLowerCase().includes(nomeColumnFilter));
   }
@@ -1639,13 +1750,11 @@ mtbody.addEventListener('click', (e) => {
 
   list = applyManualCustomFilters(list, 'maquinas');
 
-  if (sortState.machines.key) {
-    const key = sortState.machines.key;
-    list = sortWithIndex(list, item => item[key], sortState.machines.dir);
-  }
+  list = applyMachineSort(list);
 
   renderMachines(list);
   updateSortIndicators('#tabMaquinas thead', sortState.machines);
+  updateSortQuickButtons('machines', sortState.machines);
   updateFilterBadges();
 }
 
@@ -3281,8 +3390,9 @@ function renderModuloDinamico() {
 
   const sortMenuOptions = document.getElementById('sortMenuModOptions');
   if (sortMenuOptions) {
-    sortMenuOptions.innerHTML = displayCampos
-      .map((campo) => `<button type="button" data-sort-key="${campo.nome}">${campo.nome}</button>`)
+    const availableOptions = getModuleSortMenuOptions(displayCampos);
+    sortMenuOptions.innerHTML = availableOptions
+      .map((campo) => `<button type="button" data-sort-key="${campo.label}">${campo.label}</button>`)
       .join('');
     initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
   }
@@ -3743,6 +3853,84 @@ function openNovoRegistroModulo() {
 }
 
 let newTabFields = window.newTabFields;
+let newTabSortOptions = [];
+
+const moduleSortOptionsKey = (moduleId) => `ti-module-sort-options-${moduleId}`;
+
+function normalizeModuloSortKey(name) {
+  return normalizeHeader(name || '').replace(/\s+/g, '');
+}
+
+function loadModuleSortOptions(moduleId) {
+  if (!moduleId) return [];
+  const stored = localStorage.getItem(moduleSortOptionsKey(moduleId));
+  if (!stored) return [];
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveModuleSortOptions(moduleId, options) {
+  if (!moduleId) return;
+  localStorage.setItem(moduleSortOptionsKey(moduleId), JSON.stringify(options || []));
+}
+
+function getSortOptionCandidates() {
+  const fields = getFieldRowsData().filter(field => field.nome);
+  const seen = new Set();
+  return fields.reduce((acc, field) => {
+    const key = normalizeModuloSortKey(field.nome);
+    if (!key || seen.has(key)) return acc;
+    seen.add(key);
+    acc.push({ key, label: field.nome });
+    return acc;
+  }, []);
+}
+
+function resolveSortOptionsSelection(candidates, selectedKeys) {
+  if (!candidates.length) return [];
+  const validKeys = new Set(candidates.map(item => item.key));
+  const normalizedSelected = (selectedKeys || []).filter(key => validKeys.has(key));
+  return normalizedSelected.length ? normalizedSelected : candidates.map(item => item.key);
+}
+
+function renderSortOptionsPicker(selectedKeys = null) {
+  const container = document.getElementById('sortOptionsContainer');
+  if (!container) return;
+
+  const candidates = getSortOptionCandidates();
+  newTabSortOptions = resolveSortOptionsSelection(candidates, selectedKeys || newTabSortOptions);
+
+  if (!candidates.length) {
+    container.innerHTML = '<span class="small">Adicione campos para liberar opções de ordenação.</span>';
+    return;
+  }
+
+  container.innerHTML = candidates.map(option => `
+    <label class="sort-option-item">
+      <input
+        type="checkbox"
+        value="${option.key}"
+        ${newTabSortOptions.includes(option.key) ? 'checked' : ''}
+        onchange="toggleSortOption(this)"
+      />
+      ${escapeHtml(option.label)}
+    </label>
+  `).join('');
+}
+
+function toggleSortOption(input) {
+  const key = input.value;
+  if (!key) return;
+  if (input.checked) {
+    if (!newTabSortOptions.includes(key)) newTabSortOptions.push(key);
+  } else {
+    newTabSortOptions = newTabSortOptions.filter(item => item !== key);
+  }
+}
 
 const tabTemplates = {
   inventario: [
@@ -3811,6 +3999,7 @@ function rebuildFieldRowsFromDOM() {
   window.newTabFields = newTabFields;
   container.innerHTML = '';
   rowsData.forEach(row => addFieldWithValues(row));
+  renderSortOptionsPicker();
 }
 
 function validateDuplicateFields(fields) {
@@ -3961,6 +4150,7 @@ function openCreateTabModal() {
   manageTabContext = null;
   newTabFields = [];
   window.newTabFields = newTabFields;
+  newTabSortOptions = [];
   document.getElementById('fieldsContainer').innerHTML = '';
   document.getElementById('newTabName').value = '';
   document.getElementById('newTabDescription').value = '';
@@ -3974,6 +4164,7 @@ function openCreateTabModal() {
   const submitBtn = document.getElementById('createTabSubmitBtn');
   if (submitBtn) submitBtn.textContent = 'Criar Aba';
   initFieldDragAndDrop();
+  renderSortOptionsPicker();
   openModalById('createTabModal');
 }
 
@@ -4002,6 +4193,7 @@ async function openManageModule(mod) {
   };
   newTabFields = [];
   window.newTabFields = newTabFields;
+  newTabSortOptions = [];
   const container = document.getElementById('fieldsContainer');
   if (container) container.innerHTML = '';
 
@@ -4030,6 +4222,8 @@ async function openManageModule(mod) {
     });
   });
 
+  newTabSortOptions = loadModuleSortOptions(mod.id);
+  renderSortOptionsPicker(newTabSortOptions);
   initFieldDragAndDrop();
   openModalById('createTabModal');
 }
@@ -4102,6 +4296,10 @@ async function saveManagedModule() {
       });
     }
   }
+
+  const sortCandidates = getSortOptionCandidates();
+  const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
+  saveModuleSortOptions(moduleId, resolvedSortOptions);
 
   closeCreateTabModal();
   const currentModuleId = moduleId;
@@ -4347,6 +4545,7 @@ function applyTabTemplate() {
   if (templateKey === 'custom') return;
   const templateFields = tabTemplates[templateKey] || [];
   templateFields.forEach(field => addFieldWithValues(field));
+  renderSortOptionsPicker();
 }
 
 function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id = null } = {}) {
@@ -4378,7 +4577,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
       class="field-name"
       placeholder="Nome do campo"
       value="${escapeHtml(nome)}"
-      oninput="window.newTabFields[${idx}].nome = this.value"
+      oninput="window.newTabFields[${idx}].nome = this.value; renderSortOptionsPicker();"
     />
 
     <select class="field-type" onchange="window.newTabFields[${idx}].tipo = this.value">
@@ -4411,6 +4610,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
 
   document.getElementById('fieldsContainer').appendChild(row);
   initFieldDragAndDrop();
+  renderSortOptionsPicker();
 
   const typeSelect = row.querySelector('.field-type');
   if (typeSelect) {
@@ -4432,6 +4632,7 @@ function removeField(idx) {
   rows.forEach(r => {
     if (Number(r.dataset.idx) === idx) r.remove();
   });
+  renderSortOptionsPicker();
 }
 
 function sortFieldsAlphabetically() {
@@ -4442,6 +4643,7 @@ function sortFieldsAlphabetically() {
   const container = document.getElementById('fieldsContainer');
   if (container) container.innerHTML = '';
   newTabFields.forEach(field => addFieldWithValues(field));
+  renderSortOptionsPicker();
 }
 
 
@@ -4585,6 +4787,10 @@ for (let i = 0; i < camposValidos.length; i++) {
     })
   });
 }
+
+  const sortCandidates = getSortOptionCandidates();
+  const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
+  saveModuleSortOptions(modulo.id, resolvedSortOptions);
 
 
   closeCreateTabModal();
