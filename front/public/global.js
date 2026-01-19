@@ -1860,6 +1860,10 @@ function drawHeader(doc, titulo, logoBase64) {
   const pageMargin = 24;
   const titleY = 52;
   const ruleY = 60;
+  const logoSize = 12;
+  const logoY = 22;
+  const textOffset = 6;
+  const textStartX = pageMargin + logoSize + textOffset;
 
   /* ===== LOGO ===== */
   if (logoBase64) {
@@ -1869,9 +1873,9 @@ function drawHeader(doc, titulo, logoBase64) {
         logoBase64,
         imageType,
         pageMargin,   // X
-        18,   // Y
-        16,   // largura
-        16    // altura
+        logoY,   // Y
+        logoSize,   // largura
+        logoSize    // altura
       );
     } catch (err) {
       console.warn('Erro ao inserir logo no PDF:', err);
@@ -1881,11 +1885,11 @@ function drawHeader(doc, titulo, logoBase64) {
   /* ===== TEXTO INSTITUCIONAL ===== */
   doc.setFont('Helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text('Prefeitura Municipal de São Francisco do Sul', pageMargin + 22, 26);
+  doc.text('Prefeitura Municipal de São Francisco do Sul', textStartX, 26);
 
   doc.setFontSize(9);
   doc.setFont('Helvetica', 'normal');
-  doc.text('Secretaria Municipal de Tecnologia da Informação', pageMargin + 22, 34);
+  doc.text('Secretaria Municipal de Tecnologia da Informação', textStartX, 34);
 
   /* ===== TÍTULO ===== */
   doc.setFontSize(13);
