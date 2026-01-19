@@ -2717,6 +2717,7 @@ body.theme-dark .sort-quick-btn.is-active {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 140px;
 }
 
 .field-type-help {
@@ -2759,6 +2760,7 @@ body.theme-dark .sort-quick-btn.is-active {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 220px;
 }
 
 .field-type-options input {
@@ -2778,6 +2780,10 @@ body.theme-dark .sort-quick-btn.is-active {
 .field-options-summary {
   font-size: 12px;
   color: #475569;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .field-options-modal-body {
@@ -3166,7 +3172,7 @@ body.theme-dark #fieldsContainer:empty::before {
 
 .field-row {
   display: grid;
-  grid-template-columns: 1.6fr 1.4fr 1fr 0.9fr 0.2fr 0.35fr;
+  grid-template-columns: 1.5fr 1.2fr 1fr 1.4fr auto auto auto;
   gap: 10px;
   align-items: center;
 }
