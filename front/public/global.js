@@ -3540,7 +3540,10 @@ function renderFormularioModulo(valores = {}) {
 
   moduloCampos.forEach((campo, index) => {
     const field = document.createElement('div');
-    field.className = 'form-full';
+    const normalizedFieldName = normalizeHeader(campo.nome);
+    if (normalizedFieldName.includes('descricao')) {
+      field.className = 'form-full';
+    }
 
     const label = document.createElement('label');
     label.textContent = campo.nome;
@@ -3552,7 +3555,7 @@ function renderFormularioModulo(valores = {}) {
     };
 
     let input;
-    const normalizedName = normalizeHeader(campo.nome).replace(/\s+/g, '');
+    const normalizedName = normalizedFieldName.replace(/\s+/g, '');
     const isNomeMaquina = normalizedName.includes('nomemaquina');
     if (isNomeMaquina) {
       const wrapper = document.createElement('div');
@@ -3643,7 +3646,6 @@ function renderFormularioModulo(valores = {}) {
           event.target.value = applyDateMask(event.target.value);
         });
       }
-      const normalizedFieldName = normalizeHeader(campo.nome);
       if (campo.tipo === 'email') {
         input.addEventListener('blur', (event) => {
           event.target.value = event.target.value.trim().toLowerCase();
