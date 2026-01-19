@@ -912,7 +912,14 @@
 <div id="systemMessageModal" class="modal" onclick="closeSystemMessageModal(event)">
   <div class="card" onclick="event.stopPropagation()">
     <div class="modal-heading">
-      <h2 id="systemMessageTitle">Aviso</h2>
+      <div class="system-message-title">
+        <span class="system-message-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation">
+            <path d="M6 12.5l4 4 8-9" />
+          </svg>
+        </span>
+        <h2 id="systemMessageTitle">Aviso</h2>
+      </div>
       <p class="modal-subtitle" id="systemMessageText"></p>
     </div>
 

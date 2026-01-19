@@ -557,13 +557,14 @@ function updateBulkUI() {
     }
   }
 
-function showMessage(message, title = 'Aviso') {
+function showMessage(message, title = 'Aviso', type = 'info') {
     const titleEl = document.getElementById('systemMessageTitle');
     const textEl = document.getElementById('systemMessageText');
     const modalEl = document.getElementById('systemMessageModal');
     if (titleEl) titleEl.textContent = title;
     if (textEl) textEl.textContent = message;
     if (modalEl) {
+      modalEl.classList.toggle('system-message-success', type === 'success');
       openModalById('systemMessageModal');
     } else {
       console.warn('[UI] Modal systemMessageModal não encontrado.');
@@ -3018,7 +3019,7 @@ async function confirmImport() {
       showImportWarning(`Importação concluída com ${result.errorCount || result.errors?.length || 0} erro(s).`);
       if (result.errors?.length) console.table(result.errors);
     } else {
-      showMessage('Importação realizada com sucesso!');
+      showMessage('Importação realizada com sucesso!', 'Importação concluída', 'success');
     }
 
     recordImportHistory({
