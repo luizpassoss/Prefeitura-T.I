@@ -2753,6 +2753,19 @@ body.theme-dark .sort-quick-btn.is-active {
   background: #f8fafc;
 }
 
+.field-type-options {
+  display: none;
+  width: 100%;
+}
+
+.field-type-options input {
+  width: 100%;
+}
+
+.field-type-options.is-visible {
+  display: block;
+}
+
 .field-type-help-item p {
   margin: 4px 0 0;
   color: var(--text-muted);
@@ -2766,10 +2779,11 @@ body.theme-dark .sort-quick-btn.is-active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(37, 99, 235, 0.12);
-  color: #1d4ed8;
-  font-weight: 700;
-  font-size: 14px;
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #64748b;
+  font-weight: 600;
+  font-size: 13px;
 }
 
 body.theme-dark .field-type-help {
@@ -2784,8 +2798,9 @@ body.theme-dark .field-type-help-item {
 }
 
 body.theme-dark .field-type-help-icon {
-  background: rgba(59, 130, 246, 0.25);
-  color: #bfdbfe;
+  background: transparent;
+  border-color: rgba(51, 65, 85, 0.7);
+  color: #cbd5f5;
 }
 
 body.theme-dark .sort-option-item {
