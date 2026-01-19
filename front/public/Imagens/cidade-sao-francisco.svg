@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="64" viewBox="0 0 480 64" fill="none">
+  <g stroke="#d1d5db" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 52h476"/>
+    <path d="M8 52v-6h10v6"/>
+    <path d="M26 52v-14h16v14"/>
+    <path d="M48 52v-10h10v10"/>
+    <path d="M64 52v-18h22v18"/>
+    <path d="M92 52v-8h8v8"/>
+    <path d="M110 52v-24h20v24"/>
+    <path d="M136 52v-12h12v12"/>
+    <path d="M156 52v-30h26v30"/>
+    <path d="M188 52v-16h14v16"/>
+    <path d="M208 52v-22h18v22"/>
+    <path d="M232 52v-12h10v12"/>
+    <path d="M248 52v-28h24v28"/>
+    <path d="M276 52v-18h16v18"/>
+    <path d="M298 52v-10h12v10"/>
+    <path d="M316 52v-26h22v26"/>
+    <path d="M344 52v-14h12v14"/>
+    <path d="M364 52v-20h18v20"/>
+    <path d="M388 52v-12h10v12"/>
+    <path d="M404 52v-24h20v24"/>
+    <path d="M430 52v-10h12v10"/>
+    <path d="M448 52v-16h20v16"/>
+  </g>
+</svg>

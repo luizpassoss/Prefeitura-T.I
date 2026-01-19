@@ -166,7 +166,7 @@ body.theme-dark {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 52px;
+  min-height: 68px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-weight: 600;
   font-size: var(--font-md);
@@ -174,7 +174,7 @@ body.theme-dark {
   cursor: default;
   transition: color 0.3s ease, transform 0.3s ease;
   margin-bottom: 20px;
-  padding: 6px 4px 20px;
+  padding: 6px 6px 28px;
   border-radius: 14px;
   background: transparent;
   border: none;
@@ -184,19 +184,28 @@ body.theme-dark {
 }
 
 .brand::after {
-  content: none;
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 6px;
+  height: 34px;
+  background: url('Imagens/cidade-sao-francisco.svg') center bottom / contain no-repeat;
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .brand-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 0;
   background: transparent;
   border: none;
   box-shadow: none;
+  z-index: 1;
 }
 
 .brand-icon svg {
@@ -205,8 +214,8 @@ body.theme-dark {
 }
 
 .brand-icon img {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
 }
 
@@ -216,12 +225,13 @@ body.theme-dark {
   align-items: flex-start;
   gap: 2px;
   line-height: 1.05;
+  z-index: 1;
 }
 
 .brand-text strong {
-  font-size: 16px;
+  font-size: 12px;
   letter-spacing: 0.2px;
-  white-space: nowrap;
+  text-transform: uppercase;
 }
 
 .brand-text small {
@@ -738,6 +748,7 @@ body.theme-dark .tab-menu-dropdown button:hover {
 
 body.theme-dark .brand::after {
   opacity: 0.35;
+  filter: brightness(0.9);
 }
 
 body.theme-dark .btn {
