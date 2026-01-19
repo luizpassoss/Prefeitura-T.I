@@ -823,10 +823,6 @@ body.theme-dark #descModal .card {
   box-shadow: 0 24px 60px rgba(2, 6, 23, 0.65);
 }
 
-body.theme-dark #descModal h2::before {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(14, 116, 144, 0.25));
-  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.3);
-}
 
 body.theme-dark #descModalContent {
   background: rgba(15, 23, 42, 0.6);
@@ -996,23 +992,23 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   justify-content: center;
   padding: var(--space-5);
   z-index: 9999;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(3px);
   transition: opacity 0.25s ease;
 }
 
 .modal.show {
   display: flex !important;
-  animation: fadeIn 0.25s ease;
+  animation: fadeIn 0.18s ease-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.98) translateY(8px); }
+  from { opacity: 0; transform: scale(0.995) translateY(4px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .card {
   width: 100%;
-  max-width: 620px;
+  max-width: 560px;
   background: #fff;
   border-radius: 14px;
   padding: var(--space-5);
@@ -1224,14 +1220,6 @@ body.theme-dark .file-input-name {
   color: #0f172a;
 }
 
-#descModal h2::before {
-  content: '';
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(14, 116, 144, 0.2));
-  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
-}
 
 #descModalContent {
   margin-top: 12px;
@@ -1688,6 +1676,8 @@ select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  padding-right: 38px;
+  background-color: #f8fafc;
 
   background-image: 
     linear-gradient(45deg, transparent 50%, #94a3b8 50%),
@@ -1699,8 +1689,21 @@ select {
     5px 5px,
     5px 5px;
   background-repeat: no-repeat;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
 
   cursor: pointer;
+}
+
+select:hover {
+  border-color: rgba(100, 116, 139, 0.6);
+  background-color: #f1f5f9;
+}
+
+select option {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #0f172a;
+  background-color: #ffffff;
 }
 
 /* Labels mais clean */
@@ -2577,6 +2580,38 @@ body.theme-dark .status-inativa .status-dot {
 .sort-wrapper .sort-btn {
   padding: 8px 10px;
   font-size: var(--font-xs);
+}
+
+.sort-quick {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sort-quick-label {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.sort-quick-btn {
+  padding: 8px 10px;
+  font-size: var(--font-xs);
+}
+
+.sort-quick-btn.is-active {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+}
+
+body.theme-dark .sort-quick-btn.is-active {
+  background: #3b82f6;
+  border-color: #1d4ed8;
+  color: #0f172a;
+  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.35);
 }
 
 .import-validation {

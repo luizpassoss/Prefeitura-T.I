@@ -331,6 +331,8 @@ if (btnNovaAba) {
   initSortOrderToggle('inventory', sortState.inventory, applyFilters);
   initSortOrderToggle('machines', sortState.machines, applyMachineFilters);
   initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
+  initSortQuickButtons('inventory', sortState.inventory, applyFilters);
+  initSortQuickButtons('machines', sortState.machines, applyMachineFilters);
   ensureManualTabColumns('inventario');
   ensureManualTabColumns('maquinas');
   applyManualTabLabels('inventario');
@@ -911,6 +913,111 @@ function updateSortIndicators(scopeSelector, state) {
   });
 }
 
+function updateSortQuickButtons(scope, state) {
+  document.querySelectorAll(`.sort-quick-btn[data-sort-scope="${scope}"]`).forEach((btn) => {
+    const isActive =
+      btn.dataset.sortKey === state.key &&
+      (btn.dataset.sortDir || 'asc') === state.dir;
+    btn.classList.toggle('is-active', isActive);
+  });
+}
+
+function initSortQuickButtons(scope, state, onApply) {
+  const buttons = document.querySelectorAll(`.sort-quick-btn[data-sort-scope="${scope}"]`);
+  if (!buttons.length) return;
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setSort(state, btn.dataset.sortKey, btn.dataset.sortDir || 'asc');
+      updateSortQuickButtons(scope, state);
+      if (typeof onApply === 'function') onApply();
+    });
+  });
+  updateSortQuickButtons(scope, state);
+}
+
+function toTimestamp(value) {
+  if (!value) return null;
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isNaN(numeric) && numeric > 0) return numeric;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function getItemTimestamp(item) {
+  const candidates = [
+    item.updated_at,
+    item.updatedAt,
+    item.data_atualizacao,
+    item.dataAtualizacao,
+    item.created_at,
+    item.createdAt,
+    item.data_criacao,
+    item.dataCriacao
+  ];
+  for (const candidate of candidates) {
+    const timestamp = toTimestamp(candidate);
+    if (timestamp !== null) return timestamp;
+  }
+  if (typeof item.id === 'number') return item.id;
+  return 0;
+}
+
+function getInventoryIssueScore(item) {
+  let score = 0;
+  if (!normalizeSortValue(item.link)) score += 2;
+  if (!normalizeSortValue(item.telefone)) score += 2;
+  if (!normalizeSortValue(item.local)) score += 1;
+  if (!normalizeSortValue(item.endereco)) score += 1;
+  if (!normalizeSortValue(item.velocidade)) score += 1;
+  return score;
+}
+
+function getMachineIssueScore(item) {
+  let score = 0;
+  const status = normalizeSortValue(item.status).toLowerCase();
+  if (status === 'manutenção') score += 3;
+  if (status === 'inativa') score += 2;
+  if (!normalizeSortValue(item.patrimonio)) score += 2;
+  if (!normalizeSortValue(item.descricao)) score += 1;
+  if (!normalizeSortValue(item.local)) score += 1;
+  return score;
+}
+
+function getMachineStatusPriority(item) {
+  const status = normalizeSortValue(item.status).toLowerCase();
+  if (status === 'manutenção') return 0;
+  if (status === 'inativa') return 1;
+  if (status === 'ativa') return 2;
+  return 3;
+}
+
+function applyInventorySort(list) {
+  if (!sortState.inventory.key) return list;
+  const { key, dir } = sortState.inventory;
+  if (key === 'issues') {
+    return sortWithIndex(list, item => getInventoryIssueScore(item), dir);
+  }
+  if (key === 'recent') {
+    return sortWithIndex(list, item => getItemTimestamp(item), dir);
+  }
+  return sortWithIndex(list, item => item[key], dir);
+}
+
+function applyMachineSort(list) {
+  if (!sortState.machines.key) return list;
+  const { key, dir } = sortState.machines;
+  if (key === 'issues') {
+    return sortWithIndex(list, item => getMachineIssueScore(item), dir);
+  }
+  if (key === 'recent') {
+    return sortWithIndex(list, item => getItemTimestamp(item), dir);
+  }
+  if (key === 'status_priority') {
+    return sortWithIndex(list, item => getMachineStatusPriority(item), dir);
+  }
+  return sortWithIndex(list, item => item[key], dir);
+}
+
 function toggleSort(state, key) {
   if (state.key === key) {
     state.dir = state.dir === 'asc' ? 'desc' : 'asc';
@@ -1114,12 +1221,10 @@ async function carregarLogoPrefeitura() {
 
   function applyFilters(){
     let filtered = getFiltered();
-    if (sortState.inventory.key) {
-      const key = sortState.inventory.key;
-      filtered = sortWithIndex(filtered, item => item[key], sortState.inventory.dir);
-    }
+    filtered = applyInventorySort(filtered);
     renderTable(filtered);
     updateSortIndicators('#tb thead', sortState.inventory);
+    updateSortQuickButtons('inventory', sortState.inventory);
     updateFilterBadges();
   }
   function renderPills({q, cat, tel, vmin, vmax}){
@@ -1612,11 +1717,6 @@ mtbody.addEventListener('click', (e) => {
     list = list.filter(x => (x.descricao || '').toLowerCase().includes(descricaoColumnFilter));
   }
 
-  if (sortState.machines.key) {
-    const key = sortState.machines.key;
-    list = sortWithIndex(list, item => item[key], sortState.machines.dir);
-  }
-
   if (nomeColumnFilter) {
     list = list.filter(x => (x.nome_maquina || '').toLowerCase().includes(nomeColumnFilter));
   }
@@ -1639,13 +1739,11 @@ mtbody.addEventListener('click', (e) => {
 
   list = applyManualCustomFilters(list, 'maquinas');
 
-  if (sortState.machines.key) {
-    const key = sortState.machines.key;
-    list = sortWithIndex(list, item => item[key], sortState.machines.dir);
-  }
+  list = applyMachineSort(list);
 
   renderMachines(list);
   updateSortIndicators('#tabMaquinas thead', sortState.machines);
+  updateSortQuickButtons('machines', sortState.machines);
   updateFilterBadges();
 }
 
