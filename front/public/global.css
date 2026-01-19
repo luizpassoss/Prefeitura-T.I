@@ -2717,7 +2717,7 @@ body.theme-dark .sort-quick-btn.is-active {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 140px;
+  min-width: 0;
 }
 
 .field-type-help {
@@ -2758,9 +2758,10 @@ body.theme-dark .sort-quick-btn.is-active {
   display: none;
   width: 100%;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
-  min-width: 220px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .field-type-options input {
@@ -2780,10 +2781,9 @@ body.theme-dark .sort-quick-btn.is-active {
 .field-options-summary {
   font-size: 12px;
   color: #475569;
-  max-width: 180px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 220px;
+  white-space: normal;
+  line-height: 1.3;
 }
 
 .field-options-modal-body {
@@ -3171,8 +3171,8 @@ body.theme-dark #fieldsContainer:empty::before {
 }
 
 .field-row {
-  display: grid;
-  grid-template-columns: 1.5fr 1.2fr 1fr 1.4fr auto auto auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
 }
@@ -3183,6 +3183,21 @@ body.theme-dark #fieldsContainer:empty::before {
 }
 
 .field-row .field-preset {
+  min-width: 220px;
+  flex: 1 1 240px;
+}
+
+.field-row .field-name {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+.field-row .field-type-wrapper {
+  flex: 0 1 160px;
+}
+
+.field-row .field-type-options {
+  flex: 1 1 240px;
   min-width: 220px;
 }
 
@@ -3254,6 +3269,7 @@ body.theme-dark .field-row .field-drag {
   margin: 0;
   justify-self: flex-start;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  white-space: nowrap;
 }
 
 .field-required-label .field-required {
@@ -3278,7 +3294,8 @@ body.theme-dark .field-required-label {
   }
 
   .field-row {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .field-row .field-remove {
