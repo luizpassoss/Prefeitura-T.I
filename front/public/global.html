@@ -34,19 +34,19 @@
     <nav class="nav">
       <div class="tab-dinamica-wrapper" data-tab-type="manual" data-tab-id="inventario">
         <a class="active" onclick="switchTab('inventario')">Inventário</a>
-        <button class="tab-menu-btn" type="button" aria-label="Opções da aba Inventário" onclick="toggleTabMenu(this, event)">
+        <button class="tab-menu-btn" type="button" aria-label="Opções da aba Inventário" aria-haspopup="menu" aria-expanded="false" aria-controls="tabMenuInventario" onclick="toggleTabMenu(this, event)">
           <span aria-hidden="true">⋯</span>
         </button>
-        <div class="tab-menu-dropdown hidden">
+        <div class="tab-menu-dropdown hidden" id="tabMenuInventario" role="menu">
           <button type="button" onclick="openManualTabManager('inventario')">Gerenciar</button>
         </div>
       </div>
       <div class="tab-dinamica-wrapper" data-tab-type="manual" data-tab-id="maquinas">
         <a onclick="switchTab('maquinas')">Máquinas</a>
-        <button class="tab-menu-btn" type="button" aria-label="Opções da aba Máquinas" onclick="toggleTabMenu(this, event)">
+        <button class="tab-menu-btn" type="button" aria-label="Opções da aba Máquinas" aria-haspopup="menu" aria-expanded="false" aria-controls="tabMenuMaquinas" onclick="toggleTabMenu(this, event)">
           <span aria-hidden="true">⋯</span>
         </button>
-        <div class="tab-menu-dropdown hidden">
+        <div class="tab-menu-dropdown hidden" id="tabMenuMaquinas" role="menu">
           <button type="button" onclick="openManualTabManager('maquinas')">Gerenciar</button>
         </div>
       </div>
@@ -558,6 +558,8 @@
         <label>Endereço</label>
         <input id="inpEnd" type="text">
       </div>
+
+      <div id="manualCustomFieldsInv" class="form-full manual-custom-fields"></div>
     </div>
 
     <div class="modal-footer">
@@ -638,6 +640,8 @@
         <textarea id="mDescricao" rows="3" placeholder="Descrição da máquina..."></textarea>
 
       </div>
+
+      <div id="manualCustomFieldsMaq" class="form-full manual-custom-fields"></div>
     </div>
 
     <div class="modal-footer">
@@ -847,6 +851,10 @@
     <div class="manual-tab-actions">
       <select id="manualTabFieldSelect" class="select"></select>
       <button class="btn secondary" type="button" onclick="addManualTabField()">Adicionar campo</button>
+    </div>
+    <div class="manual-tab-new-field">
+      <input id="manualTabNewFieldInput" type="text" placeholder="Novo campo personalizado" />
+      <button class="btn secondary" type="button" onclick="addManualTabCustomField()">Adicionar novo</button>
     </div>
 
     <div class="modal-footer">
