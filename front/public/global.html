@@ -205,6 +205,29 @@
             <tbody id="tbody"></tbody>
           </table>
         </div>
+        <div id="inventoryPagination" class="pagination">
+          <div class="pagination-info" id="inventoryRange">Mostrando 0–0 de 0</div>
+          <div class="pagination-controls">
+            <button class="btn secondary" type="button" data-page-action="prev" data-page-scope="inventory">
+              Anterior
+            </button>
+            <span class="pagination-page">
+              Página <strong id="inventoryPage">1</strong> de <strong id="inventoryTotalPages">1</strong>
+            </span>
+            <button class="btn secondary" type="button" data-page-action="next" data-page-scope="inventory">
+              Próxima
+            </button>
+          </div>
+          <div class="pagination-size">
+            <label for="inventoryPageSize">Itens por página</label>
+            <select id="inventoryPageSize" class="select">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
       </main>
     </section>
 
@@ -347,6 +370,29 @@
             </thead>
             <tbody id="mtbody"></tbody>
           </table>
+        </div>
+        <div id="machinesPagination" class="pagination">
+          <div class="pagination-info" id="machinesRange">Mostrando 0–0 de 0</div>
+          <div class="pagination-controls">
+            <button class="btn secondary" type="button" data-page-action="prev" data-page-scope="machines">
+              Anterior
+            </button>
+            <span class="pagination-page">
+              Página <strong id="machinesPage">1</strong> de <strong id="machinesTotalPages">1</strong>
+            </span>
+            <button class="btn secondary" type="button" data-page-action="next" data-page-scope="machines">
+              Próxima
+            </button>
+          </div>
+          <div class="pagination-size">
+            <label for="machinesPageSize">Itens por página</label>
+            <select id="machinesPageSize" class="select">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
         </div>
       </main>
     </section>
