@@ -168,7 +168,7 @@
           <button class="btn cancel" type="button" onclick="clearInventoryFilters()">Limpar</button>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap table-scroll">
           <table id="tb">
             <thead>
               <tr>
@@ -204,6 +204,22 @@
             </thead>
             <tbody id="tbody"></tbody>
           </table>
+        </div>
+        <div class="pagination-footer" data-page-scope="inventory">
+          <span class="pagination-info" id="inventoryRange">Mostrando 0–0 de 0</span>
+          <select id="inventoryPageSize" class="pagination-select" aria-label="Itens por página (inventário)">
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">Todos</option>
+          </select>
+          <button class="btn secondary" type="button" data-page-action="prev" data-page-scope="inventory" aria-label="Página anterior">
+            ◀
+          </button>
+          <span class="pagination-page" id="inventoryPageLabel">Página 1 de 1</span>
+          <button class="btn secondary" type="button" data-page-action="next" data-page-scope="inventory" aria-label="Próxima página">
+            ▶
+          </button>
         </div>
       </main>
     </section>
@@ -311,7 +327,7 @@
           </select>
           <button class="btn cancel" type="button" onclick="clearMachineFilters()">Limpar</button>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap table-scroll">
           <table>
             <thead>
               <tr>
@@ -347,6 +363,22 @@
             </thead>
             <tbody id="mtbody"></tbody>
           </table>
+        </div>
+        <div class="pagination-footer" data-page-scope="machines">
+          <span class="pagination-info" id="machinesRange">Mostrando 0–0 de 0</span>
+          <select id="machinesPageSize" class="pagination-select" aria-label="Itens por página (máquinas)">
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">Todos</option>
+          </select>
+          <button class="btn secondary" type="button" data-page-action="prev" data-page-scope="machines" aria-label="Página anterior">
+            ◀
+          </button>
+          <span class="pagination-page" id="machinesPageLabel">Página 1 de 1</span>
+          <button class="btn secondary" type="button" data-page-action="next" data-page-scope="machines" aria-label="Próxima página">
+            ▶
+          </button>
         </div>
       </main>
     </section>

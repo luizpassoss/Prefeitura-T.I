@@ -377,6 +377,9 @@ body.theme-dark .brand-icon img {
 .main {
   flex: 1;
   padding: 44px 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .header {
@@ -497,6 +500,85 @@ body.theme-dark h1 {
   position: relative;
   --table-head-row-height: 40px;
   --table-filter-row-height: 38px;
+}
+
+.pagination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.pagination-footer .btn {
+  height: 30px;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.pagination-footer .btn.secondary {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+.pagination-footer .btn.secondary:hover {
+  background: #eef2f7;
+}
+
+.pagination-footer .pagination-info {
+  margin-right: auto;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.pagination-footer .pagination-select {
+  height: 30px;
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text-muted);
+}
+
+body.theme-dark .pagination-footer .btn.secondary {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(51, 65, 85, 0.6);
+  color: #cbd5e1;
+}
+
+body.theme-dark .pagination-footer .pagination-select {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(51, 65, 85, 0.6);
+  color: #e2e8f0;
+}
+
+.table-wrap.table-scroll {
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+}
+
+.table-wrap.table-scroll thead th {
+  top: 0;
+  z-index: 3;
+  background: #f1f5fb;
+  box-shadow: 0 1px 0 #e6edf5;
+}
+
+.table-wrap.table-scroll .table-filters th {
+  top: var(--table-head-row-height);
+  z-index: 2;
+  background: #f8fafc;
+  box-shadow: 0 1px 0 #e6edf5;
+}
+
+.table-wrap.table-scroll tbody tr td:first-child .pill {
+  margin-top: 0;
 }
 
 .loading-row {
@@ -2317,6 +2399,48 @@ body.theme-dark tbody tr:hover td.actions {
   margin-top: var(--space-4);
   display: grid;
   gap: var(--space-2);
+}
+
+#importModal .card {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#importModal .card > :not(.import-history) {
+  flex: 0 0 auto;
+}
+
+.import-history {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.import-history .table-wrap {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.import-history table {
+  min-width: 640px;
+}
+
+.import-history thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.import-history td:nth-child(3) {
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.theme-dark #importModal .card {
+  background: #121826;
 }
 
 .import-history-header {
