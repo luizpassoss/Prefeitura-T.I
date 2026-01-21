@@ -26,6 +26,8 @@
 }
 .tab-content {
     width: 100%;
+    height: 100vh;
+    overflow-y: auto;
 }
 
 .tab {
@@ -377,6 +379,9 @@ body.theme-dark .brand-icon img {
 .main {
   flex: 1;
   padding: 44px 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .header {
@@ -497,6 +502,38 @@ body.theme-dark h1 {
   position: relative;
   --table-head-row-height: 40px;
   --table-filter-row-height: 38px;
+}
+
+.pagination-indicator {
+  position: fixed;
+  bottom: 16px;
+  right: 20px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+  z-index: 20;
+  opacity: 0.85;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.pagination-indicator.hidden {
+  display: none;
+}
+
+.pagination-indicator:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+body.theme-dark .pagination-indicator {
+  background: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+  box-shadow: 0 12px 28px rgba(5, 10, 20, 0.45);
 }
 
 .loading-row {

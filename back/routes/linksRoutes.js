@@ -7,10 +7,105 @@ const pool = require('../db');
 // =========================
 router.get('/', async (req, res) => {
     try {
-        const [rows] = await pool.query(
-            'SELECT * FROM links ORDER BY id DESC'
+        const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+        const pageSizeRaw = parseInt(req.query.pageSize, 10) || 20;
+        const pageSize = Math.min(Math.max(pageSizeRaw, 5), 200);
+        const sortKey = (req.query.sortKey || '').toLowerCase();
+        const sortDir = req.query.sortDir === 'asc' ? 'ASC' : 'DESC';
+
+        const filters = [];
+        const params = [];
+
+        const q = (req.query.q || '').trim();
+        if (q) {
+            const like = `%${q}%`;
+            filters.push(`(link LIKE ? OR local LIKE ? OR endereco LIKE ? OR telefone LIKE ? OR velocidade LIKE ? OR categoria LIKE ?)`);
+            params.push(like, like, like, like, like, like);
+        }
+
+        const categoria = (req.query.categoria || '').trim();
+        if (categoria) {
+            filters.push('categoria = ?');
+            params.push(categoria);
+        }
+
+        const link = (req.query.link || '').trim();
+        if (link) {
+            filters.push('link LIKE ?');
+            params.push(`%${link}%`);
+        }
+
+        const velocidade = (req.query.velocidade || '').trim();
+        if (velocidade) {
+            filters.push('velocidade LIKE ?');
+            params.push(`%${velocidade}%`);
+        }
+
+        const telefone = (req.query.telefone || '').trim();
+        if (telefone) {
+            filters.push('telefone LIKE ?');
+            params.push(`%${telefone}%`);
+        }
+
+        const local = (req.query.local || '').trim();
+        if (local) {
+            filters.push('local LIKE ?');
+            params.push(`%${local}%`);
+        }
+
+        const endereco = (req.query.endereco || '').trim();
+        if (endereco) {
+            filters.push('endereco LIKE ?');
+            params.push(`%${endereco}%`);
+        }
+
+        const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+
+        let orderBy = 'id DESC';
+        switch (sortKey) {
+            case 'link':
+            case 'velocidade':
+            case 'telefone':
+            case 'local':
+            case 'endereco':
+            case 'categoria':
+                orderBy = `${sortKey} ${sortDir}`;
+                break;
+            case 'issues':
+                orderBy = `(
+                    (CASE WHEN link IS NULL OR link = '' THEN 2 ELSE 0 END) +
+                    (CASE WHEN telefone IS NULL OR telefone = '' THEN 2 ELSE 0 END) +
+                    (CASE WHEN local IS NULL OR local = '' THEN 1 ELSE 0 END) +
+                    (CASE WHEN endereco IS NULL OR endereco = '' THEN 1 ELSE 0 END) +
+                    (CASE WHEN velocidade IS NULL OR velocidade = '' THEN 1 ELSE 0 END)
+                ) ${sortDir}, id DESC`;
+                break;
+            case 'recent':
+                orderBy = `id ${sortDir}`;
+                break;
+            default:
+                orderBy = `id ${sortDir}`;
+                break;
+        }
+
+        const [countRows] = await pool.query(
+            `SELECT COUNT(*) as total FROM links ${whereClause}`,
+            params
         );
-        res.json(rows);
+        const total = countRows[0]?.total || 0;
+        const offset = (page - 1) * pageSize;
+
+        const [rows] = await pool.query(
+            `SELECT * FROM links ${whereClause} ORDER BY ${orderBy} LIMIT ? OFFSET ?`,
+            [...params, pageSize, offset]
+        );
+
+        res.json({
+            data: rows,
+            total,
+            page,
+            pageSize
+        });
     } catch (err) {
         console.error("Erro GET /links:", err);
         res.status(500).json({ error: 'Erro ao buscar links' });
