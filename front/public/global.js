@@ -896,14 +896,22 @@ function initPaginationControls() {
     return ws;
   }
 
-  function toggleFilters(panelId, button) {
-    const panel = document.getElementById(panelId);
-    if (!panel) return;
-    panel.classList.toggle('hidden');
-    if (button) {
-      const isOpen = !panel.classList.contains('hidden');
-      button.setAttribute('aria-pressed', String(isOpen));
+function toggleFilters(panelId, button) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  if (panelId === 'moduleFilters') {
+    const hasPanelControls = panel.querySelectorAll('input, select, textarea').length > 0;
+    const hasColumnFilters = document.querySelectorAll('#moduloThead .table-filter-input').length > 0;
+    if (!hasPanelControls && !hasColumnFilters) {
+      showMessage('Esta aba ainda não possui filtros disponíveis.');
+      return;
     }
+  }
+  panel.classList.toggle('hidden');
+  if (button) {
+    const isOpen = !panel.classList.contains('hidden');
+    button.setAttribute('aria-pressed', String(isOpen));
+  }
   }
 
 function showMessage(message, title = 'Aviso', type = 'info') {
@@ -1403,6 +1411,9 @@ function getModuleSortMenuOptions(displayCampos) {
     label: campo.nome
   }));
   const stored = loadModuleSortOptions(moduloAtual?.id);
+  if (Array.isArray(stored) && stored.length === 0) {
+    return [];
+  }
   const selectedKeys = resolveSortOptionsSelection(candidates, stored);
   const filtered = candidates.filter(candidate => selectedKeys.includes(candidate.key));
   return filtered.length ? filtered : candidates;
@@ -1511,6 +1522,12 @@ function getActiveFilterCounts() {
   const modCount = [modSearch, ...modColumnFilters].filter(Boolean).length;
 
   return { invCount, mqCount, modCount };
+}
+
+function hasActiveModuleFilters() {
+  const modSearch = (document.getElementById('moduloSearch')?.value || '').trim();
+  const modColumnFilters = Object.values(moduloColumnFilters || {}).filter(value => value?.trim());
+  return Boolean(modSearch || modColumnFilters.length);
 }
 
 function updateFilterBadges() {
@@ -2800,6 +2817,18 @@ function toggleSortMenu(tipo) {
     modMenu?.classList.add('hidden');
   }
   if (tipo === 'mod' && modMenu) {
+    const { displayCampos } = getModuloDisplayConfig();
+    const sortOptions = getModuleSortMenuOptions(displayCampos);
+    if (!sortOptions.length) {
+      menu?.classList.add('hidden');
+      invMenu?.classList.add('hidden');
+      modMenu?.classList.add('hidden');
+      inv?.classList.add('hidden');
+      mq?.classList.add('hidden');
+      mod?.classList.add('hidden');
+      showMessage('Esta aba ainda não possui filtros ou opções de ordenação definidas.');
+      return;
+    }
     modMenu.classList.toggle('hidden');
     menu?.classList.add('hidden');
     invMenu?.classList.add('hidden');
@@ -3874,11 +3903,14 @@ function renderModuloDinamico() {
   }
 
   if (!sorted.length) {
+    const shouldPromptNewRecord = !hasActiveModuleFilters() && !moduloSortState.key;
     renderEmptyState(
       tbody,
       displayCampos.length + 2,
-      'Nenhum registro encontrado',
-      'Crie um novo registro ou ajuste os filtros.'
+      shouldPromptNewRecord ? 'Adicione o primeiro registro' : 'Nenhum registro encontrado',
+      shouldPromptNewRecord
+        ? 'Clique em "+ Novo" para adicionar um registro nesta aba.'
+        : 'Crie um novo registro ou ajuste os filtros.'
     );
     tbody.closest('.table-wrap')?.classList.remove('is-loading');
     const chkAllMod = document.getElementById('chkAllMod');
@@ -4445,9 +4477,12 @@ function getSortOptionCandidates() {
 
 function resolveSortOptionsSelection(candidates, selectedKeys) {
   if (!candidates.length) return [];
-  const validKeys = new Set(candidates.map(item => item.key));
-  const normalizedSelected = (selectedKeys || []).filter(key => validKeys.has(key));
-  return normalizedSelected.length ? normalizedSelected : candidates.map(item => item.key);
+  if (Array.isArray(selectedKeys)) {
+    if (!selectedKeys.length) return [];
+    const validKeys = new Set(candidates.map(item => item.key));
+    return selectedKeys.filter(key => validKeys.has(key));
+  }
+  return candidates.map(item => item.key);
 }
 
 function renderSortOptionsPicker(selectedKeys = null) {
@@ -4455,7 +4490,10 @@ function renderSortOptionsPicker(selectedKeys = null) {
   if (!container) return;
 
   const candidates = getSortOptionCandidates();
-  newTabSortOptions = resolveSortOptionsSelection(candidates, selectedKeys || newTabSortOptions);
+  const selection = Array.isArray(selectedKeys)
+    ? selectedKeys
+    : (newTabSortOptions.length ? newTabSortOptions : null);
+  newTabSortOptions = resolveSortOptionsSelection(candidates, selection);
 
   if (!candidates.length) {
     container.innerHTML = '<span class="small">Adicione campos para liberar opções de ordenação.</span>';
