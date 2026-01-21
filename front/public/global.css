@@ -611,8 +611,8 @@ body.theme-dark .pagination-footer .pagination-select {
 }
 
 .table-wrap.table-scroll {
-  flex: 1 1 auto;
-  max-height: none;
+  flex: 0 1 auto;
+  max-height: calc(100vh - 260px);
   min-height: 0;
   overflow-y: auto;
   padding: 0;
