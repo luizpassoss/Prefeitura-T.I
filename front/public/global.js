@@ -277,8 +277,8 @@ const sortState = {
 
 const IMPORT_HISTORY_KEY = 'ti-import-history';
 const paginationState = {
-  inventory: { page: 1, pageSize: 20, total: 0 },
-  machines: { page: 1, pageSize: 20, total: 0 }
+  inventory: { page: 1, pageSize: 15, total: 0 },
+  machines: { page: 1, pageSize: 15, total: 0 }
 };
 let inventoryFilterTimeout = null;
 let machineFilterTimeout = null;
@@ -490,8 +490,6 @@ function updatePaginationUI(scope) {
   const nextBtn = document.querySelector(`[data-page-action="next"][data-page-scope="${scope}"]`);
   if (prevBtn) prevBtn.disabled = state.page <= 1;
   if (nextBtn) nextBtn.disabled = state.page >= totalPages;
-  const pageSizeSelect = document.getElementById(`${scope}PageSize`);
-  if (pageSizeSelect) pageSizeSelect.value = String(state.pageSize);
 }
 
 function setPage(scope, nextPage) {
@@ -521,23 +519,6 @@ function initPaginationControls() {
     });
   });
 
-  const inventoryPageSize = document.getElementById('inventoryPageSize');
-  if (inventoryPageSize) {
-    inventoryPageSize.addEventListener('change', (event) => {
-      paginationState.inventory.pageSize = Number(event.target.value) || 20;
-      paginationState.inventory.page = 1;
-      fetchData();
-    });
-  }
-
-  const machinesPageSize = document.getElementById('machinesPageSize');
-  if (machinesPageSize) {
-    machinesPageSize.addEventListener('change', (event) => {
-      paginationState.machines.pageSize = Number(event.target.value) || 20;
-      paginationState.machines.page = 1;
-      fetchMachines();
-    });
-  }
 }
 
   /* ===========================
