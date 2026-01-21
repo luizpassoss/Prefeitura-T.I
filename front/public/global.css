@@ -561,7 +561,7 @@ body.theme-dark .pagination-footer .pagination-select {
 }
 
 .table-wrap.table-scroll {
-  max-height: 420px;
+  max-height: 72vh;
   overflow-y: auto;
 }
 
