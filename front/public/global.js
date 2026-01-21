@@ -276,6 +276,12 @@ const sortState = {
 };
 
 const IMPORT_HISTORY_KEY = 'ti-import-history';
+const paginationState = {
+  inventory: { page: 1, pageSize: 20, total: 0, isLoading: false },
+  machines: { page: 1, pageSize: 20, total: 0, isLoading: false }
+};
+let inventoryFilterTimeout = null;
+let machineFilterTimeout = null;
 
   /* ===========================
      CONFIG
@@ -337,6 +343,7 @@ if (btnNovaAba) {
   ensureManualTabColumns('maquinas');
   applyManualTabLabels('inventario');
   applyManualTabLabels('maquinas');
+  initPaginationControls();
 
 
   /* ===========================
@@ -410,33 +417,244 @@ function updateBulkUI() {
   }
 }
 
+function buildInventoryQueryParams({ page = paginationState.inventory.page, pageSize = paginationState.inventory.pageSize, includePagination = true } = {}) {
+  const params = new URLSearchParams();
+  if (includePagination) {
+    const requestPageSize = pageSize === 'all' ? 200 : pageSize;
+    params.set('page', page);
+    params.set('pageSize', requestPageSize);
+  }
+  const q = (document.getElementById('q')?.value || '').trim();
+  if (q) params.set('q', q);
+  const cat = (document.getElementById('filterCategoryInv')?.value || 'All');
+  if (cat && cat !== 'All') params.set('categoria', cat);
+  const invLink = (document.getElementById('invFilterLink')?.value || '').trim();
+  if (invLink) params.set('link', invLink);
+  const invVel = (document.getElementById('invFilterVel')?.value || '').trim();
+  if (invVel) params.set('velocidade', invVel);
+  const invTel = (document.getElementById('invFilterTel')?.value || '').trim();
+  if (invTel) params.set('telefone', invTel);
+  const invLocal = (document.getElementById('invFilterLocal')?.value || '').trim();
+  if (invLocal) params.set('local', invLocal);
+  const invEnd = (document.getElementById('invFilterEndereco')?.value || '').trim();
+  if (invEnd) params.set('endereco', invEnd);
+  if (sortState.inventory.key) {
+    params.set('sortKey', sortState.inventory.key);
+    params.set('sortDir', sortState.inventory.dir);
+  }
+  return params;
+}
+
+function buildMachineQueryParams({ page = paginationState.machines.page, pageSize = paginationState.machines.pageSize, includePagination = true } = {}) {
+  const params = new URLSearchParams();
+  if (includePagination) {
+    const requestPageSize = pageSize === 'all' ? 200 : pageSize;
+    params.set('page', page);
+    params.set('pageSize', requestPageSize);
+  }
+  const q = (document.getElementById('mq')?.value || '').trim();
+  if (q) params.set('q', q);
+  const status = (document.getElementById('filterMachineStatus')?.value || 'All');
+  if (status && status !== 'All') params.set('status', status);
+  const mqNome = (document.getElementById('mqFilterNome')?.value || '').trim();
+  if (mqNome) params.set('nome_maquina', mqNome);
+  const mqPatrimonio = (document.getElementById('mqFilterPatrimonio')?.value || '').trim();
+  if (mqPatrimonio) params.set('patrimonio', mqPatrimonio);
+  const mqLocal = (document.getElementById('mqFilterLocal')?.value || '').trim();
+  if (mqLocal) params.set('local', mqLocal);
+  const mqStatus = (document.getElementById('mqFilterStatus')?.value || '').trim();
+  if (mqStatus) params.set('status_like', mqStatus);
+  const mqDescricao = (document.getElementById('mqFilterDescricao')?.value || '').trim();
+  if (mqDescricao) params.set('descricao', mqDescricao);
+  if (sortState.machines.key) {
+    params.set('sortKey', sortState.machines.key);
+    params.set('sortDir', sortState.machines.dir);
+  }
+  return params;
+}
+
+function updatePaginationUI(scope) {
+  const state = paginationState[scope];
+  if (!state) return;
+  const totalPages = state.pageSize === 'all'
+    ? 1
+    : Math.max(1, Math.ceil(state.total / state.pageSize));
+  state.page = Math.min(state.page, totalPages);
+  const rangeEl = document.getElementById(`${scope}Range`);
+  const pageLabel = document.getElementById(`${scope}PageLabel`);
+  const pageSizeSelect = document.getElementById(`${scope}PageSize`);
+  const start = state.total === 0 ? 0 : (state.page - 1) * (state.pageSize === 'all' ? state.total : state.pageSize) + 1;
+  const end = state.total === 0
+    ? 0
+    : Math.min(state.page * (state.pageSize === 'all' ? state.total : state.pageSize), state.total);
+  if (rangeEl) {
+    rangeEl.textContent = `Mostrando ${start}–${end} de ${state.total}`;
+  }
+  if (pageLabel) {
+    pageLabel.textContent = `Página ${state.page} de ${totalPages}`;
+  }
+  if (pageSizeSelect) {
+    pageSizeSelect.value = state.pageSize === 'all' ? 'all' : String(state.pageSize);
+  }
+  const prevBtn = document.querySelector(`[data-page-action="prev"][data-page-scope="${scope}"]`);
+  const nextBtn = document.querySelector(`[data-page-action="next"][data-page-scope="${scope}"]`);
+  const isSinglePage = totalPages <= 1;
+  if (prevBtn) prevBtn.disabled = state.page <= 1 || isSinglePage;
+  if (nextBtn) nextBtn.disabled = state.page >= totalPages || isSinglePage;
+}
+
+function setPage(scope, nextPage) {
+  const state = paginationState[scope];
+  if (!state) return;
+  const totalPages = state.pageSize === 'all'
+    ? 1
+    : Math.max(1, Math.ceil(state.total / state.pageSize));
+  const clamped = Math.min(Math.max(nextPage, 1), totalPages);
+  if (clamped === state.page) return;
+  state.page = clamped;
+  if (scope === 'inventory') {
+    fetchData();
+  } else if (scope === 'machines') {
+    fetchMachines();
+  }
+}
+
+function initPaginationControls() {
+  document.querySelectorAll('[data-page-action]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const scope = btn.dataset.pageScope;
+      const action = btn.dataset.pageAction;
+      if (!scope || !action) return;
+      const state = paginationState[scope];
+      if (!state) return;
+      if (action === 'prev') setPage(scope, state.page - 1);
+      if (action === 'next') setPage(scope, state.page + 1);
+    });
+  });
+
+  const inventorySelect = document.getElementById('inventoryPageSize');
+  if (inventorySelect) {
+    inventorySelect.addEventListener('change', (event) => {
+      paginationState.inventory.pageSize = event.target.value === 'all' ? 'all' : Number(event.target.value);
+      paginationState.inventory.page = 1;
+      fetchData();
+    });
+  }
+
+  const machinesSelect = document.getElementById('machinesPageSize');
+  if (machinesSelect) {
+    machinesSelect.addEventListener('change', (event) => {
+      paginationState.machines.pageSize = event.target.value === 'all' ? 'all' : Number(event.target.value);
+      paginationState.machines.page = 1;
+      fetchMachines();
+    });
+  }
+}
 
   /* ===========================
      FETCH / INIT
      =========================== */
   async function fetchData(){
+    const state = paginationState.inventory;
+    const isReset = state.page === 1;
     try{
-      setTableLoading('tbody', true, getManualTableColspan('inventario'));
-      const res = await fetch(API_URL);
-      data = await res.json();
-      applyFilters();
+      state.isLoading = true;
+      if (isReset) {
+        setTableLoading('tbody', true, getManualTableColspan('inventario'));
+      }
+      const params = buildInventoryQueryParams({
+        page: state.page,
+        pageSize: state.pageSize === 'all' ? 200 : state.pageSize
+      });
+      const res = await fetch(`${API_URL}?${params.toString()}`);
+      const payload = await res.json();
+      const rows = Array.isArray(payload) ? payload : (payload.data || []);
+      if (state.pageSize === 'all' && !Array.isArray(payload)) {
+        const total = payload.total ?? rows.length;
+        if (total > rows.length) {
+          const allRows = await fetchAllPagedRows(API_URL, ({ page, pageSize }) =>
+            buildInventoryQueryParams({ page, pageSize })
+          );
+          rows.splice(0, rows.length, ...allRows);
+        }
+      }
+      paginationState.inventory.total = Array.isArray(payload) ? rows.length : (payload.total ?? rows.length);
+      if (!Array.isArray(payload)) {
+        paginationState.inventory.page = payload.page || paginationState.inventory.page;
+        paginationState.inventory.pageSize = payload.pageSize || paginationState.inventory.pageSize;
+      }
+      const normalizedRows = applyManualCustomFilters(rows, 'inventario');
+      data = normalizedRows;
+      selectedInvIds.clear();
+      updateBulkUI();
+      renderTable(data);
+      updateSortIndicators('#tb thead', sortState.inventory);
+      updateSortQuickButtons('inventory', sortState.inventory);
+      updateFilterBadges();
+      updatePaginationUI('inventory');
     } catch(err){
       console.error('Erro ao buscar links:', err);
-      data = [];
-      applyFilters();
+      if (isReset) {
+        data = [];
+        selectedInvIds.clear();
+        updateBulkUI();
+        renderTable([]);
+      }
+      updatePaginationUI('inventory');
+    } finally {
+      state.isLoading = false;
     }
   }
 
   async function fetchMachines(){
+    const state = paginationState.machines;
+    const isReset = state.page === 1;
     try{
-      setTableLoading('mtbody', true, getManualTableColspan('maquinas'));
-      const res = await fetch(API_MAQUINAS);
-      machineData = await res.json();
-      applyMachineFilters();
+      state.isLoading = true;
+      if (isReset) {
+        setTableLoading('mtbody', true, getManualTableColspan('maquinas'));
+      }
+      const params = buildMachineQueryParams({
+        page: state.page,
+        pageSize: state.pageSize === 'all' ? 200 : state.pageSize
+      });
+      const res = await fetch(`${API_MAQUINAS}?${params.toString()}`);
+      const payload = await res.json();
+      const rows = Array.isArray(payload) ? payload : (payload.data || []);
+      if (state.pageSize === 'all' && !Array.isArray(payload)) {
+        const total = payload.total ?? rows.length;
+        if (total > rows.length) {
+          const allRows = await fetchAllPagedRows(API_MAQUINAS, ({ page, pageSize }) =>
+            buildMachineQueryParams({ page, pageSize })
+          );
+          rows.splice(0, rows.length, ...allRows);
+        }
+      }
+      paginationState.machines.total = Array.isArray(payload) ? rows.length : (payload.total ?? rows.length);
+      if (!Array.isArray(payload)) {
+        paginationState.machines.page = payload.page || paginationState.machines.page;
+        paginationState.machines.pageSize = payload.pageSize || paginationState.machines.pageSize;
+      }
+      const normalizedRows = applyManualCustomFilters(rows, 'maquinas');
+      machineData = normalizedRows;
+      selectedMaqIds.clear();
+      updateBulkUI();
+      renderMachines(machineData);
+      updateSortIndicators('#tabMaquinas thead', sortState.machines);
+      updateSortQuickButtons('machines', sortState.machines);
+      updateFilterBadges();
+      updatePaginationUI('machines');
     } catch(err){
       console.error('Erro ao buscar máquinas:', err);
-      machineData = [];
-      applyMachineFilters();
+      if (isReset) {
+        machineData = [];
+        selectedMaqIds.clear();
+        updateBulkUI();
+        renderMachines([]);
+      }
+      updatePaginationUI('machines');
+    } finally {
+      state.isLoading = false;
     }
   }
 
@@ -886,7 +1104,7 @@ function initSortMenu(menuId, state, onApply) {
   menu.querySelectorAll('[data-sort-key]').forEach((btn) => {
     btn.addEventListener('click', () => {
       setSort(state, btn.dataset.sortKey);
-      if (typeof onApply === 'function') onApply();
+      if (typeof onApply === 'function') onApply({ immediate: true, resetPage: true });
       menu.classList.add('hidden');
     });
   });
@@ -907,7 +1125,7 @@ function initSortOrderToggle(scope, state, onApply) {
     state.dir = state.dir === 'asc' ? 'desc' : 'asc';
     updateSortOrderLabel(button, state.dir);
     if (state.key && typeof onApply === 'function') {
-      onApply();
+      onApply({ immediate: true, resetPage: true });
     }
   });
 }
@@ -939,7 +1157,7 @@ function initSortQuickButtons(scope, state, onApply) {
     btn.addEventListener('click', () => {
       setSort(state, btn.dataset.sortKey, btn.dataset.sortDir || 'asc');
       updateSortQuickButtons(scope, state);
-      if (typeof onApply === 'function') onApply();
+      if (typeof onApply === 'function') onApply({ immediate: true, resetPage: true });
     });
   });
   updateSortQuickButtons(scope, state);
@@ -1103,65 +1321,6 @@ function clearImportHistory() {
   renderImportHistory();
 }
 
-function getFiltered() {
-  const q = (document.getElementById('q')?.value || "").toLowerCase();
-
-  // PEGAR O SELECT APENAS SE EXISTIR (ABA INVENTÁRIO)
-  const catEl = document.getElementById('filterCategoryInv');
-  const cat = catEl ? catEl.value : "All";
-  const linkColumnFilter = getInputValue('invFilterLink');
-  const velColumnFilter = getInputValue('invFilterVel');
-  const telColumnFilter = getInputValue('invFilterTel');
-  const localColumnFilter = getInputValue('invFilterLocal');
-  const enderecoColumnFilter = getInputValue('invFilterEndereco');
-
-  let list = [...data];
-
-  // FILTRAR CATEGORIA (SOMENTE INVENTÁRIO)
-if (cat !== "All") {
-  list = list.filter(x =>
-    normalize(x.categoria) === normalize(cat)
-  );
-}
-
-
-
-  // BUSCA GERAL
-  if (q) {
-    list = list.filter(x =>
-      (x.link || "").toLowerCase().includes(q) ||
-      (x.local || "").toLowerCase().includes(q) ||
-      (x.endereco || "").toLowerCase().includes(q) ||
-      (x.telefone || "").toLowerCase().includes(q) ||
-      (x.velocidade || "").toLowerCase().includes(q) ||
-      (x.categoria || "").toLowerCase().includes(q)
-    );
-  }
-
-  if (linkColumnFilter) {
-    list = list.filter(x => (x.link || '').toLowerCase().includes(linkColumnFilter));
-  }
-
-  if (velColumnFilter) {
-    list = list.filter(x => (x.velocidade || '').toLowerCase().includes(velColumnFilter));
-  }
-
-  if (telColumnFilter) {
-    list = list.filter(x => (x.telefone || '').toLowerCase().includes(telColumnFilter));
-  }
-
-  if (localColumnFilter) {
-    list = list.filter(x => (x.local || '').toLowerCase().includes(localColumnFilter));
-  }
-
-  if (enderecoColumnFilter) {
-    list = list.filter(x => (x.endereco || '').toLowerCase().includes(enderecoColumnFilter));
-  }
-
-  list = applyManualCustomFilters(list, 'inventario');
-
-  return list;
-}
 
 function updateFilterBadge(type, count) {
   const badge = document.querySelector(`[data-filter-badge="${type}"]`);
@@ -1240,12 +1399,22 @@ async function carregarLogoPrefeitura() {
 }
 
 
-  function applyFilters(){
-    let filtered = getFiltered();
-    filtered = applyInventorySort(filtered);
-    renderTable(filtered);
-    updateSortIndicators('#tb thead', sortState.inventory);
-    updateSortQuickButtons('inventory', sortState.inventory);
+  function applyFilters(options = {}){
+    const { immediate = false, resetPage = true } = options;
+    if (resetPage) {
+      paginationState.inventory.page = 1;
+      if (paginationState.inventory.pageSize !== 'all') {
+        paginationState.inventory.pageSize = 20;
+      }
+    }
+    if (inventoryFilterTimeout) clearTimeout(inventoryFilterTimeout);
+    if (immediate) {
+      fetchData();
+    } else {
+      inventoryFilterTimeout = setTimeout(() => {
+        fetchData();
+      }, 250);
+    }
     updateFilterBadges();
   }
   function renderPills({q, cat, tel, vmin, vmax}){
@@ -1433,8 +1602,54 @@ async function loadImageToBase64(url) {
   });
 }
 
-function exportInventario(type) {
-  const rows = getInventarioExportData();
+async function fetchAllPagedRows(url, paramsBuilder) {
+  const pageSize = 200;
+  let page = 1;
+  let total = 0;
+  let rows = [];
+  while (true) {
+    const params = paramsBuilder({ page, pageSize });
+    const res = await fetch(`${url}?${params.toString()}`);
+    const payload = await res.json();
+    const chunk = Array.isArray(payload) ? payload : (payload.data || []);
+    total = Array.isArray(payload) ? chunk.length : (payload.total ?? chunk.length);
+    rows = rows.concat(chunk);
+    if (rows.length >= total || chunk.length === 0) break;
+    page += 1;
+  }
+  return rows;
+}
+
+async function getInventarioExportData() {
+  if (selectedInvIds.size > 0) {
+    return data
+      .filter(it => selectedInvIds.has(it.id))
+      .map(it => ({
+        categoria: it.categoria || '',
+        link: it.link || '',
+        velocidade: it.velocidade || '',
+        telefone: it.telefone || '',
+        local: it.local || '',
+        endereco: it.endereco || ''
+      }));
+  }
+
+  const rows = await fetchAllPagedRows(API_URL, ({ page, pageSize }) =>
+    buildInventoryQueryParams({ page, pageSize })
+  );
+  const filtered = applyManualCustomFilters(rows, 'inventario');
+  return filtered.map(it => ({
+    categoria: it.categoria || '',
+    link: it.link || '',
+    velocidade: it.velocidade || '',
+    telefone: it.telefone || '',
+    local: it.local || '',
+    endereco: it.endereco || ''
+  }));
+}
+
+async function exportInventario(type) {
+  const rows = await getInventarioExportData();
 
   if (!rows.length) {
     showMessage('Nenhum registro para exportar.');
@@ -1450,23 +1665,8 @@ function exportInventario(type) {
   }
 }
 
-
-function getInventarioExportData() {
-  const base = selectedInvIds.size > 0
-    ? data.filter(it => selectedInvIds.has(it.id))
-    : getFiltered();
-
-  return base.map(it => ({
-    categoria: it.categoria || '',
-    link: it.link || '',
-    velocidade: it.velocidade || '',
-    telefone: it.telefone || '',
-    local: it.local || '',
-    endereco: it.endereco || ''
-  }));
-}
-function exportInventarioRelatorio() {
-  const rows = getInventarioExportData();
+async function exportInventarioRelatorio() {
+  const rows = await getInventarioExportData();
 
   if (!rows.length) {
     showMessage('Nenhum registro para exportar.');
@@ -1692,81 +1892,24 @@ mtbody.addEventListener('click', (e) => {
   /* ===========================
      FILTROS MÁQUINAS
      =========================== */
-  function applyMachineFilters() {
-  const q = (document.getElementById('mq').value || '').trim().toLowerCase();
-  const statusFilter = (document.getElementById('filterMachineStatus')?.value || 'All').toLowerCase();
-  const nomeColumnFilter = getInputValue('mqFilterNome');
-  const patrimonioColumnFilter = getInputValue('mqFilterPatrimonio');
-  const localColumnFilter = getInputValue('mqFilterLocal');
-  const statusColumnFilter = getInputValue('mqFilterStatus');
-  const descricaoColumnFilter = getInputValue('mqFilterDescricao');
-
-  let list = [...machineData];
-
-  if (q) {
-    list = list.filter(x =>
-      (x.nome_maquina || '').toLowerCase().includes(q) ||
-      (x.patrimonio || '').toLowerCase().includes(q) ||
-      (x.local || '').toLowerCase().includes(q) ||
-      (x.descricao || '').toLowerCase().includes(q) ||
-      (x.status || '').toLowerCase().includes(q)
-
-    );
+  function applyMachineFilters(options = {}) {
+    const { immediate = false, resetPage = true } = options;
+    if (resetPage) {
+      paginationState.machines.page = 1;
+      if (paginationState.machines.pageSize !== 'all') {
+        paginationState.machines.pageSize = 20;
+      }
+    }
+    if (machineFilterTimeout) clearTimeout(machineFilterTimeout);
+    if (immediate) {
+      fetchMachines();
+    } else {
+      machineFilterTimeout = setTimeout(() => {
+        fetchMachines();
+      }, 250);
+    }
+    updateFilterBadges();
   }
-
-  if (statusFilter !== 'all') {
-    list = list.filter(x => (x.status || '').toLowerCase() === statusFilter);
-  }
-
-  if (nomeColumnFilter) {
-    list = list.filter(x => (x.nome_maquina || '').toLowerCase().includes(nomeColumnFilter));
-  }
-
-  if (patrimonioColumnFilter) {
-    list = list.filter(x => (x.patrimonio || '').toLowerCase().includes(patrimonioColumnFilter));
-  }
-
-  if (localColumnFilter) {
-    list = list.filter(x => (x.local || '').toLowerCase().includes(localColumnFilter));
-  }
-
-  if (statusColumnFilter) {
-    list = list.filter(x => (x.status || '').toLowerCase().includes(statusColumnFilter));
-  }
-
-  if (descricaoColumnFilter) {
-    list = list.filter(x => (x.descricao || '').toLowerCase().includes(descricaoColumnFilter));
-  }
-
-  if (nomeColumnFilter) {
-    list = list.filter(x => (x.nome_maquina || '').toLowerCase().includes(nomeColumnFilter));
-  }
-
-  if (patrimonioColumnFilter) {
-    list = list.filter(x => (x.patrimonio || '').toLowerCase().includes(patrimonioColumnFilter));
-  }
-
-  if (localColumnFilter) {
-    list = list.filter(x => (x.local || '').toLowerCase().includes(localColumnFilter));
-  }
-
-  if (statusColumnFilter) {
-    list = list.filter(x => (x.status || '').toLowerCase().includes(statusColumnFilter));
-  }
-
-  if (descricaoColumnFilter) {
-    list = list.filter(x => (x.descricao || '').toLowerCase().includes(descricaoColumnFilter));
-  }
-
-  list = applyManualCustomFilters(list, 'maquinas');
-
-  list = applyMachineSort(list);
-
-  renderMachines(list);
-  updateSortIndicators('#tabMaquinas thead', sortState.machines);
-  updateSortQuickButtons('machines', sortState.machines);
-  updateFilterBadges();
-}
 
 function clearMachineFilters(){
   const mqEl = document.getElementById('mq');
@@ -2043,8 +2186,34 @@ function drawFooter(doc) {
     pageHeight - 18
   );
 }
-function exportMaquinas(type) {
-  const rows = getMaquinasExportData();
+async function getMaquinasExportData() {
+  if (selectedMaqIds.size > 0) {
+    return machineData
+      .filter(m => selectedMaqIds.has(m.id))
+      .map(m => ({
+        nome_maquina: m.nome_maquina || '',
+        patrimonio: m.patrimonio || '',
+        local: m.local || '',
+        status: m.status || 'Ativa',
+        descricao: m.descricao || ''
+      }));
+  }
+
+  const rows = await fetchAllPagedRows(API_MAQUINAS, ({ page, pageSize }) =>
+    buildMachineQueryParams({ page, pageSize })
+  );
+  const filtered = applyManualCustomFilters(rows, 'maquinas');
+  return filtered.map(m => ({
+    nome_maquina: m.nome_maquina || '',
+    patrimonio: m.patrimonio || '',
+    local: m.local || '',
+    status: m.status || 'Ativa',
+    descricao: m.descricao || ''
+  }));
+}
+
+async function exportMaquinas(type) {
+  const rows = await getMaquinasExportData();
 
   if (!rows.length) {
     showMessage('Nenhuma máquina para exportar.');
@@ -2060,22 +2229,8 @@ function exportMaquinas(type) {
   }
 }
 
-
-function getMaquinasExportData() {
-  const base = selectedMaqIds.size > 0
-    ? machineData.filter(m => selectedMaqIds.has(m.id))
-    : machineData;
-
-  return base.map(m => ({
-    nome: m.nome_maquina || '',
-    patrimonio: m.patrimonio || '',
-    local: m.local || '',
-    status: m.status || 'Ativa',
-    descricao: m.descricao || ''
-  }));
-}
-function exportMaquinasRelatorio() {
-  const rows = getMaquinasExportData();
+async function exportMaquinasRelatorio() {
+  const rows = await getMaquinasExportData();
 
   if (!rows.length) {
     showMessage('Nenhuma máquina para exportar.');
@@ -2095,7 +2250,7 @@ function exportMaquinasPDF(data) {
     startY: 70,
     head: [[ 'Máquina', 'Patrimônio', 'Local', 'Status', 'Descrição' ]],
     body: data.map(r => [
-      r.nome,
+      r.nome_maquina,
       r.patrimonio,
       r.local,
       r.status,
@@ -2176,14 +2331,18 @@ function exportMaquinasExcel(rows) {
     closeTabMenus();
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+    document.getElementById('inventoryPageIndicator')?.classList.add('hidden');
+    document.getElementById('machinesPageIndicator')?.classList.add('hidden');
 
     if (tabName === 'inventario') {
       document.getElementById('tabInventario').classList.add('active');
       document.querySelector('.tab-dinamica-wrapper[data-tab-id="inventario"] > a')?.classList.add('active');
+      updatePaginationUI('inventory');
     } else {
       document.getElementById('tabMaquinas').classList.add('active');
       document.querySelector('.tab-dinamica-wrapper[data-tab-id="maquinas"] > a')?.classList.add('active');
       fetchMachines();
+      updatePaginationUI('machines');
     }
   }
   
