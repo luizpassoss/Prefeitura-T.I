@@ -34,6 +34,37 @@ let moduloSortState = { key: null, dir: 'asc' };
 let manageTabContext = null;
 let manualTabContext = null;
 
+let globalLoadingCount = 0;
+
+function updateGlobalLoader() {
+  const loader = document.getElementById('globalLoader');
+  if (!loader) return;
+  loader.classList.toggle('hidden', globalLoadingCount === 0);
+}
+
+function showGlobalLoader() {
+  globalLoadingCount += 1;
+  updateGlobalLoader();
+}
+
+function hideGlobalLoader() {
+  globalLoadingCount = Math.max(0, globalLoadingCount - 1);
+  updateGlobalLoader();
+}
+
+if (!window.__globalFetchWrapped) {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async (...args) => {
+    showGlobalLoader();
+    try {
+      return await originalFetch(...args);
+    } finally {
+      hideGlobalLoader();
+    }
+  };
+  window.__globalFetchWrapped = true;
+}
+
 const manualTabFieldConfig = {
   inventario: [
     { key: 'link', label: 'Link de Internet' },
