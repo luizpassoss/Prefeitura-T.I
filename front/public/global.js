@@ -14,6 +14,8 @@ let camposModuloAtual = [];
   let importFileName = '';
   let importColumnMap = [];
   let importHasHeaderRow = false;
+  let importRawRows = [];
+  let importHeaderMode = 'auto';
 
 /* ===========================
    MÓDULOS DINÂMICOS
@@ -31,6 +33,94 @@ let moduloColumnFilters = {};
 let moduloSortState = { key: null, dir: 'asc' };
 let manageTabContext = null;
 let manualTabContext = null;
+
+let globalLoadingCount = 0;
+const rowHighlightQueue = {
+  inventario: new Set(),
+  maquinas: new Set(),
+  modulo: new Set()
+};
+let inventoryFlashAfterFetch = false;
+let machinesFlashAfterFetch = false;
+let moduloFlashAfterFetch = false;
+
+function updateGlobalLoader() {
+  const loader = document.getElementById('globalLoader');
+  if (!loader) return;
+  loader.classList.toggle('hidden', globalLoadingCount === 0);
+}
+
+function showGlobalLoader() {
+  globalLoadingCount += 1;
+  updateGlobalLoader();
+}
+
+function hideGlobalLoader() {
+  globalLoadingCount = Math.max(0, globalLoadingCount - 1);
+  updateGlobalLoader();
+}
+
+if (!window.__globalFetchWrapped) {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async (...args) => {
+    showGlobalLoader();
+    try {
+      return await originalFetch(...args);
+    } finally {
+      hideGlobalLoader();
+    }
+  };
+  window.__globalFetchWrapped = true;
+}
+
+function queueRowHighlight(scope, id) {
+  const bucket = rowHighlightQueue[scope];
+  if (!bucket || !id) return;
+  bucket.add(Number(id));
+}
+
+function applyRowHighlights(scope, tbodyId) {
+  const bucket = rowHighlightQueue[scope];
+  const tbodyEl = document.getElementById(tbodyId);
+  if (!bucket || !tbodyEl) return;
+  bucket.forEach((id) => {
+    const row = tbodyEl.querySelector(`tr[data-id="${id}"]`);
+    if (row) row.classList.add('table-row-highlight');
+  });
+  if (bucket.size) {
+    setTimeout(() => {
+      bucket.forEach((id) => {
+        const row = tbodyEl.querySelector(`tr[data-id="${id}"]`);
+        row?.classList.remove('table-row-highlight');
+      });
+      bucket.clear();
+    }, 2200);
+  }
+}
+
+function flashTableRows(tbodyId) {
+  const tbodyEl = document.getElementById(tbodyId);
+  if (!tbodyEl) return;
+  tbodyEl.querySelectorAll('tr').forEach((row) => row.classList.add('table-row-flash'));
+  setTimeout(() => {
+    tbodyEl.querySelectorAll('tr').forEach((row) => row.classList.remove('table-row-flash'));
+  }, 1200);
+}
+
+function setButtonLoading(button, isLoading) {
+  if (!button) return;
+  if (isLoading) {
+    if (button.classList.contains('is-loading')) return;
+    button.dataset.originalLabel = button.innerHTML;
+    button.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span>';
+    button.classList.add('is-loading');
+    button.setAttribute('aria-busy', 'true');
+  } else if (button.classList.contains('is-loading')) {
+    button.innerHTML = button.dataset.originalLabel || button.innerHTML;
+    button.classList.remove('is-loading');
+    button.removeAttribute('aria-busy');
+  }
+}
 
 const manualTabFieldConfig = {
   inventario: [
@@ -570,9 +660,7 @@ function initPaginationControls() {
     const isReset = state.page === 1;
     try{
       state.isLoading = true;
-      if (isReset) {
-        setTableLoading('tbody', true, getManualTableColspan('inventario'));
-      }
+      setTableLoading('tbody', true, getManualTableColspan('inventario'));
       const params = buildInventoryQueryParams({
         page: state.page,
         pageSize: state.pageSize === 'all' ? 200 : state.pageSize
@@ -614,6 +702,7 @@ function initPaginationControls() {
       updatePaginationUI('inventory');
     } finally {
       state.isLoading = false;
+      setTableLoading('tbody', false, getManualTableColspan('inventario'));
     }
   }
 
@@ -622,9 +711,7 @@ function initPaginationControls() {
     const isReset = state.page === 1;
     try{
       state.isLoading = true;
-      if (isReset) {
-        setTableLoading('mtbody', true, getManualTableColspan('maquinas'));
-      }
+      setTableLoading('mtbody', true, getManualTableColspan('maquinas'));
       const params = buildMachineQueryParams({
         page: state.page,
         pageSize: state.pageSize === 'all' ? 200 : state.pageSize
@@ -666,6 +753,7 @@ function initPaginationControls() {
       updatePaginationUI('machines');
     } finally {
       state.isLoading = false;
+      setTableLoading('mtbody', false, getManualTableColspan('maquinas'));
     }
   }
 
@@ -708,16 +796,48 @@ function initPaginationControls() {
   function setTableLoading(tbodyId, isLoading, colspan, message = 'Carregando registros...') {
     const tbodyEl = document.getElementById(tbodyId);
     if (!tbodyEl) return;
-    if (isLoading) {
-      tbodyEl.innerHTML = `
-        <tr class="loading-row">
+    const tableWrap = tbodyEl.closest('.table-wrap');
+    if (!isLoading) {
+      tableWrap?.classList.remove('is-loading');
+      return;
+    }
+    tableWrap?.classList.add('is-loading');
+    const skeletonRows = Array.from({ length: 5 }, (_, idx) => {
+      const width = 60 + (idx * 6);
+      return `
+        <tr class="skeleton-row">
           <td colspan="${colspan}">
-            <span class="loading-spinner" aria-hidden="true"></span>
-            ${message}
+            <div class="skeleton-bar" style="width:${width}%;"></div>
           </td>
         </tr>
       `;
-    }
+    }).join('');
+    tbodyEl.innerHTML = `
+      <tr class="loading-row">
+        <td colspan="${colspan}">
+          <span class="loading-spinner" aria-hidden="true"></span>
+          ${message}
+        </td>
+      </tr>
+      ${skeletonRows}
+    `;
+  }
+
+  function renderEmptyState(tbodyEl, colspan, title, subtitle) {
+    if (!tbodyEl) return;
+    tbodyEl.innerHTML = `
+      <tr>
+        <td colspan="${colspan}">
+          <div class="empty-state">
+            <span class="empty-state-icon" aria-hidden="true">∅</span>
+            <div class="empty-state-text">
+              <strong>${title}</strong>
+              <span>${subtitle}</span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
   }
 
   function focusFirstField(modalEl) {
@@ -882,7 +1002,13 @@ function showErrorMessage(message, title = 'Erro') {
   function renderTable(list){
     tbody.innerHTML = '';
     if(!list || list.length === 0){
-      tbody.innerHTML = `<tr><td colspan="${getManualTableColspan('inventario')}" style="padding:22px;color:#9fb6d9">Nenhum registro encontrado.</td></tr>`;
+      renderEmptyState(
+        tbody,
+        getManualTableColspan('inventario'),
+        'Nenhum registro encontrado',
+        'Adicione um novo registro ou ajuste os filtros.'
+      );
+      tbody.closest('.table-wrap')?.classList.remove('is-loading');
       updateBulkUI();
       return;
     }
@@ -892,6 +1018,7 @@ function showErrorMessage(message, title = 'Erro') {
 
     list.forEach((it, idx) => {
       const tr = document.createElement('tr');
+      tr.dataset.id = it.id;
      tr.innerHTML = `
  <td class="checkbox-cell" style="text-align:center;">
     <input 
@@ -950,6 +1077,12 @@ function showErrorMessage(message, title = 'Erro') {
     tbody.querySelectorAll('button.delete').forEach(b => {
       b.onclick = (e) => removeItem(Number(e.currentTarget.dataset.idx));
     });
+    tbody.closest('.table-wrap')?.classList.remove('is-loading');
+    applyRowHighlights('inventario', 'tbody');
+    if (inventoryFlashAfterFetch) {
+      flashTableRows('tbody');
+      inventoryFlashAfterFetch = false;
+    }
   }
   
 
@@ -1352,7 +1485,7 @@ function updateFilterBadge(type, count) {
   }
 }
 
-function updateFilterBadges() {
+function getActiveFilterCounts() {
   const q = (document.getElementById('q')?.value || '').trim();
   const cat = (document.getElementById('filterCategoryInv')?.value || 'All');
   const invLink = (document.getElementById('invFilterLink')?.value || '').trim();
@@ -1377,6 +1510,11 @@ function updateFilterBadges() {
   const modColumnFilters = Object.values(moduloColumnFilters || {}).filter(value => value?.trim());
   const modCount = [modSearch, ...modColumnFilters].filter(Boolean).length;
 
+  return { invCount, mqCount, modCount };
+}
+
+function updateFilterBadges() {
+  const { invCount, mqCount, modCount } = getActiveFilterCounts();
   updateFilterBadge('inventory', invCount);
   updateFilterBadge('machines', mqCount);
   updateFilterBadge('modules', modCount);
@@ -1425,6 +1563,8 @@ async function carregarLogoPrefeitura() {
         paginationState.inventory.pageSize = 20;
       }
     }
+    const { invCount } = getActiveFilterCounts();
+    inventoryFlashAfterFetch = invCount > 0;
     if (inventoryFilterTimeout) clearTimeout(inventoryFilterTimeout);
     if (immediate) {
       fetchData();
@@ -1534,6 +1674,7 @@ if (mLocalSelect && mLocalOutro) {
   safeAdd('inpTel', 'input', function() { this.value = applyPhoneMask(this.value); });
 
   async function saveItem(){
+    const saveBtn = modal?.querySelector('.btn-salvar');
     const isEdit = editIndex >= 0;
     const categoria = (document.getElementById('inpCategoria').value || '').trim();
     let link = (document.getElementById('inpLink').value || '').trim(); const linkOutro = (document.getElementById('inpLinkOutro') ? document.getElementById('inpLinkOutro').value.trim() : '');
@@ -1564,16 +1705,19 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
     const item = { categoria, link, velocidade, telefone, local, endereco };
     const customValues = collectManualCustomFieldValues('inventario');
 
+    setButtonLoading(saveBtn, true);
     try {
       if(isEdit){
         const id = data[editIndex].id;
         await fetch(`${API_URL}/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item) });
         setManualCustomValuesForItem('inventario', id, customValues);
+        queueRowHighlight('inventario', id);
       } else {
         const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item) });
         const novo = await res.json();
         data.push(novo);
         setManualCustomValuesForItem('inventario', novo.id, customValues);
+        queueRowHighlight('inventario', novo.id);
       }
       await fetchData();
       closeModal();
@@ -1581,6 +1725,8 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
     } catch(err){
       console.error('Erro salvar item:', err);
       showErrorMessage('Erro ao salvar item.');
+    } finally {
+      setButtonLoading(saveBtn, false);
     }
   }
 
@@ -1597,6 +1743,8 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
     showConfirm('Remover este registro?', async () => {
       try {
         const id = data[idx].id;
+        const row = tbody.querySelector(`tr[data-id="${id}"]`);
+        row?.classList.add('table-row-removing');
         await fetch(`${API_URL}/${id}`, { method:'DELETE' });
         removeManualCustomValuesForItem('inventario', id);
         await fetchData();
@@ -1666,20 +1814,27 @@ async function getInventarioExportData() {
   }));
 }
 
-async function exportInventario(type) {
-  const rows = await getInventarioExportData();
+async function exportInventario(type, triggerBtn) {
+  setButtonLoading(triggerBtn, true);
+  try {
+    const rows = await getInventarioExportData();
 
-  if (!rows.length) {
-    showMessage('Nenhum registro para exportar.');
-    return;
-  }
+    if (!rows.length) {
+      showMessage('Nenhum registro para exportar.');
+      return;
+    }
 
-  if (type === 'pdf' || type === 'both') {
-    exportInventarioPDF(rows);
-  }
+    if (type === 'pdf' || type === 'both') {
+      exportInventarioPDF(rows);
+    }
 
-  if (type === 'excel' || type === 'both') {
-    exportInventarioExcel(rows);
+    if (type === 'excel' || type === 'both') {
+      exportInventarioExcel(rows);
+    }
+
+    showActionToast('Exportação concluída com sucesso.');
+  } finally {
+    setButtonLoading(triggerBtn, false);
   }
 }
 
@@ -1786,7 +1941,14 @@ function exportInventarioExcel(rows) {
   function renderMachines(list){
     mtbody.innerHTML = '';
     if(!list || list.length===0){
-      mtbody.innerHTML = `<tr><td colspan="${getManualTableColspan('maquinas')}" style="padding:22px;color:#9fb6d9">Nenhuma máquina encontrada.</td></tr>`;
+      renderEmptyState(
+        mtbody,
+        getManualTableColspan('maquinas'),
+        'Nenhuma máquina encontrada',
+        'Cadastre uma nova máquina ou ajuste os filtros.'
+      );
+      mtbody.closest('.table-wrap')?.classList.remove('is-loading');
+      updateBulkUI();
       return;
     }
 
@@ -1795,6 +1957,7 @@ function exportInventarioExcel(rows) {
 
     list.forEach((it, idx) => {
       const tr = document.createElement('tr');
+      tr.dataset.id = it.id;
       tr.innerHTML = `
   <td class="checkbox-cell" style="text-align:center">
     <input
@@ -1859,6 +2022,13 @@ ${customFields.map((field) => `
   mtbody.querySelectorAll('.icon-btn.delete').forEach(b =>
     b.onclick = e => deleteMachine(Number(e.currentTarget.dataset.idx))
   );
+
+  mtbody.closest('.table-wrap')?.classList.remove('is-loading');
+  applyRowHighlights('maquinas', 'mtbody');
+  if (machinesFlashAfterFetch) {
+    flashTableRows('mtbody');
+    machinesFlashAfterFetch = false;
+  }
 
 
 if (chkAllMq) {
@@ -1926,6 +2096,8 @@ mtbody.addEventListener('click', (e) => {
         paginationState.machines.pageSize = 20;
       }
     }
+    const { mqCount } = getActiveFilterCounts();
+    machinesFlashAfterFetch = mqCount > 0;
     if (machineFilterTimeout) clearTimeout(machineFilterTimeout);
     if (immediate) {
       fetchMachines();
@@ -2051,6 +2223,7 @@ if (localSelect && [...localSelect.options].some(o => o.value === it.local)) {
      CRUD MÁQUINAS
      =========================== */
 async function saveMachine(){
+  const saveBtn = machineModal?.querySelector('.btn-salvar');
   const isEdit = machineEditIndex >= 0;
   let local = (document.getElementById('mLocal')?.value || '').trim();
   const localOutro = (document.getElementById('mLocalOutro')?.value || '').trim();
@@ -2084,6 +2257,7 @@ if(!item.local){
     return;
   }
 
+  setButtonLoading(saveBtn, true);
   try {
     if(isEdit){
       const id = machineData[machineEditIndex].id;
@@ -2094,6 +2268,7 @@ if(!item.local){
         body: JSON.stringify(item)
       });
       setManualCustomValuesForItem('maquinas', id, customValues);
+      queueRowHighlight('maquinas', id);
 
     } else {
 
@@ -2106,6 +2281,7 @@ if(!item.local){
       const novo = await res.json();
       machineData.push(novo);
       setManualCustomValuesForItem('maquinas', novo.id, customValues);
+      queueRowHighlight('maquinas', novo.id);
     }
 
     await fetchMachines();
@@ -2115,6 +2291,8 @@ if(!item.local){
   } catch (err) {
     console.error("Erro ao salvar máquina:", err);
     showErrorMessage("Erro ao salvar máquina.");
+  } finally {
+    setButtonLoading(saveBtn, false);
   }
 }
 
@@ -2131,6 +2309,8 @@ if(!item.local){
     showConfirm('Remover esta máquina?', async () => {
       try{
         const id = machineData[idx].id;
+        const row = mtbody.querySelector(`tr[data-id="${id}"]`);
+        row?.classList.add('table-row-removing');
         await fetch(`${API_MAQUINAS}/${id}`, { method:'DELETE' });
         removeManualCustomValuesForItem('maquinas', id);
         await fetchMachines();
@@ -2238,20 +2418,27 @@ async function getMaquinasExportData() {
   }));
 }
 
-async function exportMaquinas(type) {
-  const rows = await getMaquinasExportData();
+async function exportMaquinas(type, triggerBtn) {
+  setButtonLoading(triggerBtn, true);
+  try {
+    const rows = await getMaquinasExportData();
 
-  if (!rows.length) {
-    showMessage('Nenhuma máquina para exportar.');
-    return;
-  }
+    if (!rows.length) {
+      showMessage('Nenhuma máquina para exportar.');
+      return;
+    }
 
-  if (type === 'pdf' || type === 'both') {
-    exportMaquinasPDF(rows);
-  }
+    if (type === 'pdf' || type === 'both') {
+      exportMaquinasPDF(rows);
+    }
 
-  if (type === 'excel' || type === 'both') {
-    exportMaquinasExcel(rows);
+    if (type === 'excel' || type === 'both') {
+      exportMaquinasExcel(rows);
+    }
+
+    showActionToast('Exportação concluída com sucesso.');
+  } finally {
+    setButtonLoading(triggerBtn, false);
   }
 }
 
@@ -2628,6 +2815,8 @@ function openImportModal(type) {
   importFileName = '';
   importColumnMap = [];
   importHasHeaderRow = false;
+  importRawRows = [];
+  importHeaderMode = 'auto';
 
   document.getElementById('importTitle').innerText =
     type === 'inventario'
@@ -2641,6 +2830,8 @@ function openImportModal(type) {
   document.getElementById('importFile').value = '';
   const fileName = document.getElementById('importFileName');
   if (fileName) fileName.textContent = 'Nenhum arquivo selecionado';
+  const headerModeEl = document.getElementById('importHeaderMode');
+  if (headerModeEl) headerModeEl.value = 'auto';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -2653,6 +2844,7 @@ function openImportModal(type) {
     actionBtn.textContent = 'Confirmar Importação';
     actionBtn.disabled = false;
   }
+  updateImportSummary();
   openModalById('importModal');
   renderImportHistory();
 
@@ -2666,6 +2858,8 @@ function closeImportModal() {
   importFileName = '';
   importColumnMap = [];
   importHasHeaderRow = false;
+  importRawRows = [];
+  importHeaderMode = 'auto';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -2725,26 +2919,57 @@ function buildImportColumnMap(headers) {
     return match ? match.key : '';
   });
 }
-function handleImportFile() {
-  const file = document.getElementById('importFile').files[0];
-  const fileName = document.getElementById('importFileName');
-  importFileName = file?.name || '';
-  if (fileName) {
-    fileName.textContent = file?.name || 'Nenhum arquivo selecionado';
+
+function updateImportSummary() {
+  const rowsEl = document.getElementById('importSummaryRows');
+  const colsEl = document.getElementById('importSummaryCols');
+  const headerEl = document.getElementById('importSummaryHeader');
+  if (rowsEl) rowsEl.textContent = importRows.length.toString();
+  if (colsEl) colsEl.textContent = importHeaders.length.toString();
+  if (headerEl) {
+    const headerLabel =
+      importHeaderMode === 'auto'
+        ? `Auto (${importHasHeaderRow ? 'Sim' : 'Não'})`
+        : importHeaderMode === 'yes'
+          ? 'Sim'
+          : 'Não';
+    headerEl.textContent = headerLabel;
   }
-  if (!file) return;
+}
 
-  const reader = new FileReader();
+function setImportHeaderMode(mode) {
+  importHeaderMode = mode;
+  if (importRawRows.length) {
+    processImportData();
+  }
+  updateImportSummary();
+}
 
-  reader.onload = (e) => {
-    const wb = XLSX.read(e.target.result, { type: 'binary' });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
-    const cleaned = data.map(row => (row || []).map(cell => (cell ?? '').toString().trim()));
-    const options = getImportFieldOptions();
-    const dataRows = cleaned.filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
-    let maxCols = dataRows.reduce((max, row) => Math.max(max, row.length), 0);
+function autoMapImportColumns() {
+  importColumnMap = buildImportColumnMap(importHeaders);
+  renderImportPreview();
+}
 
+function clearImportMapping() {
+  importColumnMap = Array.from({ length: importHeaders.length }, () => '');
+  renderImportPreview();
+}
+
+function processImportData() {
+  const cleaned = importRawRows || [];
+  const options = getImportFieldOptions();
+  const dataRows = cleaned.filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
+  let maxCols = dataRows.reduce((max, row) => Math.max(max, row.length), 0);
+  let headerRowIndex = null;
+  let hasHeaderRow = false;
+
+  if (importHeaderMode === 'yes') {
+    headerRowIndex = cleaned.findIndex(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
+    hasHeaderRow = headerRowIndex !== -1;
+  } else if (importHeaderMode === 'no') {
+    headerRowIndex = null;
+    hasHeaderRow = false;
+  } else {
     const headerCandidates = cleaned.map((row, index) => {
       const normalized = row.map(cell => normalizeHeader(cell));
       const nonEmptyCount = normalized.filter(cell => cell).length;
@@ -2760,31 +2985,67 @@ function handleImportFile() {
       .filter(item => item.score > 0 && item.nonEmptyCount > 0)
       .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
 
-    if (!bestCandidate) {
-      importHeaders = Array.from({ length: maxCols }, (_, idx) => `Coluna ${columnLetter(idx)}`);
-      importRows = dataRows;
-      importColumnMap = Array.from({ length: maxCols }, () => '');
-      importHasHeaderRow = false;
-      renderImportPreview();
-      return;
+    if (bestCandidate) {
+      headerRowIndex = bestCandidate.index;
+      hasHeaderRow = true;
     }
+  }
 
-    maxCols = Math.max(maxCols, bestCandidate.row.length);
-    importHeaders = Array.from({ length: maxCols }, (_, idx) => {
-      const header = (bestCandidate.row || [])[idx] ?? '';
-      return header || `Coluna ${columnLetter(idx)}`;
-    });
-    importRows = cleaned
-      .slice(bestCandidate.index + 1)
-      .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''))
-      .filter(row => {
-        const normalizedRow = row.map(cell => normalizeHeader(cell));
-        return normalizedRow.join('|') !== bestCandidate.normalized.join('|');
-      });
-
-    importColumnMap = buildImportColumnMap(importHeaders);
-    importHasHeaderRow = true;
+  if (!dataRows.length) {
+    importHeaders = [];
+    importRows = [];
+    importColumnMap = [];
+    importHasHeaderRow = false;
     renderImportPreview();
+    return;
+  }
+
+  if (!hasHeaderRow || headerRowIndex === null) {
+    importHeaders = Array.from({ length: maxCols }, (_, idx) => `Coluna ${columnLetter(idx)}`);
+    importRows = dataRows;
+    importColumnMap = Array.from({ length: maxCols }, () => '');
+    importHasHeaderRow = false;
+    renderImportPreview();
+    return;
+  }
+
+  maxCols = Math.max(maxCols, cleaned[headerRowIndex].length);
+  importHeaders = Array.from({ length: maxCols }, (_, idx) => {
+    const header = (cleaned[headerRowIndex] || [])[idx] ?? '';
+    return header || `Coluna ${columnLetter(idx)}`;
+  });
+
+  const headerNormalized = cleaned[headerRowIndex].map(cell => normalizeHeader(cell));
+  importRows = cleaned
+    .slice(headerRowIndex + 1)
+    .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''))
+    .filter(row => {
+      const normalizedRow = row.map(cell => normalizeHeader(cell));
+      return normalizedRow.join('|') !== headerNormalized.join('|');
+    });
+
+  importColumnMap = buildImportColumnMap(importHeaders);
+  importHasHeaderRow = true;
+  renderImportPreview();
+}
+
+function handleImportFile() {
+  const file = document.getElementById('importFile').files[0];
+  const fileName = document.getElementById('importFileName');
+  importFileName = file?.name || '';
+  if (fileName) {
+    fileName.textContent = file?.name || 'Nenhum arquivo selecionado';
+  }
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    const wb = XLSX.read(e.target.result, { type: 'binary' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
+    importRawRows = data.map(row => (row || []).map(cell => (cell ?? '').toString().trim()));
+    processImportData();
   };
 
   reader.readAsBinaryString(file);
@@ -2946,6 +3207,7 @@ function renderImportPreview() {
   }
 
   renderImportValidation(validation, validationEl);
+  updateImportSummary();
 }
 
 function updateImportCell(row, col, value) {
@@ -3186,6 +3448,7 @@ function columnLetter(index) {
   return result;
 }
 async function confirmImport() {
+  const actionBtn = document.getElementById('importActionBtn');
   const validation = validateImportRows();
   if (validation.issues.length || validation.errorCount > 0) {
     showImportWarning('Existem campos obrigatórios vazios. Você pode importar e ajustar depois.');
@@ -3202,6 +3465,7 @@ async function confirmImport() {
     return;
   }
 
+  setButtonLoading(actionBtn, true);
   try {
     const result = await executeImport({
       type: importType,
@@ -3251,6 +3515,8 @@ async function confirmImport() {
       rows,
       moduleId: importType === 'modulo' ? moduloAtual?.id : null
     });
+  } finally {
+    setButtonLoading(actionBtn, false);
   }
 }
 
@@ -3284,19 +3550,25 @@ async function importarRegistrosModulo() {
   renderModuloDinamico();
 }
 
-function exportModulo(tipo) {
+function exportModulo(tipo, triggerBtn) {
   if (!moduloCampos.length || !moduloRegistros.length) {
     showMessage('Nenhum registro para exportar.');
     return;
   }
 
-  if (tipo === 'excel') {
-    exportModuloExcel();
-  } else if (tipo === 'pdf') {
-    exportModuloPDF();
-  } else if (tipo === 'both') {
-    exportModuloPDF();
-    exportModuloExcel();
+  setButtonLoading(triggerBtn, true);
+  try {
+    if (tipo === 'excel') {
+      exportModuloExcel();
+    } else if (tipo === 'pdf') {
+      exportModuloPDF();
+    } else if (tipo === 'both') {
+      exportModuloPDF();
+      exportModuloExcel();
+    }
+    showActionToast('Exportação concluída com sucesso.');
+  } finally {
+    setButtonLoading(triggerBtn, false);
   }
 }
 
@@ -3602,12 +3874,13 @@ function renderModuloDinamico() {
   }
 
   if (!sorted.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="${displayCampos.length + 2}" style="padding:22px;color:#9fb6d9">
-          Nenhum registro encontrado.
-        </td>
-      </tr>`;
+    renderEmptyState(
+      tbody,
+      displayCampos.length + 2,
+      'Nenhum registro encontrado',
+      'Crie um novo registro ou ajuste os filtros.'
+    );
+    tbody.closest('.table-wrap')?.classList.remove('is-loading');
     const chkAllMod = document.getElementById('chkAllMod');
     if (chkAllMod) chkAllMod.checked = false;
     updateBulkUI();
@@ -3616,6 +3889,7 @@ function renderModuloDinamico() {
 
   sorted.forEach(({ row, idx }) => {
     const tr = document.createElement('tr');
+    tr.dataset.id = row.id;
 
     tr.innerHTML = `
       <td class="checkbox-cell">
@@ -3677,6 +3951,13 @@ function renderModuloDinamico() {
 
     const total = tbody.querySelectorAll('.chk-mod').length;
     chkAllMod.checked = total > 0 && selectedModuloIds.size === total;
+  }
+
+  tbody.closest('.table-wrap')?.classList.remove('is-loading');
+  applyRowHighlights('modulo', 'moduloTbody');
+  if (moduloFlashAfterFetch) {
+    flashTableRows('moduloTbody');
+    moduloFlashAfterFetch = false;
   }
 }
 
@@ -3814,6 +4095,8 @@ function clearModuloFilters() {
 }
 
 function filtrarModulo() {
+  const { modCount } = getActiveFilterCounts();
+  moduloFlashAfterFetch = modCount > 0;
   renderModuloDinamico();
   updateFilterBadges();
 }
@@ -3827,6 +4110,8 @@ async function excluirRegistroModulo(id) {
     return valores;
   })() : null;
   showConfirm('Remover este registro?', async () => {
+    const row = document.querySelector(`#moduloTbody tr[data-id="${id}"]`);
+    row?.classList.add('table-row-removing');
     await fetch(`${API_MODULOS}/${moduloAtual.id}/registros/${id}`, {
       method: 'DELETE'
     });
@@ -3995,6 +4280,7 @@ function renderFormularioModulo(valores = {}) {
 }
 
 async function salvarRegistroModulo() {
+  const saveBtn = document.querySelector('#moduloRegistroModal .btn-salvar');
   if (!moduloAtual?.id) {
     showErrorMessage('Selecione uma aba personalizada.');
     return;
@@ -4038,11 +4324,19 @@ async function salvarRegistroModulo() {
     : `${API_MODULOS}/${moduloAtual.id}/registros`;
   const method = moduloEditId ? 'PUT' : 'POST';
 
-  await fetch(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ valores })
-  });
+  setButtonLoading(saveBtn, true);
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valores })
+    });
+    const payload = await res.json().catch(() => ({}));
+    const rowId = moduloEditId || payload?.id;
+    if (rowId) queueRowHighlight('modulo', rowId);
+  } finally {
+    setButtonLoading(saveBtn, false);
+  }
 
   closeModuloRegistroModal();
   await carregarRegistrosModulo();
