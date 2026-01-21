@@ -545,6 +545,20 @@ body.theme-dark h1 {
   box-shadow: none;
 }
 
+.pagination-footer .btn.pagination-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 6px;
+}
+
+.pagination-footer .pagination-arrow-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
 .pagination-footer .btn.secondary {
   background: #f8fafc;
   border-color: #e2e8f0;
@@ -734,6 +748,7 @@ thead th {
   top: 0;
   z-index: 3;
   height: var(--table-head-row-height);
+  box-sizing: border-box;
 }
 
 thead th.actions-header {
@@ -753,6 +768,7 @@ tbody td.checkbox-cell {
   top: var(--table-head-row-height);
   z-index: 2;
   height: var(--table-filter-row-height);
+  box-sizing: border-box;
 }
 
 .table-filter-input {
@@ -791,6 +807,10 @@ tbody tr:hover td {
 
 tbody tr:nth-child(even) td {
   background: #f4f7fb;
+}
+
+tbody tr:nth-child(even):hover td {
+  background: #f0f7ff;
 }
 
 tbody tr {
@@ -835,8 +855,8 @@ body.theme-dark tbody tr:nth-child(even) td {
   background: rgba(15, 23, 42, 0.35);
 }
 
-body.theme-dark tbody tr:hover td {
-  background: rgba(59, 130, 246, 0.12);
+body.theme-dark tbody tr:nth-child(even):hover td {
+  background: rgba(59, 130, 246, 0.08);
 }
 
 body.theme-dark .table-wrap thead .table-filters th.checkbox-cell,
@@ -1719,15 +1739,15 @@ label {
 .filters {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .filters-panel {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 8px;
   flex-wrap: wrap;
 }
 
@@ -1737,15 +1757,15 @@ label {
 
 .filters .input,
 .filters .select {
-  height: 40px;
-  padding: 8px 14px;
-  border-radius: 10px;
-  font-size: 14px;
+  height: 32px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #1f2937;
-  min-width: 180px;
-  flex: 1 1 180px;
+  min-width: 140px;
+  flex: 1 1 160px;
 }
 
 .filters .btn {
@@ -1753,8 +1773,8 @@ label {
 }
 
 .filters .btn {
-  height: 40px;
-  padding: 8px 14px;
+  height: 32px;
+  padding: 6px 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2462,7 +2482,8 @@ td {
   text-align: center;
 }
 table tbody tr {
-  height: 44px;
+  height: auto;
+  min-height: 44px;
 }
 
 tbody tr:hover td.checkbox-cell,
