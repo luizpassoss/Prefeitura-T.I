@@ -903,6 +903,10 @@ function toggleFilters(panelId, button) {
     const hasPanelControls = panel.querySelectorAll('input, select, textarea').length > 0;
     const hasColumnFilters = document.querySelectorAll('#moduloThead .table-filter-input').length > 0;
     if (!hasPanelControls && !hasColumnFilters) {
+      panel.classList.add('hidden');
+      if (button) {
+        button.setAttribute('aria-pressed', 'false');
+      }
       showMessage('Esta aba ainda não possui filtros disponíveis.');
       return;
     }
@@ -3847,6 +3851,8 @@ function renderModuloDinamico() {
 
   const filtered = getModuloFiltrado();
   const { displayCampos, categoriaFieldName } = getModuloDisplayConfig();
+  const moduleFiltersPanel = document.getElementById('moduleFilters');
+  const moduleFiltersButton = document.querySelector('#tabModuloDinamico .filter-btn');
 
   // HEADER
   thead.innerHTML = `
@@ -3883,6 +3889,11 @@ function renderModuloDinamico() {
       filtrarModulo();
     });
   });
+
+  if (moduleFiltersPanel && !displayCampos.length) {
+    moduleFiltersPanel.classList.add('hidden');
+    if (moduleFiltersButton) moduleFiltersButton.setAttribute('aria-pressed', 'false');
+  }
 
   const sortMenuOptions = document.getElementById('sortMenuModOptions');
   if (sortMenuOptions) {
