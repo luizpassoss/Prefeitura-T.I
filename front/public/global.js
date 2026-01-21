@@ -303,6 +303,17 @@ let machineFilterTimeout = null;
 
   const btnNovaAba = document.getElementById('btnNovaAba');
   const themeToggle = document.getElementById('themeToggle');
+
+function shouldIgnoreRowToggle(target) {
+  return Boolean(target.closest('button, a, input, select, textarea, .action-group, .icon-btn, .desc-preview'));
+}
+
+function toggleRowCheckbox(row, selector) {
+  const checkbox = row.querySelector(selector);
+  if (!checkbox) return;
+  checkbox.checked = !checkbox.checked;
+  checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+}
   
 
 if (btnNovaAba) {
@@ -989,6 +1000,13 @@ tbody.addEventListener('change', (e) => {
   }
 
   updateBulkUI();
+});
+
+tbody.addEventListener('click', (e) => {
+  if (shouldIgnoreRowToggle(e.target)) return;
+  const row = e.target.closest('tr');
+  if (!row) return;
+  toggleRowCheckbox(row, '.chk-inv');
 });
 
 function normalize(s){
@@ -1879,6 +1897,14 @@ mtbody.addEventListener('change', (e) => {
   }
 
   updateBulkUI();
+});
+
+mtbody.addEventListener('click', (e) => {
+  if (shouldIgnoreRowToggle(e.target)) return;
+  const row = e.target.closest('tr');
+  if (row) {
+    toggleRowCheckbox(row, '.chk-mq');
+  }
 });
 
 mtbody.addEventListener('click', (e) => {
@@ -3670,6 +3696,14 @@ if (moduloTbody) {
     }
 
     updateBulkUI();
+  });
+
+  moduloTbody.addEventListener('click', (e) => {
+    if (shouldIgnoreRowToggle(e.target)) return;
+    const row = e.target.closest('tr');
+    if (row) {
+      toggleRowCheckbox(row, '.chk-mod');
+    }
   });
 
   moduloTbody.addEventListener('click', (e) => {
