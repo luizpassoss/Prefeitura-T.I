@@ -568,11 +568,15 @@ body.theme-dark .pagination-footer .pagination-select {
 .table-wrap.table-scroll thead th {
   top: 0;
   z-index: 3;
+  background: #f1f5fb;
+  box-shadow: 0 1px 0 #e6edf5;
 }
 
 .table-wrap.table-scroll .table-filters th {
   top: var(--table-head-row-height);
   z-index: 2;
+  background: #f8fafc;
+  box-shadow: 0 1px 0 #e6edf5;
 }
 
 .table-wrap.table-scroll tbody tr td:first-child .pill {
