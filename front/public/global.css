@@ -496,9 +496,9 @@ body.theme-dark h1 {
 .table-wrap {
   background: var(--panel);
   border-radius: 16px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
   overflow-x: auto;
   position: relative;
   --table-head-row-height: 40px;
@@ -508,16 +508,34 @@ body.theme-dark h1 {
 .pagination-footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: 8px;
-  padding: 8px 12px;
-  border-radius: 14px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--text-muted);
   font-size: 11px;
   opacity: 0.95;
+}
+
+.pagination-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.pagination-group-left {
+  justify-content: flex-start;
+}
+
+.pagination-group-right {
+  justify-content: flex-end;
 }
 
 .pagination-footer .btn {
@@ -542,6 +560,7 @@ body.theme-dark h1 {
   font-weight: 500;
   color: var(--text-muted);
   letter-spacing: 0.1px;
+  white-space: nowrap;
 }
 
 .pagination-footer .pagination-select {
@@ -552,6 +571,7 @@ body.theme-dark h1 {
   border: 1px solid #dbe4f0;
   background: #ffffff;
   color: #334155;
+  min-width: 72px;
 }
 
 body.theme-dark .pagination-footer .btn.secondary {
@@ -561,8 +581,14 @@ body.theme-dark .pagination-footer .btn.secondary {
 }
 
 body.theme-dark .pagination-footer {
+  background: transparent;
+  border-color: transparent;
+}
+
+body.theme-dark .pagination-group {
   background: rgba(15, 23, 42, 0.7);
   border-color: rgba(51, 65, 85, 0.7);
+  box-shadow: 0 6px 14px rgba(5, 10, 20, 0.35);
 }
 
 body.theme-dark .pagination-footer .pagination-select {
@@ -668,12 +694,12 @@ table {
 }
 
 thead th {
-  background: #f1f5fb;
-  color: #54667a;
+  background: #f4f7fb;
+  color: #475569;
   font-weight: 600;
-  padding: var(--space-3) var(--space-2);
+  padding: 12px 14px;
   text-align: left;
-  border-bottom: 1px solid #e6edf5;
+  border-bottom: 1px solid #e2e8f0;
   font-size: var(--font-xs);
   position: sticky;
   top: 0;
@@ -693,7 +719,7 @@ tbody td.checkbox-cell {
 
 .table-filters th {
   background: #f8fafc;
-  padding: var(--space-2) var(--space-2);
+  padding: 8px 14px;
   position: sticky;
   top: var(--table-head-row-height);
   z-index: 2;
@@ -702,7 +728,7 @@ tbody td.checkbox-cell {
 
 .table-filter-input {
   width: 100%;
-  padding: var(--space-1) var(--space-2);
+  padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid #dbe4f0;
   background: #ffffff;
@@ -723,14 +749,23 @@ tbody td.checkbox-cell input {
 }
 
 tbody td {
-  padding: var(--space-3) var(--space-2);
-  border-bottom: 1px solid #e6edf5;
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef2f7;
   color: #1a1f27;
   font-size: var(--font-xs);
+  line-height: 1.4;
 }
 
 tbody tr:hover td {
   background: #f0f7ff;
+}
+
+tbody tr:nth-child(even) td {
+  background: #f9fbff;
+}
+
+tbody tr {
+  transition: background 0.2s ease;
 }
 
 body.theme-dark .nav a {
@@ -744,7 +779,8 @@ body.theme-dark .nav a.active {
 }
 
 body.theme-dark .table-wrap {
-  box-shadow: 0 10px 24px rgba(5, 10, 20, 0.45);
+  box-shadow: 0 12px 26px rgba(5, 10, 20, 0.5);
+  border-color: rgba(51, 65, 85, 0.7);
 }
 
 body.theme-dark thead th {
@@ -760,6 +796,18 @@ body.theme-dark .table-wrap th.actions-header {
 
 body.theme-dark .table-filters th {
   background: #131c2b;
+}
+
+body.theme-dark tbody td {
+  border-bottom-color: rgba(30, 41, 59, 0.7);
+}
+
+body.theme-dark tbody tr:nth-child(even) td {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+body.theme-dark tbody tr:hover td {
+  background: rgba(59, 130, 246, 0.12);
 }
 
 body.theme-dark .table-wrap thead .table-filters th.checkbox-cell,
@@ -2354,7 +2402,7 @@ td {
 }
 
 .table-wrap th.checkbox-cell {
-  background: #f1f5fb;
+  background: #f4f7fb;
   z-index: 5;
 }
 
@@ -2370,7 +2418,7 @@ td {
 }
 
 .table-wrap th.actions-header {
-  background: #f1f5fb;
+  background: #f4f7fb;
   z-index: 5;
 }
 
@@ -2382,6 +2430,7 @@ td {
 
 .table-wrap td.actions {
   background: var(--panel);
+  text-align: center;
 }
 table tbody tr {
   height: 44px;
