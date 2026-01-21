@@ -545,6 +545,20 @@ body.theme-dark h1 {
   box-shadow: none;
 }
 
+.pagination-footer .btn.pagination-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 6px;
+}
+
+.pagination-footer .pagination-arrow-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
 .pagination-footer .btn.secondary {
   background: #f8fafc;
   border-color: #e2e8f0;
@@ -734,6 +748,7 @@ thead th {
   top: 0;
   z-index: 3;
   height: var(--table-head-row-height);
+  box-sizing: border-box;
 }
 
 thead th.actions-header {
@@ -753,6 +768,7 @@ tbody td.checkbox-cell {
   top: var(--table-head-row-height);
   z-index: 2;
   height: var(--table-filter-row-height);
+  box-sizing: border-box;
 }
 
 .table-filter-input {
@@ -791,6 +807,10 @@ tbody tr:hover td {
 
 tbody tr:nth-child(even) td {
   background: #f4f7fb;
+}
+
+tbody tr:nth-child(even):hover td {
+  background: #f0f7ff;
 }
 
 tbody tr {
@@ -836,6 +856,10 @@ body.theme-dark tbody tr:nth-child(even) td {
 }
 
 body.theme-dark tbody tr:hover td {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+body.theme-dark tbody tr:nth-child(even):hover td {
   background: rgba(59, 130, 246, 0.12);
 }
 
