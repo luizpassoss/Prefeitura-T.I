@@ -135,17 +135,17 @@
               </button>
 
               <div id="exportMenuInv" class="export-menu hidden">
-                <button onclick="exportInventario('pdf')">
+                <button onclick="exportInventario('pdf', this)">
                   <span class="icon pdf-icon"></span>
                   PDF
                 </button>
 
-                <button onclick="exportInventario('excel')">
+                <button onclick="exportInventario('excel', this)">
                   <span class="icon excel-icon"></span>
                   Excel
                 </button>
 
-                <button onclick="exportInventario('both')">
+                <button onclick="exportInventario('both', this)">
                   <span class="icon both-icon"></span>
                   PDF + Excel
                 </button>
@@ -307,17 +307,17 @@
               </button>
 
               <div id="exportMenuMq" class="export-menu hidden">
-                <button onclick="exportMaquinas('pdf')">
+                <button onclick="exportMaquinas('pdf', this)">
                   <span class="icon pdf-icon"></span>
                   PDF
                 </button>
 
-                <button onclick="exportMaquinas('excel')">
+                <button onclick="exportMaquinas('excel', this)">
                   <span class="icon excel-icon"></span>
                   Excel
                 </button>
 
-                <button onclick="exportMaquinas('both')">
+                <button onclick="exportMaquinas('both', this)">
                   <span class="icon both-icon"></span>
                   PDF + Excel
                 </button>
@@ -477,20 +477,20 @@
               </button>
 
               <div id="exportMenuMod" class="export-menu hidden">
-                <button onclick="exportModulo('pdf')">
-                  <span class="icon pdf-icon"></span>
-                  PDF
-                </button>
+              <button onclick="exportModulo('pdf', this)">
+                <span class="icon pdf-icon"></span>
+                PDF
+              </button>
 
-                <button onclick="exportModulo('excel')">
-                  <span class="icon excel-icon"></span>
-                  Excel
-                </button>
+              <button onclick="exportModulo('excel', this)">
+                <span class="icon excel-icon"></span>
+                Excel
+              </button>
 
-                <button onclick="exportModulo('both')">
-                  <span class="icon both-icon"></span>
-                  PDF + Excel
-                </button>
+              <button onclick="exportModulo('both', this)">
+                <span class="icon both-icon"></span>
+                PDF + Excel
+              </button>
               </div>
             </div>
 
