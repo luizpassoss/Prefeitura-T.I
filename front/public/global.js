@@ -14,6 +14,8 @@ let camposModuloAtual = [];
   let importFileName = '';
   let importColumnMap = [];
   let importHasHeaderRow = false;
+  let importRawRows = [];
+  let importHeaderMode = 'auto';
 
 /* ===========================
    MÓDULOS DINÂMICOS
@@ -2628,6 +2630,8 @@ function openImportModal(type) {
   importFileName = '';
   importColumnMap = [];
   importHasHeaderRow = false;
+  importRawRows = [];
+  importHeaderMode = 'auto';
 
   document.getElementById('importTitle').innerText =
     type === 'inventario'
@@ -2641,6 +2645,8 @@ function openImportModal(type) {
   document.getElementById('importFile').value = '';
   const fileName = document.getElementById('importFileName');
   if (fileName) fileName.textContent = 'Nenhum arquivo selecionado';
+  const headerModeEl = document.getElementById('importHeaderMode');
+  if (headerModeEl) headerModeEl.value = 'auto';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -2653,6 +2659,7 @@ function openImportModal(type) {
     actionBtn.textContent = 'Confirmar Importação';
     actionBtn.disabled = false;
   }
+  updateImportSummary();
   openModalById('importModal');
   renderImportHistory();
 
@@ -2666,6 +2673,8 @@ function closeImportModal() {
   importFileName = '';
   importColumnMap = [];
   importHasHeaderRow = false;
+  importRawRows = [];
+  importHeaderMode = 'auto';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -2725,26 +2734,57 @@ function buildImportColumnMap(headers) {
     return match ? match.key : '';
   });
 }
-function handleImportFile() {
-  const file = document.getElementById('importFile').files[0];
-  const fileName = document.getElementById('importFileName');
-  importFileName = file?.name || '';
-  if (fileName) {
-    fileName.textContent = file?.name || 'Nenhum arquivo selecionado';
+
+function updateImportSummary() {
+  const rowsEl = document.getElementById('importSummaryRows');
+  const colsEl = document.getElementById('importSummaryCols');
+  const headerEl = document.getElementById('importSummaryHeader');
+  if (rowsEl) rowsEl.textContent = importRows.length.toString();
+  if (colsEl) colsEl.textContent = importHeaders.length.toString();
+  if (headerEl) {
+    const headerLabel =
+      importHeaderMode === 'auto'
+        ? `Auto (${importHasHeaderRow ? 'Sim' : 'Não'})`
+        : importHeaderMode === 'yes'
+          ? 'Sim'
+          : 'Não';
+    headerEl.textContent = headerLabel;
   }
-  if (!file) return;
+}
 
-  const reader = new FileReader();
+function setImportHeaderMode(mode) {
+  importHeaderMode = mode;
+  if (importRawRows.length) {
+    processImportData();
+  }
+  updateImportSummary();
+}
 
-  reader.onload = (e) => {
-    const wb = XLSX.read(e.target.result, { type: 'binary' });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
-    const cleaned = data.map(row => (row || []).map(cell => (cell ?? '').toString().trim()));
-    const options = getImportFieldOptions();
-    const dataRows = cleaned.filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
-    let maxCols = dataRows.reduce((max, row) => Math.max(max, row.length), 0);
+function autoMapImportColumns() {
+  importColumnMap = buildImportColumnMap(importHeaders);
+  renderImportPreview();
+}
 
+function clearImportMapping() {
+  importColumnMap = Array.from({ length: importHeaders.length }, () => '');
+  renderImportPreview();
+}
+
+function processImportData() {
+  const cleaned = importRawRows || [];
+  const options = getImportFieldOptions();
+  const dataRows = cleaned.filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
+  let maxCols = dataRows.reduce((max, row) => Math.max(max, row.length), 0);
+  let headerRowIndex = null;
+  let hasHeaderRow = false;
+
+  if (importHeaderMode === 'yes') {
+    headerRowIndex = cleaned.findIndex(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
+    hasHeaderRow = headerRowIndex !== -1;
+  } else if (importHeaderMode === 'no') {
+    headerRowIndex = null;
+    hasHeaderRow = false;
+  } else {
     const headerCandidates = cleaned.map((row, index) => {
       const normalized = row.map(cell => normalizeHeader(cell));
       const nonEmptyCount = normalized.filter(cell => cell).length;
@@ -2760,31 +2800,67 @@ function handleImportFile() {
       .filter(item => item.score > 0 && item.nonEmptyCount > 0)
       .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
 
-    if (!bestCandidate) {
-      importHeaders = Array.from({ length: maxCols }, (_, idx) => `Coluna ${columnLetter(idx)}`);
-      importRows = dataRows;
-      importColumnMap = Array.from({ length: maxCols }, () => '');
-      importHasHeaderRow = false;
-      renderImportPreview();
-      return;
+    if (bestCandidate) {
+      headerRowIndex = bestCandidate.index;
+      hasHeaderRow = true;
     }
+  }
 
-    maxCols = Math.max(maxCols, bestCandidate.row.length);
-    importHeaders = Array.from({ length: maxCols }, (_, idx) => {
-      const header = (bestCandidate.row || [])[idx] ?? '';
-      return header || `Coluna ${columnLetter(idx)}`;
-    });
-    importRows = cleaned
-      .slice(bestCandidate.index + 1)
-      .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''))
-      .filter(row => {
-        const normalizedRow = row.map(cell => normalizeHeader(cell));
-        return normalizedRow.join('|') !== bestCandidate.normalized.join('|');
-      });
-
-    importColumnMap = buildImportColumnMap(importHeaders);
-    importHasHeaderRow = true;
+  if (!dataRows.length) {
+    importHeaders = [];
+    importRows = [];
+    importColumnMap = [];
+    importHasHeaderRow = false;
     renderImportPreview();
+    return;
+  }
+
+  if (!hasHeaderRow || headerRowIndex === null) {
+    importHeaders = Array.from({ length: maxCols }, (_, idx) => `Coluna ${columnLetter(idx)}`);
+    importRows = dataRows;
+    importColumnMap = Array.from({ length: maxCols }, () => '');
+    importHasHeaderRow = false;
+    renderImportPreview();
+    return;
+  }
+
+  maxCols = Math.max(maxCols, cleaned[headerRowIndex].length);
+  importHeaders = Array.from({ length: maxCols }, (_, idx) => {
+    const header = (cleaned[headerRowIndex] || [])[idx] ?? '';
+    return header || `Coluna ${columnLetter(idx)}`;
+  });
+
+  const headerNormalized = cleaned[headerRowIndex].map(cell => normalizeHeader(cell));
+  importRows = cleaned
+    .slice(headerRowIndex + 1)
+    .filter(row => row.some(cell => `${cell ?? ''}`.trim() !== ''))
+    .filter(row => {
+      const normalizedRow = row.map(cell => normalizeHeader(cell));
+      return normalizedRow.join('|') !== headerNormalized.join('|');
+    });
+
+  importColumnMap = buildImportColumnMap(importHeaders);
+  importHasHeaderRow = true;
+  renderImportPreview();
+}
+
+function handleImportFile() {
+  const file = document.getElementById('importFile').files[0];
+  const fileName = document.getElementById('importFileName');
+  importFileName = file?.name || '';
+  if (fileName) {
+    fileName.textContent = file?.name || 'Nenhum arquivo selecionado';
+  }
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    const wb = XLSX.read(e.target.result, { type: 'binary' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
+    importRawRows = data.map(row => (row || []).map(cell => (cell ?? '').toString().trim()));
+    processImportData();
   };
 
   reader.readAsBinaryString(file);
@@ -2946,6 +3022,7 @@ function renderImportPreview() {
   }
 
   renderImportValidation(validation, validationEl);
+  updateImportSummary();
 }
 
 function updateImportCell(row, col, value) {
