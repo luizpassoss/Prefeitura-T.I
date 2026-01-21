@@ -720,6 +720,9 @@
   </svg>
   <span class="action-toast-text"></span>
 </div>
+<div id="globalLoader" class="global-loader hidden" role="status" aria-live="polite" aria-label="Carregando">
+  <div class="global-loader-spinner" aria-hidden="true"></div>
+</div>
 <!-- MODAL DESCRIÇÃO COMPLETA -->
 <div id="descModal" class="modal" onclick="closeDescModal(event)">
   <div class="card" style="max-width: 600px" onclick="event.stopPropagation()">
@@ -780,6 +783,32 @@
 
     <!-- STEP 2: PREVIEW -->
     <div id="importStepPreview" class="hidden">
+      <div class="import-guide">
+        <div>
+          <h3>Assistente de importação</h3>
+          <p>Revise os dados, confirme o cabeçalho e ajuste o mapeamento antes de importar.</p>
+          <ul>
+            <li>Passo 1: confirme se a primeira linha é cabeçalho.</li>
+            <li>Passo 2: confira o mapeamento sugerido.</li>
+            <li>Passo 3: revise as células destacadas.</li>
+          </ul>
+        </div>
+        <div class="import-guide-summary">
+          <div><strong>Linhas:</strong> <span id="importSummaryRows">0</span></div>
+          <div><strong>Colunas:</strong> <span id="importSummaryCols">0</span></div>
+          <div><strong>Cabeçalho:</strong> <span id="importSummaryHeader">Auto</span></div>
+        </div>
+      </div>
+      <div class="import-controls">
+        <label for="importHeaderMode">Primeira linha é cabeçalho?</label>
+        <select id="importHeaderMode" class="select" onchange="setImportHeaderMode(this.value)">
+          <option value="auto">Detectar automaticamente</option>
+          <option value="yes">Sim</option>
+          <option value="no">Não</option>
+        </select>
+        <button type="button" class="btn secondary" onclick="autoMapImportColumns()">Auto mapear colunas</button>
+        <button type="button" class="btn secondary" onclick="clearImportMapping()">Limpar mapeamento</button>
+      </div>
       <div id="importValidation" class="import-validation hidden"></div>
 
       <div class="table-wrap" style="margin-top:20px">
