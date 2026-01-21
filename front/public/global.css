@@ -504,36 +504,65 @@ body.theme-dark h1 {
   --table-filter-row-height: 38px;
 }
 
-.pagination-indicator {
-  position: fixed;
-  bottom: 16px;
-  right: 20px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.9);
-  color: #f8fafc;
+.pagination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--text-muted);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
-  z-index: 20;
-  opacity: 0.85;
-  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.pagination-indicator.hidden {
-  display: none;
+.pagination-footer .btn {
+  height: 30px;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 999px;
+  box-shadow: none;
 }
 
-.pagination-indicator:hover {
-  opacity: 1;
-  transform: translateY(-2px);
+.pagination-footer .btn.secondary {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
 }
 
-body.theme-dark .pagination-indicator {
-  background: rgba(148, 163, 184, 0.2);
+.pagination-footer .btn.secondary:hover {
+  background: #eef2f7;
+}
+
+.pagination-footer .pagination-info {
+  margin-right: auto;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.pagination-footer .pagination-select {
+  height: 30px;
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text-muted);
+}
+
+body.theme-dark .pagination-footer .btn.secondary {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(51, 65, 85, 0.6);
+  color: #cbd5e1;
+}
+
+body.theme-dark .pagination-footer .pagination-select {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(51, 65, 85, 0.6);
   color: #e2e8f0;
-  box-shadow: 0 12px 28px rgba(5, 10, 20, 0.45);
+}
+
+.table-wrap.table-scroll {
+  max-height: 420px;
+  overflow-y: auto;
 }
 
 .loading-row {
@@ -2354,6 +2383,48 @@ body.theme-dark tbody tr:hover td.actions {
   margin-top: var(--space-4);
   display: grid;
   gap: var(--space-2);
+}
+
+#importModal .card {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#importModal .card > :not(.import-history) {
+  flex: 0 0 auto;
+}
+
+.import-history {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.import-history .table-wrap {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.import-history table {
+  min-width: 640px;
+}
+
+.import-history thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.import-history td:nth-child(3) {
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+body.theme-dark #importModal .card {
+  background: #121826;
 }
 
 .import-history-header {
