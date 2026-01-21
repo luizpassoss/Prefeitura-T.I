@@ -277,8 +277,8 @@ const sortState = {
 
 const IMPORT_HISTORY_KEY = 'ti-import-history';
 const paginationState = {
-  inventory: { page: 1, pageSize: 15, total: 0 },
-  machines: { page: 1, pageSize: 15, total: 0 }
+  inventory: { page: 1, pageSize: 20, total: 0, hasMore: true, isLoading: false },
+  machines: { page: 1, pageSize: 20, total: 0, hasMore: true, isLoading: false }
 };
 let inventoryFilterTimeout = null;
 let machineFilterTimeout = null;
@@ -344,6 +344,7 @@ if (btnNovaAba) {
   applyManualTabLabels('inventario');
   applyManualTabLabels('maquinas');
   initPaginationControls();
+  initInfiniteScroll();
 
 
   /* ===========================
@@ -474,22 +475,24 @@ function buildMachineQueryParams({ page = paginationState.machines.page, pageSiz
 function updatePaginationUI(scope) {
   const state = paginationState[scope];
   if (!state) return;
+  const isActive =
+    (scope === 'inventory' && document.getElementById('tabInventario')?.classList.contains('active')) ||
+    (scope === 'machines' && document.getElementById('tabMaquinas')?.classList.contains('active'));
   const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
   state.page = Math.min(state.page, totalPages);
-  const rangeEl = document.getElementById(`${scope}Range`);
-  const pageEl = document.getElementById(`${scope}Page`);
-  const totalPagesEl = document.getElementById(`${scope}TotalPages`);
-  const start = state.total === 0 ? 0 : (state.page - 1) * state.pageSize + 1;
-  const end = state.total === 0 ? 0 : Math.min(state.page * state.pageSize, state.total);
-  if (rangeEl) {
-    rangeEl.textContent = `Mostrando ${start}–${end} de ${state.total}`;
+  const indicator = document.getElementById(`${scope}PageIndicator`);
+  if (!indicator) return;
+  if (state.total === 0) {
+    indicator.classList.add('hidden');
+    return;
   }
-  if (pageEl) pageEl.textContent = String(state.page);
-  if (totalPagesEl) totalPagesEl.textContent = String(totalPages);
-  const prevBtn = document.querySelector(`[data-page-action="prev"][data-page-scope="${scope}"]`);
-  const nextBtn = document.querySelector(`[data-page-action="next"][data-page-scope="${scope}"]`);
-  if (prevBtn) prevBtn.disabled = state.page <= 1;
-  if (nextBtn) nextBtn.disabled = state.page >= totalPages;
+  const loaded = Math.min(state.page * state.pageSize, state.total);
+  indicator.textContent = `Carregados ${loaded} de ${state.total} · Página ${state.page}/${totalPages}`;
+  if (isActive) {
+    indicator.classList.remove('hidden');
+  } else {
+    indicator.classList.add('hidden');
+  }
 }
 
 function setPage(scope, nextPage) {
@@ -521,25 +524,71 @@ function initPaginationControls() {
 
 }
 
+function getActivePaginationScope() {
+  if (document.getElementById('tabInventario')?.classList.contains('active')) {
+    return 'inventory';
+  }
+  if (document.getElementById('tabMaquinas')?.classList.contains('active')) {
+    return 'machines';
+  }
+  return null;
+}
+
+function maybeLoadMore(scope) {
+  const state = paginationState[scope];
+  if (!state || state.isLoading || !state.hasMore) return;
+  state.page += 1;
+  if (scope === 'inventory') {
+    fetchData();
+  } else if (scope === 'machines') {
+    fetchMachines();
+  }
+}
+
+function initInfiniteScroll() {
+  const scrollContainer = document.querySelector('.tab-content');
+  if (!scrollContainer) return;
+  scrollContainer.addEventListener('scroll', () => {
+    const scope = getActivePaginationScope();
+    if (!scope) return;
+    const threshold = 220;
+    const remaining = scrollContainer.scrollHeight - (scrollContainer.scrollTop + scrollContainer.clientHeight);
+    if (remaining <= threshold) {
+      maybeLoadMore(scope);
+    }
+  });
+}
+
   /* ===========================
      FETCH / INIT
      =========================== */
   async function fetchData(){
+    const state = paginationState.inventory;
+    const isReset = state.page === 1;
     try{
-      setTableLoading('tbody', true, getManualTableColspan('inventario'));
+      state.isLoading = true;
+      if (isReset) {
+        setTableLoading('tbody', true, getManualTableColspan('inventario'));
+      }
       const params = buildInventoryQueryParams();
       const res = await fetch(`${API_URL}?${params.toString()}`);
       const payload = await res.json();
       const rows = Array.isArray(payload) ? payload : (payload.data || []);
-      data = rows;
       paginationState.inventory.total = Array.isArray(payload) ? rows.length : (payload.total ?? rows.length);
       if (!Array.isArray(payload)) {
         paginationState.inventory.page = payload.page || paginationState.inventory.page;
         paginationState.inventory.pageSize = payload.pageSize || paginationState.inventory.pageSize;
       }
-      data = applyManualCustomFilters(data, 'inventario');
-      selectedInvIds.clear();
-      updateBulkUI();
+      const normalizedRows = applyManualCustomFilters(rows, 'inventario');
+      if (isReset) {
+        data = normalizedRows;
+        selectedInvIds.clear();
+        updateBulkUI();
+      } else {
+        data = data.concat(normalizedRows);
+      }
+      const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+      state.hasMore = state.page < totalPages;
       renderTable(data);
       updateSortIndicators('#tb thead', sortState.inventory);
       updateSortQuickButtons('inventory', sortState.inventory);
@@ -547,30 +596,46 @@ function initPaginationControls() {
       updatePaginationUI('inventory');
     } catch(err){
       console.error('Erro ao buscar links:', err);
-      data = [];
-      selectedInvIds.clear();
-      updateBulkUI();
-      renderTable([]);
+      if (isReset) {
+        data = [];
+        selectedInvIds.clear();
+        updateBulkUI();
+        renderTable([]);
+      }
+      state.hasMore = false;
       updatePaginationUI('inventory');
+    } finally {
+      state.isLoading = false;
     }
   }
 
   async function fetchMachines(){
+    const state = paginationState.machines;
+    const isReset = state.page === 1;
     try{
-      setTableLoading('mtbody', true, getManualTableColspan('maquinas'));
+      state.isLoading = true;
+      if (isReset) {
+        setTableLoading('mtbody', true, getManualTableColspan('maquinas'));
+      }
       const params = buildMachineQueryParams();
       const res = await fetch(`${API_MAQUINAS}?${params.toString()}`);
       const payload = await res.json();
       const rows = Array.isArray(payload) ? payload : (payload.data || []);
-      machineData = rows;
       paginationState.machines.total = Array.isArray(payload) ? rows.length : (payload.total ?? rows.length);
       if (!Array.isArray(payload)) {
         paginationState.machines.page = payload.page || paginationState.machines.page;
         paginationState.machines.pageSize = payload.pageSize || paginationState.machines.pageSize;
       }
-      machineData = applyManualCustomFilters(machineData, 'maquinas');
-      selectedMaqIds.clear();
-      updateBulkUI();
+      const normalizedRows = applyManualCustomFilters(rows, 'maquinas');
+      if (isReset) {
+        machineData = normalizedRows;
+        selectedMaqIds.clear();
+        updateBulkUI();
+      } else {
+        machineData = machineData.concat(normalizedRows);
+      }
+      const totalPages = Math.max(1, Math.ceil(state.total / state.pageSize));
+      state.hasMore = state.page < totalPages;
       renderMachines(machineData);
       updateSortIndicators('#tabMaquinas thead', sortState.machines);
       updateSortQuickButtons('machines', sortState.machines);
@@ -578,11 +643,16 @@ function initPaginationControls() {
       updatePaginationUI('machines');
     } catch(err){
       console.error('Erro ao buscar máquinas:', err);
-      machineData = [];
-      selectedMaqIds.clear();
-      updateBulkUI();
-      renderMachines([]);
+      if (isReset) {
+        machineData = [];
+        selectedMaqIds.clear();
+        updateBulkUI();
+        renderMachines([]);
+      }
+      state.hasMore = false;
       updatePaginationUI('machines');
+    } finally {
+      state.isLoading = false;
     }
   }
 
@@ -1331,6 +1401,7 @@ async function carregarLogoPrefeitura() {
     const { immediate = false, resetPage = true } = options;
     if (resetPage) {
       paginationState.inventory.page = 1;
+      paginationState.inventory.hasMore = true;
     }
     if (inventoryFilterTimeout) clearTimeout(inventoryFilterTimeout);
     if (immediate) {
@@ -1821,6 +1892,7 @@ mtbody.addEventListener('click', (e) => {
     const { immediate = false, resetPage = true } = options;
     if (resetPage) {
       paginationState.machines.page = 1;
+      paginationState.machines.hasMore = true;
     }
     if (machineFilterTimeout) clearTimeout(machineFilterTimeout);
     if (immediate) {
@@ -2253,14 +2325,18 @@ function exportMaquinasExcel(rows) {
     closeTabMenus();
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+    document.getElementById('inventoryPageIndicator')?.classList.add('hidden');
+    document.getElementById('machinesPageIndicator')?.classList.add('hidden');
 
     if (tabName === 'inventario') {
       document.getElementById('tabInventario').classList.add('active');
       document.querySelector('.tab-dinamica-wrapper[data-tab-id="inventario"] > a')?.classList.add('active');
+      updatePaginationUI('inventory');
     } else {
       document.getElementById('tabMaquinas').classList.add('active');
       document.querySelector('.tab-dinamica-wrapper[data-tab-id="maquinas"] > a')?.classList.add('active');
       fetchMachines();
+      updatePaginationUI('machines');
     }
   }
   
