@@ -896,14 +896,22 @@ function initPaginationControls() {
     return ws;
   }
 
-  function toggleFilters(panelId, button) {
-    const panel = document.getElementById(panelId);
-    if (!panel) return;
-    panel.classList.toggle('hidden');
-    if (button) {
-      const isOpen = !panel.classList.contains('hidden');
-      button.setAttribute('aria-pressed', String(isOpen));
+function toggleFilters(panelId, button) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  if (panelId === 'moduleFilters') {
+    const hasPanelControls = panel.querySelectorAll('input, select, textarea').length > 0;
+    const hasColumnFilters = document.querySelectorAll('#moduloThead .table-filter-input').length > 0;
+    if (!hasPanelControls && !hasColumnFilters) {
+      showMessage('Esta aba ainda não possui filtros disponíveis.');
+      return;
     }
+  }
+  panel.classList.toggle('hidden');
+  if (button) {
+    const isOpen = !panel.classList.contains('hidden');
+    button.setAttribute('aria-pressed', String(isOpen));
+  }
   }
 
 function showMessage(message, title = 'Aviso', type = 'info') {
