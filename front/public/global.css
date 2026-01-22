@@ -1997,6 +1997,10 @@ body.theme-dark .file-input-name {
   border-radius: 8px;
   font-size: var(--font-sm);
   color: #000000cc;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  line-height: 1.4;
 }
 
 .create-tab-card textarea:focus,
