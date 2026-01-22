@@ -449,6 +449,8 @@ let actionToastLeftTimeout = null;
 let notificationItems = [];
 let notificationsClearedAt = null;
 let notificationsSuppressed = false;
+const NOTIFICATION_DISMISSED_KEY = 'ti-notification-dismissed';
+let dismissedNotificationIds = loadDismissedNotifications();
 
   updateFilterBadges();
   renderImportHistory();
@@ -536,6 +538,8 @@ function clearNotifications() {
   notificationsClearedAt = Date.now();
   notificationItems = [];
   notificationsSuppressed = true;
+  dismissedNotificationIds = new Set();
+  saveDismissedNotifications(dismissedNotificationIds);
   renderNotifications();
   closeNotificationPanel();
 }
@@ -546,8 +550,64 @@ function refreshNotifications() {
   toggleNotificationPanel(true);
 }
 
-function buildNotificationItem(id, title, description, count) {
-  return { id, title, description, count };
+function buildNotificationItem(id, title, description, count, options = {}) {
+  return {
+    id,
+    title,
+    description,
+    count,
+    priority: options.priority || 'low',
+    action: options.action || null,
+    actionLabel: options.actionLabel || 'Ver detalhes'
+  };
+}
+
+function loadDismissedNotifications() {
+  const stored = localStorage.getItem(NOTIFICATION_DISMISSED_KEY);
+  if (!stored) return new Set();
+  try {
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed);
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function saveDismissedNotifications(nextSet) {
+  localStorage.setItem(NOTIFICATION_DISMISSED_KEY, JSON.stringify([...nextSet]));
+}
+
+function dismissNotification(id) {
+  if (!id) return;
+  dismissedNotificationIds.add(id);
+  saveDismissedNotifications(dismissedNotificationIds);
+  notificationItems = notificationItems.filter(item => item.id !== id);
+  renderNotifications();
+}
+
+function openNotificationFilters(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  if (panel.classList.contains('hidden')) {
+    toggleFilters(panelId);
+  }
+}
+
+function handleNotificationAction(id) {
+  const item = notificationItems.find(entry => entry.id === id);
+  if (!item?.action) return;
+  const { type } = item.action;
+  if (type === 'inventario') {
+    switchTab('inventario');
+    openNotificationFilters('inventoryFilters');
+  } else if (type === 'maquinas') {
+    switchTab('maquinas');
+    openNotificationFilters('machineFilters');
+  } else if (type === 'modulo' && moduloAtual) {
+    abrirModulo(moduloAtual);
+    openNotificationFilters('moduleFilters');
+  }
 }
 
 function collectNotifications() {
@@ -560,7 +620,8 @@ function collectNotifications() {
         'inv-telefone',
         `${missingTelefone} registro(s) sem telefone`,
         'Revise o Inventário para completar os contatos.',
-        missingTelefone
+        missingTelefone,
+        { priority: 'medium', action: { type: 'inventario' } }
       ));
     }
     if (missingEndereco) {
@@ -568,7 +629,8 @@ function collectNotifications() {
         'inv-endereco',
         `${missingEndereco} registro(s) sem endereço`,
         'Inclua o endereço para facilitar a localização.',
-        missingEndereco
+        missingEndereco,
+        { priority: 'medium', action: { type: 'inventario' } }
       ));
     }
   }
@@ -581,7 +643,8 @@ function collectNotifications() {
         'maq-manutencao',
         `${emManutencao} máquina(s) em manutenção`,
         'Verifique prioridades e atualize o status quando necessário.',
-        emManutencao
+        emManutencao,
+        { priority: 'high', action: { type: 'maquinas' } }
       ));
     }
     if (inativas) {
@@ -589,7 +652,8 @@ function collectNotifications() {
         'maq-inativa',
         `${inativas} máquina(s) inativas`,
         'Considere revisar o destino ou reativação.',
-        inativas
+        inativas,
+        { priority: 'high', action: { type: 'maquinas' } }
       ));
     }
     if (semPatrimonio) {
@@ -597,7 +661,8 @@ function collectNotifications() {
         'maq-patrimonio',
         `${semPatrimonio} máquina(s) sem patrimônio`,
         'Inclua o patrimônio para controle e auditoria.',
-        semPatrimonio
+        semPatrimonio,
+        { priority: 'medium', action: { type: 'maquinas' } }
       ));
     }
   }
@@ -610,7 +675,8 @@ function collectNotifications() {
         'mod-sem-registros',
         'Módulo sem registros',
         'Adicione registros para começar a preencher a aba personalizada.',
-        1
+        1,
+        { priority: 'medium', action: { type: 'modulo' } }
       ));
     }
     if (emptyCells) {
@@ -618,7 +684,8 @@ function collectNotifications() {
         'mod-campos-vazios',
         `${emptyCells} campo(s) vazio(s) no módulo`,
         'Revise os registros para completar as informações.',
-        emptyCells
+        emptyCells,
+        { priority: 'low', action: { type: 'modulo' } }
       ));
     }
   }
@@ -638,16 +705,23 @@ function renderNotifications() {
     return;
   }
   list.innerHTML = items.map(item => `
-    <div class="notification-item" data-id="${item.id}">
-      <strong>${item.title}</strong>
-      <span>${item.description}</span>
+    <div class="notification-item is-${item.priority}" data-id="${item.id}">
+      <div class="notification-item-content">
+        <strong>${item.title}</strong>
+        <span>${item.description}</span>
+      </div>
+      <div class="notification-item-actions">
+        ${item.action ? `<button type="button" class="notification-action" onclick="handleNotificationAction('${item.id}')">${item.actionLabel}</button>` : ''}
+        <button type="button" class="notification-dismiss" onclick="dismissNotification('${item.id}')">Dispensar</button>
+      </div>
     </div>
   `).join('');
 }
 
 function updateNotifications(force = false) {
   if (notificationsSuppressed && !force) return;
-  const items = collectNotifications();
+  const items = collectNotifications()
+    .filter(item => !dismissedNotificationIds.has(item.id));
   if (notificationsClearedAt) {
     const hasNew = items.some(item => item.count > 0);
     if (!hasNew) {
@@ -4959,6 +5033,11 @@ const fieldPresetMap = Object.entries(tabTemplates).reduce((acc, [group, fields]
 
 let fieldDragInitialized = false;
 
+function getInheritedFieldOptions(nome, tipo) {
+  if (tipo !== 'select') return [];
+  return getSelectOptionsForCampo({ nome });
+}
+
 function applyFieldPreset(idx, presetKey) {
   const preset = fieldPresetMap[presetKey];
   if (!preset) return;
@@ -4978,6 +5057,7 @@ function applyFieldPreset(idx, presetKey) {
     newTabFields[idx].nome = preset.nome;
     newTabFields[idx].tipo = preset.tipo;
     newTabFields[idx].obrigatorio = preset.obrigatorio;
+    newTabFields[idx].opcoes = getInheritedFieldOptions(preset.nome, preset.tipo);
   }
   updateFieldType(idx, preset.tipo);
   updateFieldOptionsSummary(idx);
@@ -5567,7 +5647,10 @@ function applyTabTemplate() {
 
   if (templateKey === 'custom') return;
   const templateFields = tabTemplates[templateKey] || [];
-  templateFields.forEach(field => addFieldWithValues(field));
+  templateFields.forEach(field => addFieldWithValues({
+    ...field,
+    opcoes: getInheritedFieldOptions(field.nome, field.tipo)
+  }));
   renderSortOptionsPicker();
 }
 
@@ -6154,6 +6237,8 @@ window.closeBulkEditModalIfClicked = closeBulkEditModalIfClicked;
 window.applyBulkEdit = applyBulkEdit;
 window.clearNotifications = clearNotifications;
 window.refreshNotifications = refreshNotifications;
+window.dismissNotification = dismissNotification;
+window.handleNotificationAction = handleNotificationAction;
 
 
   /* ===========================

@@ -1108,7 +1108,8 @@
       </p>
     </div>
 
-    <div class="form-grid">
+    <div class="create-tab-body">
+      <div class="form-grid">
       <div class="form-full">
         <label for="newTabName">Nome da Aba</label>
         <input id="newTabName" placeholder="Ex: Almoxarifado" data-autofocus />
@@ -1131,27 +1132,28 @@
           <option value="maquinas">Máquinas (status e patrimônio)</option>
         </select>
       </div>
-    </div>
-
-    <div class="create-tab-header">
-      <label>Campos da Tabela</label>
-      <div class="create-tab-actions">
-        <button type="button" class="btn secondary" onclick="sortFieldsAlphabetically()">
-          Ordenar A→Z
-        </button>
-        <button type="button" class="btn secondary" onclick="addField()">
-          + Adicionar Campo
-        </button>
       </div>
-    </div>
 
-    <div id="fieldsContainer"></div>
+      <div class="create-tab-header">
+        <label>Campos da Tabela</label>
+        <div class="create-tab-actions">
+          <button type="button" class="btn secondary" onclick="sortFieldsAlphabetically()">
+            Ordenar A→Z
+          </button>
+          <button type="button" class="btn secondary" onclick="addField()">
+            + Adicionar Campo
+          </button>
+        </div>
+      </div>
 
-    <div class="create-tab-header">
-      <label>Opções de ordenação</label>
-      <span class="small">Escolha quais campos devem aparecer no menu Ordenar.</span>
+      <div id="fieldsContainer"></div>
+
+      <div class="create-tab-header">
+        <label>Opções de ordenação</label>
+        <span class="small">Escolha quais campos devem aparecer no menu Ordenar.</span>
+      </div>
+      <div id="sortOptionsContainer" class="sort-options-grid"></div>
     </div>
-    <div id="sortOptionsContainer" class="sort-options-grid"></div>
 
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeCreateTabModal()">Cancelar</button>
