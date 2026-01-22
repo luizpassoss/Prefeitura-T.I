@@ -430,23 +430,6 @@ if (btnNovaAba) {
   const savedTheme = localStorage.getItem('ti-theme');
   const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
-  updateFilterBadges();
-  renderImportHistory();
-
-  initSortMenu('sortMenuInv', sortState.inventory, applyFilters);
-  initSortMenu('sortMenuMq', sortState.machines, applyMachineFilters);
-  initSortOrderToggle('inventory', sortState.inventory, applyFilters);
-  initSortOrderToggle('machines', sortState.machines, applyMachineFilters);
-  initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
-  initSortQuickButtons('inventory', sortState.inventory, applyFilters);
-  initSortQuickButtons('machines', sortState.machines, applyMachineFilters);
-  ensureManualTabColumns('inventario');
-  ensureManualTabColumns('maquinas');
-  applyManualTabLabels('inventario');
-  applyManualTabLabels('maquinas');
-  initPaginationControls();
-
-
   /* ===========================
      ESTADOS
      =========================== */
@@ -463,6 +446,37 @@ let selectedMaqIds = new Set();
 let selectedModuloIds = new Set();
 let actionToastTimeout = null;
 let actionToastLeftTimeout = null;
+let notificationItems = [];
+let notificationsClearedAt = null;
+
+  updateFilterBadges();
+  renderImportHistory();
+
+  initSortMenu('sortMenuInv', sortState.inventory, applyFilters);
+  initSortMenu('sortMenuMq', sortState.machines, applyMachineFilters);
+  initSortOrderToggle('inventory', sortState.inventory, applyFilters);
+  initSortOrderToggle('machines', sortState.machines, applyMachineFilters);
+  initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
+  initSortQuickButtons('inventory', sortState.inventory, applyFilters);
+  initSortQuickButtons('machines', sortState.machines, applyMachineFilters);
+  ensureManualTabColumns('inventario');
+  ensureManualTabColumns('maquinas');
+  applyManualTabLabels('inventario');
+  applyManualTabLabels('maquinas');
+  initPaginationControls();
+  renderNotifications();
+  const notificationToggle = document.getElementById('notificationToggle');
+  if (notificationToggle) {
+    notificationToggle.addEventListener('click', () => toggleNotificationPanel());
+  }
+  document.addEventListener('click', (event) => {
+    const panel = document.getElementById('notificationPanel');
+    const toggle = document.getElementById('notificationToggle');
+    if (!panel || !toggle) return;
+    if (!panel.classList.contains('hidden') && !panel.contains(event.target) && !toggle.contains(event.target)) {
+      closeNotificationPanel();
+    }
+  });
 
 function showActionToastWithId(toastId, message, duration, getTimeoutRef, setTimeoutRef) {
   const toast = document.getElementById(toastId);
@@ -504,6 +518,153 @@ function showActionToastLeft(message, duration = 3200) {
   );
 }
 
+function toggleNotificationPanel(forceOpen = null) {
+  const panel = document.getElementById('notificationPanel');
+  const toggle = document.getElementById('notificationToggle');
+  if (!panel || !toggle) return;
+  const shouldOpen = forceOpen !== null ? forceOpen : panel.classList.contains('hidden');
+  panel.classList.toggle('hidden', !shouldOpen);
+  toggle.setAttribute('aria-expanded', String(shouldOpen));
+}
+
+function closeNotificationPanel() {
+  toggleNotificationPanel(false);
+}
+
+function clearNotifications() {
+  notificationsClearedAt = Date.now();
+  notificationItems = [];
+  renderNotifications();
+  closeNotificationPanel();
+}
+
+function buildNotificationItem(id, title, description, count) {
+  return { id, title, description, count };
+}
+
+function collectNotifications() {
+  const items = [];
+  if (Array.isArray(data)) {
+    const missingTelefone = data.filter(item => !String(item.telefone || '').trim()).length;
+    const missingEndereco = data.filter(item => !String(item.endereco || '').trim()).length;
+    if (missingTelefone) {
+      items.push(buildNotificationItem(
+        'inv-telefone',
+        `${missingTelefone} registro(s) sem telefone`,
+        'Revise o Inventário para completar os contatos.',
+        missingTelefone
+      ));
+    }
+    if (missingEndereco) {
+      items.push(buildNotificationItem(
+        'inv-endereco',
+        `${missingEndereco} registro(s) sem endereço`,
+        'Inclua o endereço para facilitar a localização.',
+        missingEndereco
+      ));
+    }
+  }
+  if (Array.isArray(machineData)) {
+    const emManutencao = machineData.filter(item => String(item.status || '').toLowerCase() === 'manutenção').length;
+    const inativas = machineData.filter(item => String(item.status || '').toLowerCase() === 'inativa').length;
+    const semPatrimonio = machineData.filter(item => !String(item.patrimonio || '').trim()).length;
+    if (emManutencao) {
+      items.push(buildNotificationItem(
+        'maq-manutencao',
+        `${emManutencao} máquina(s) em manutenção`,
+        'Verifique prioridades e atualize o status quando necessário.',
+        emManutencao
+      ));
+    }
+    if (inativas) {
+      items.push(buildNotificationItem(
+        'maq-inativa',
+        `${inativas} máquina(s) inativas`,
+        'Considere revisar o destino ou reativação.',
+        inativas
+      ));
+    }
+    if (semPatrimonio) {
+      items.push(buildNotificationItem(
+        'maq-patrimonio',
+        `${semPatrimonio} máquina(s) sem patrimônio`,
+        'Inclua o patrimônio para controle e auditoria.',
+        semPatrimonio
+      ));
+    }
+  }
+  return items;
+}
+
+function renderNotifications() {
+  const list = document.getElementById('notificationList');
+  const badge = document.getElementById('notificationBadge');
+  if (!list || !badge) return;
+  const items = notificationItems;
+  const total = items.reduce((sum, item) => sum + (item.count || 0), 0);
+  badge.textContent = total;
+  badge.classList.toggle('hidden', total === 0);
+  if (!items.length) {
+    list.innerHTML = '<div class="notification-item"><strong>Tudo em dia</strong><span>Sem pendências encontradas.</span></div>';
+    return;
+  }
+  list.innerHTML = items.map(item => `
+    <div class="notification-item" data-id="${item.id}">
+      <strong>${item.title}</strong>
+      <span>${item.description}</span>
+    </div>
+  `).join('');
+}
+
+function updateNotifications() {
+  const items = collectNotifications();
+  if (notificationsClearedAt) {
+    const hasNew = items.some(item => item.count > 0);
+    if (!hasNew) {
+      notificationItems = [];
+      renderNotifications();
+      return;
+    }
+  }
+  notificationItems = items;
+  renderNotifications();
+}
+
+function updateInventorySummary() {
+  const total = data.length;
+  const missingPhone = data.filter(item => !String(item.telefone || '').trim()).length;
+  const missingAddress = data.filter(item => !String(item.endereco || '').trim()).length;
+  const missingLocal = data.filter(item => !String(item.local || '').trim()).length;
+  const totalEl = document.getElementById('inventoryTotal');
+  const phoneEl = document.getElementById('inventoryMissingPhone');
+  const addressEl = document.getElementById('inventoryMissingAddress');
+  const localEl = document.getElementById('inventoryMissingLocal');
+  if (totalEl) totalEl.textContent = total;
+  if (phoneEl) phoneEl.textContent = missingPhone;
+  if (addressEl) addressEl.textContent = missingAddress;
+  if (localEl) localEl.textContent = missingLocal;
+}
+
+function updateMachineSummary() {
+  const total = machineData.length;
+  const maintenance = machineData.filter(item => String(item.status || '').toLowerCase() === 'manutenção').length;
+  const inactive = machineData.filter(item => String(item.status || '').toLowerCase() === 'inativa').length;
+  const missingAsset = machineData.filter(item => !String(item.patrimonio || '').trim()).length;
+  const totalEl = document.getElementById('machinesTotal');
+  const maintEl = document.getElementById('machinesMaintenance');
+  const inactiveEl = document.getElementById('machinesInactive');
+  const assetEl = document.getElementById('machinesMissingAsset');
+  if (totalEl) totalEl.textContent = total;
+  if (maintEl) maintEl.textContent = maintenance;
+  if (inactiveEl) inactiveEl.textContent = inactive;
+  if (assetEl) assetEl.textContent = missingAsset;
+}
+
+function updateSummaries() {
+  updateInventorySummary();
+  updateMachineSummary();
+}
+
 function updateBulkUI() {
   const bulk = document.getElementById('bulkActions');
   const counter = document.getElementById('bulkCounter');
@@ -515,6 +676,173 @@ function updateBulkUI() {
     bulk.classList.remove('hidden');
   } else {
     bulk.classList.add('hidden');
+  }
+}
+
+function getBulkSelectionContext() {
+  const isInventario = selectedInvIds.size > 0;
+  const isMaquinas = !isInventario && selectedMaqIds.size > 0;
+  const isModulo = !isInventario && !isMaquinas && selectedModuloIds.size > 0;
+  if (!isInventario && !isMaquinas && !isModulo) return null;
+  const ids = isInventario
+    ? [...selectedInvIds]
+    : isMaquinas
+      ? [...selectedMaqIds]
+      : [...selectedModuloIds];
+  return {
+    type: isInventario ? 'inventario' : isMaquinas ? 'maquinas' : 'modulo',
+    ids
+  };
+}
+
+function resetBulkEditForm() {
+  const safe = (id, value = '') => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  };
+  safe('bulkCategoria', '');
+  safe('bulkLink', '');
+  safe('bulkLinkOutro', '');
+  safe('bulkVel', '');
+  safe('bulkVelOutro', '');
+  safe('bulkTel', '');
+  safe('bulkLocal', '');
+  safe('bulkLocalOutro', '');
+  safe('bulkEnd', '');
+  safe('bulkStatus', '');
+  safe('bulkPatrimonio', '');
+  safe('bulkMachineLocal', '');
+  safe('bulkMachineLocalOutro', '');
+  safe('bulkDescricao', '');
+  const toggleOutro = (selectId, inputId) => {
+    const input = document.getElementById(inputId);
+    if (input) input.style.display = 'none';
+  };
+  toggleOutro('bulkLink', 'bulkLinkOutro');
+  toggleOutro('bulkVel', 'bulkVelOutro');
+  toggleOutro('bulkLocal', 'bulkLocalOutro');
+  toggleOutro('bulkMachineLocal', 'bulkMachineLocalOutro');
+}
+
+function openBulkEditModal() {
+  const context = getBulkSelectionContext();
+  if (!context) {
+    showMessage('Selecione itens para editar em massa.');
+    return;
+  }
+  if (context.type === 'modulo') {
+    showMessage('Edição em massa disponível apenas para Inventário e Máquinas.');
+    return;
+  }
+  const modal = document.getElementById('bulkEditModal');
+  const subtitle = document.getElementById('bulkEditSubtitle');
+  const inventoryFields = document.getElementById('bulkEditInventoryFields');
+  const machineFields = document.getElementById('bulkEditMachineFields');
+  if (!modal || !inventoryFields || !machineFields) return;
+  resetBulkEditForm();
+  const label = context.type === 'inventario' ? 'Inventário' : 'Máquinas';
+  if (subtitle) {
+    subtitle.textContent = `Você está editando ${context.ids.length} item(ns) de ${label}. Preencha apenas os campos que deseja alterar.`;
+  }
+  inventoryFields.style.display = context.type === 'inventario' ? 'grid' : 'none';
+  machineFields.style.display = context.type === 'maquinas' ? 'grid' : 'none';
+  showModal(modal);
+}
+
+function closeBulkEditModal() {
+  const modal = document.getElementById('bulkEditModal');
+  if (modal) hideModal(modal);
+}
+
+function closeBulkEditModalIfClicked(e) {
+  if (e?.target?.id === 'bulkEditModal') closeBulkEditModal();
+}
+
+function getBulkInventoryUpdates() {
+  const updates = {};
+  const categoria = (document.getElementById('bulkCategoria')?.value || '').trim();
+  if (categoria) updates.categoria = categoria;
+  let link = (document.getElementById('bulkLink')?.value || '').trim();
+  const linkOutro = (document.getElementById('bulkLinkOutro')?.value || '').trim();
+  if (link === 'Outro' && linkOutro) link = linkOutro;
+  if (link) updates.link = link;
+  let velocidade = (document.getElementById('bulkVel')?.value || '').trim();
+  const velOutro = (document.getElementById('bulkVelOutro')?.value || '').trim();
+  if (velocidade === 'Outro' && velOutro) velocidade = velOutro;
+  if (velocidade) updates.velocidade = velocidade;
+  let local = (document.getElementById('bulkLocal')?.value || '').trim();
+  const localOutro = (document.getElementById('bulkLocalOutro')?.value || '').trim();
+  if (local === 'Outro' && localOutro) local = localOutro;
+  if (local) updates.local = local;
+  let telefone = (document.getElementById('bulkTel')?.value || '').trim();
+  if (telefone) {
+    telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
+    updates.telefone = telefone;
+  }
+  const endereco = (document.getElementById('bulkEnd')?.value || '').trim();
+  if (endereco) updates.endereco = endereco;
+  return updates;
+}
+
+function getBulkMachineUpdates() {
+  const updates = {};
+  const status = (document.getElementById('bulkStatus')?.value || '').trim();
+  if (status) updates.status = status;
+  const patrimonio = (document.getElementById('bulkPatrimonio')?.value || '').trim();
+  if (patrimonio) updates.patrimonio = patrimonio;
+  let local = (document.getElementById('bulkMachineLocal')?.value || '').trim();
+  const localOutro = (document.getElementById('bulkMachineLocalOutro')?.value || '').trim();
+  if (local === 'Outro' && localOutro) local = localOutro;
+  if (local) updates.local = local;
+  const descricao = (document.getElementById('bulkDescricao')?.value || '').trim();
+  if (descricao) updates.descricao = descricao;
+  return updates;
+}
+
+async function applyBulkEdit() {
+  const context = getBulkSelectionContext();
+  if (!context) return;
+  const saveBtn = document.querySelector('#bulkEditModal .btn-salvar');
+  const updates = context.type === 'inventario' ? getBulkInventoryUpdates() : getBulkMachineUpdates();
+  if (!Object.keys(updates).length) {
+    showMessage('Informe ao menos um campo para atualizar.');
+    return;
+  }
+  setButtonLoading(saveBtn, true);
+  try {
+    if (context.type === 'inventario') {
+      const requests = context.ids.map((id) => {
+        const item = data.find((row) => row.id === id);
+        if (!item) return null;
+        const payload = { ...item, ...updates };
+        return fetch(`${API_URL}/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }).filter(Boolean);
+      await Promise.all(requests);
+      await fetchData();
+    } else if (context.type === 'maquinas') {
+      const requests = context.ids.map((id) => {
+        const item = machineData.find((row) => row.id === id);
+        if (!item) return null;
+        const payload = { ...item, ...updates };
+        return fetch(`${API_MAQUINAS}/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }).filter(Boolean);
+      await fetchMachines();
+    }
+    closeBulkEditModal();
+    showActionToast('Registros atualizados com sucesso.');
+  } catch (err) {
+    console.error('Erro ao editar em massa:', err);
+    showErrorMessage('Erro ao atualizar registros.');
+  } finally {
+    setButtonLoading(saveBtn, false);
   }
 }
 
@@ -687,6 +1015,8 @@ function initPaginationControls() {
       selectedInvIds.clear();
       updateBulkUI();
       renderTable(data);
+      updateNotifications();
+      updateSummaries();
       updateSortIndicators('#tb thead', sortState.inventory);
       updateSortQuickButtons('inventory', sortState.inventory);
       updateFilterBadges();
@@ -698,6 +1028,7 @@ function initPaginationControls() {
         selectedInvIds.clear();
         updateBulkUI();
         renderTable([]);
+        updateSummaries();
       }
       updatePaginationUI('inventory');
     } finally {
@@ -738,6 +1069,8 @@ function initPaginationControls() {
       selectedMaqIds.clear();
       updateBulkUI();
       renderMachines(machineData);
+      updateNotifications();
+      updateSummaries();
       updateSortIndicators('#tabMaquinas thead', sortState.machines);
       updateSortQuickButtons('machines', sortState.machines);
       updateFilterBadges();
@@ -749,6 +1082,7 @@ function initPaginationControls() {
         selectedMaqIds.clear();
         updateBulkUI();
         renderMachines([]);
+        updateSummaries();
       }
       updatePaginationUI('machines');
     } finally {
@@ -901,8 +1235,9 @@ function toggleFilters(panelId, button) {
   if (!panel) return;
   if (panelId === 'moduleFilters') {
     const hasPanelControls = panel.querySelectorAll('input, select, textarea').length > 0;
-    const hasColumnFilters = document.querySelectorAll('#moduloThead .table-filter-input').length > 0;
-    if (!hasPanelControls && !hasColumnFilters) {
+    const moduleFilterInputs = [...document.querySelectorAll('#moduloThead .table-filter-input')];
+    const hasVisibleColumnFilters = moduleFilterInputs.some(input => input.offsetParent !== null);
+    if (!hasPanelControls && !hasVisibleColumnFilters) {
       panel.classList.add('hidden');
       if (button) {
         button.setAttribute('aria-pressed', 'false');
@@ -1693,6 +2028,11 @@ if (mLocalSelect && mLocalOutro) {
   safeAdd('inpVel','change', function(){ const e = document.getElementById('inpVelOutro'); if(!e) return; e.style.display = this.value==='Outro' ? 'block' : 'none'; if(this.value!=='Outro') e.value=''; });
   safeAdd('inpLocal','change', function(){ const e = document.getElementById('inpLocalOutro'); if(!e) return; e.style.display = this.value==='Outro' ? 'block' : 'none'; if(this.value!=='Outro') e.value=''; });
   safeAdd('inpTel', 'input', function() { this.value = applyPhoneMask(this.value); });
+  safeAdd('bulkLink','change', function(){ const e = document.getElementById('bulkLinkOutro'); if(!e) return; e.style.display = this.value==='Outro' ? 'block' : 'none'; if(this.value!=='Outro') e.value=''; });
+  safeAdd('bulkVel','change', function(){ const e = document.getElementById('bulkVelOutro'); if(!e) return; e.style.display = this.value==='Outro' ? 'block' : 'none'; if(this.value!=='Outro') e.value=''; });
+  safeAdd('bulkLocal','change', function(){ const e = document.getElementById('bulkLocalOutro'); if(!e) return; e.style.display = this.value==='Outro' ? 'block' : 'none'; if(this.value!=='Outro') e.value=''; });
+  safeAdd('bulkMachineLocal','change', function(){ const e = document.getElementById('bulkMachineLocalOutro'); if(!e) return; e.style.display = this.value==='Outro' ? 'block' : 'none'; if(this.value!=='Outro') e.value=''; });
+  safeAdd('bulkTel', 'input', function() { this.value = applyPhoneMask(this.value); });
 
   async function saveItem(){
     const saveBtn = modal?.querySelector('.btn-salvar');
@@ -5751,6 +6091,11 @@ window.confirmDeleteModulo = confirmDeleteModulo;
 window.closeSystemMessageModal = closeSystemMessageModal;
 window.closeSystemConfirmModal = closeSystemConfirmModal;
 window.confirmSystemAction = confirmSystemAction;
+window.openBulkEditModal = openBulkEditModal;
+window.closeBulkEditModal = closeBulkEditModal;
+window.closeBulkEditModalIfClicked = closeBulkEditModalIfClicked;
+window.applyBulkEdit = applyBulkEdit;
+window.clearNotifications = clearNotifications;
 
 
   /* ===========================
