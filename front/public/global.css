@@ -2005,8 +2005,9 @@ body.theme-dark .file-input-name {
 
 .create-tab-card textarea:focus,
 .create-tab-card input:focus {
-  border: 1px solid rgba(59, 130, 246, 0.45);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.2);
+  outline: none;
 }
 
 .modal-heading h2 {
