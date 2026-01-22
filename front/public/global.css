@@ -1758,6 +1758,7 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 .modal-card-fixed {
   height: min(90vh, 760px);
   max-height: min(90vh, 760px);
+  overflow: hidden;
 }
 
 .modal-body-scroll {

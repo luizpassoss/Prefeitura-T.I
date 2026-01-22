@@ -591,10 +591,11 @@
 
 <!-- MODAL INVENTÁRIO -->
 <div id="modal" class="modal" onclick="closeModalIfClicked(event)">
-  <div class="card" onclick="event.stopPropagation()">
+  <div class="card modal-card-fixed" onclick="event.stopPropagation()">
     <h2 id="modalTitle">Novo Registro</h2>
 
-    <div class="form-grid">
+    <div class="modal-body-scroll">
+      <div class="form-grid">
 
       <!-- Categoria -->
       <div>
@@ -680,7 +681,8 @@
         <input id="inpEnd" type="text">
       </div>
 
-      <div id="manualCustomFieldsInv" class="form-full manual-custom-fields"></div>
+        <div id="manualCustomFieldsInv" class="form-full manual-custom-fields"></div>
+      </div>
     </div>
 
     <div class="modal-footer">
