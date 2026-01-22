@@ -979,16 +979,6 @@ tbody tr {
   transition: background 0.2s ease;
 }
 
-body.theme-dark .nav a {
-  color: #d4d4d8;
-}
-
-body.theme-dark .nav a.active {
-  background: rgba(212, 212, 216, 0.2);
-  color: #f4f4f5;
-  box-shadow: 0 6px 14px rgba(24, 24, 27, 0.4);
-}
-
 body.theme-dark .table-wrap {
   box-shadow: 0 8px 18px rgba(8, 8, 10, 0.35);
   border-color: rgba(63, 63, 70, 0.7);
@@ -1123,10 +1113,6 @@ body.theme-dark .module-record-card label {
   color: #d4d4d8;
 }
 
-body.theme-dark .brand {
-  color: #e4e4e7;
-}
-
 body.theme-dark .tab-menu-btn {
   color: #a1a1aa;
 }
@@ -1151,9 +1137,28 @@ body.theme-dark .tab-menu-dropdown button:hover {
   background: rgba(161, 161, 170, 0.16);
 }
 
+body.theme-dark .sidebar {
+  background: #1b1b21;
+  border-right-color: #2f2f36;
+}
+
+body.theme-dark .brand {
+  color: #f4f4f5;
+}
+
 body.theme-dark .brand::after {
-  opacity: 0.35;
-  filter: brightness(0.9);
+  opacity: 0.4;
+  filter: brightness(1);
+}
+
+body.theme-dark .nav a {
+  color: #e4e4e7;
+}
+
+body.theme-dark .nav a.active {
+  background: rgba(212, 212, 216, 0.28);
+  color: #f8fafc;
+  box-shadow: 0 6px 14px rgba(24, 24, 27, 0.35);
 }
 
 body.theme-dark .btn {
