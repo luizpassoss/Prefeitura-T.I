@@ -430,6 +430,25 @@ if (btnNovaAba) {
   const savedTheme = localStorage.getItem('ti-theme');
   const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+  /* ===========================
+     ESTADOS
+     =========================== */
+  let data = [];
+  let editIndex = -1;
+
+  let machineData = [];
+  let machineEditIndex = -1;
+  /* ===========================
+   SELEÇÃO (CHECKBOX)
+   =========================== */
+let selectedInvIds = new Set();
+let selectedMaqIds = new Set();
+let selectedModuloIds = new Set();
+let actionToastTimeout = null;
+let actionToastLeftTimeout = null;
+let notificationItems = [];
+let notificationsClearedAt = null;
+
   updateFilterBadges();
   renderImportHistory();
 
@@ -458,26 +477,6 @@ if (btnNovaAba) {
       closeNotificationPanel();
     }
   });
-
-
-  /* ===========================
-     ESTADOS
-     =========================== */
-  let data = [];
-  let editIndex = -1;
-
-  let machineData = [];
-  let machineEditIndex = -1;
-  /* ===========================
-   SELEÇÃO (CHECKBOX)
-   =========================== */
-let selectedInvIds = new Set();
-let selectedMaqIds = new Set();
-let selectedModuloIds = new Set();
-let actionToastTimeout = null;
-let actionToastLeftTimeout = null;
-let notificationItems = [];
-let notificationsClearedAt = null;
 
 function showActionToastWithId(toastId, message, duration, getTimeoutRef, setTimeoutRef) {
   const toast = document.getElementById(toastId);
