@@ -1700,6 +1700,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 .modal.hidden {
   display: none !important;
