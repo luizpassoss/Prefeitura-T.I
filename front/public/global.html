@@ -1086,7 +1086,7 @@
   </div>
 </div>
 <div id="createTabModal" class="modal" onclick="closeCreateTabModal(event)">
-  <div class="card create-tab-card" onclick="event.stopPropagation()">
+  <div class="card create-tab-card modal-card-fixed" onclick="event.stopPropagation()">
     <div class="modal-heading">
       <div class="modal-title-row">
         <h2>Criar nova aba</h2>
@@ -1108,7 +1108,8 @@
       </p>
     </div>
 
-    <div class="form-grid">
+    <div class="create-tab-body modal-body-scroll">
+      <div class="form-grid">
       <div class="form-full">
         <label for="newTabName">Nome da Aba</label>
         <input id="newTabName" placeholder="Ex: Almoxarifado" data-autofocus />
@@ -1131,27 +1132,28 @@
           <option value="maquinas">Máquinas (status e patrimônio)</option>
         </select>
       </div>
-    </div>
-
-    <div class="create-tab-header">
-      <label>Campos da Tabela</label>
-      <div class="create-tab-actions">
-        <button type="button" class="btn secondary" onclick="sortFieldsAlphabetically()">
-          Ordenar A→Z
-        </button>
-        <button type="button" class="btn secondary" onclick="addField()">
-          + Adicionar Campo
-        </button>
       </div>
-    </div>
 
-    <div id="fieldsContainer"></div>
+      <div class="create-tab-header">
+        <label>Campos da Tabela</label>
+        <div class="create-tab-actions">
+          <button type="button" class="btn secondary" onclick="sortFieldsAlphabetically()">
+            Ordenar A→Z
+          </button>
+          <button type="button" class="btn secondary" onclick="addField()">
+            + Adicionar Campo
+          </button>
+        </div>
+      </div>
 
-    <div class="create-tab-header">
-      <label>Opções de ordenação</label>
-      <span class="small">Escolha quais campos devem aparecer no menu Ordenar.</span>
+      <div id="fieldsContainer"></div>
+
+      <div class="create-tab-header">
+        <label>Opções de ordenação</label>
+        <span class="small">Escolha quais campos devem aparecer no menu Ordenar.</span>
+      </div>
+      <div id="sortOptionsContainer" class="sort-options-grid"></div>
     </div>
-    <div id="sortOptionsContainer" class="sort-options-grid"></div>
 
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeCreateTabModal()">Cancelar</button>
@@ -1161,21 +1163,23 @@
 </div>
 
 <div id="manageManualTabModal" class="modal" onclick="closeManageManualTabModal(event)">
-  <div class="card" style="max-width: 560px" onclick="event.stopPropagation()">
+  <div class="card modal-card-fixed" style="max-width: 560px" onclick="event.stopPropagation()">
     <div class="modal-heading">
       <h2 id="manageManualTabTitle">Gerenciar Aba</h2>
       <p class="modal-subtitle">Ajuste os nomes dos campos exibidos na tabela.</p>
     </div>
 
-    <div id="manageManualTabFields" class="form-grid"></div>
+    <div class="modal-body-scroll">
+      <div id="manageManualTabFields" class="form-grid"></div>
 
-    <div class="manual-tab-actions">
-      <select id="manualTabFieldSelect" class="select"></select>
-      <button class="btn secondary" type="button" onclick="addManualTabField()">Adicionar campo</button>
-    </div>
-    <div class="manual-tab-new-field">
-      <input id="manualTabNewFieldInput" type="text" placeholder="Novo campo personalizado" />
-      <button class="btn secondary" type="button" onclick="addManualTabCustomField()">Adicionar novo</button>
+      <div class="manual-tab-actions">
+        <select id="manualTabFieldSelect" class="select"></select>
+        <button class="btn secondary" type="button" onclick="addManualTabField()">Adicionar campo</button>
+      </div>
+      <div class="manual-tab-new-field">
+        <input id="manualTabNewFieldInput" type="text" placeholder="Novo campo personalizado" />
+        <button class="btn secondary" type="button" onclick="addManualTabCustomField()">Adicionar novo</button>
+      </div>
     </div>
 
     <div class="modal-footer">
@@ -1187,10 +1191,11 @@
 </div>
 
 <div id="moduloRegistroModal" class="modal" onclick="closeModuloRegistroModal(event)">
-  <div class="card" onclick="event.stopPropagation()">
+  <div class="card modal-card-fixed" onclick="event.stopPropagation()">
     <h2 id="moduloRegistroTitulo">Novo Registro</h2>
-
-    <div id="moduloFormFields" class="form-grid"></div>
+    <div class="modal-body-scroll">
+      <div id="moduloFormFields" class="form-grid"></div>
+    </div>
 
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeModuloRegistroModal()">Cancelar</button>
