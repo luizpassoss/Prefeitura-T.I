@@ -1832,14 +1832,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal .card {
-  max-height: 85vh;
-  overflow: visible;
-  display: flex;
-  flex-direction: column;
-}
-
-#importModal .card > *:not(.modal-footer):not(.modal-title-row) {
-  overflow-y: auto;
+  max-height: min(90vh, 760px);
+  overflow: hidden;
 }
 
 .import-header {
