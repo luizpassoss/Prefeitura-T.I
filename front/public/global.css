@@ -1724,6 +1724,36 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 .card::-webkit-scrollbar-thumb:hover {
   background-color: rgba(100, 116, 139, 0.7);
 }
+
+.create-tab-card {
+  max-height: 90vh;
+}
+
+.create-tab-body {
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
+}
+
+.create-tab-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.create-tab-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.create-tab-body::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.55);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.create-tab-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.7);
+}
 .modal.hidden {
   display: none !important;
 }
