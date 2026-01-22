@@ -901,8 +901,9 @@ function toggleFilters(panelId, button) {
   if (!panel) return;
   if (panelId === 'moduleFilters') {
     const hasPanelControls = panel.querySelectorAll('input, select, textarea').length > 0;
-    const hasColumnFilters = document.querySelectorAll('#moduloThead .table-filter-input').length > 0;
-    if (!hasPanelControls && !hasColumnFilters) {
+    const moduleFilterInputs = [...document.querySelectorAll('#moduloThead .table-filter-input')];
+    const hasVisibleColumnFilters = moduleFilterInputs.some(input => input.offsetParent !== null);
+    if (!hasPanelControls && !hasVisibleColumnFilters) {
       panel.classList.add('hidden');
       if (button) {
         button.setAttribute('aria-pressed', 'false');
