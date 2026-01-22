@@ -1836,6 +1836,10 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   overflow: hidden;
 }
 
+#importModal .modal-body-scroll {
+  overflow: auto;
+}
+
 .import-header {
   display: flex;
   flex-direction: column;
