@@ -160,11 +160,26 @@
   margin-bottom: 8px;
 }
 
+.notification-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .notification-clear {
   border: none;
   background: transparent;
   color: var(--muted);
   font-size: 11px;
+  cursor: pointer;
+}
+
+.notification-refresh {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -258,6 +273,10 @@ body.theme-dark .notification-item {
 
 body.theme-dark .notification-clear {
   color: #a1a1aa;
+}
+
+body.theme-dark .notification-refresh {
+  color: #f4f4f5;
 }
 
 
@@ -570,14 +589,26 @@ body.theme-dark h1 {
 }
 
 .summary-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), var(--panel));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: var(--shadow-none);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(37, 99, 235, 0.15);
 }
 
 .summary-label {
@@ -588,8 +619,19 @@ body.theme-dark h1 {
 }
 
 .summary-value {
-  font-size: 18px;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--text);
+}
+
+body.theme-dark .summary-card {
+  background: linear-gradient(180deg, rgba(43, 43, 48, 0.95), #1b1b21);
+  border-color: rgba(63, 63, 70, 0.6);
+  box-shadow: 0 10px 22px rgba(8, 8, 10, 0.35);
+}
+
+body.theme-dark .summary-card::before {
+  background: rgba(212, 212, 216, 0.25);
 }
 
 

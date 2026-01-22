@@ -65,7 +65,10 @@
       <div class="notification-panel hidden" id="notificationPanel" role="dialog" aria-label="Notificações">
         <div class="notification-header">
           <strong>Notificações inteligentes</strong>
-          <button type="button" class="notification-clear" onclick="clearNotifications()">Limpar</button>
+          <div class="notification-actions">
+            <button type="button" class="notification-refresh" onclick="refreshNotifications()">Procurar</button>
+            <button type="button" class="notification-clear" onclick="clearNotifications()">Limpar</button>
+          </div>
         </div>
         <div class="notification-list" id="notificationList"></div>
       </div>
@@ -548,6 +551,25 @@
               </div>
             </div>
 
+          </div>
+        </div>
+
+        <div class="summary-grid" id="moduleSummary">
+          <div class="summary-card">
+            <span class="summary-label">Total de registros</span>
+            <strong class="summary-value" id="moduleTotalRecords">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Campos cadastrados</span>
+            <strong class="summary-value" id="moduleTotalFields">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Campos vazios</span>
+            <strong class="summary-value" id="moduleEmptyCells">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Filtros ativos</span>
+            <strong class="summary-value" id="moduleActiveFilters">0</strong>
           </div>
         </div>
 

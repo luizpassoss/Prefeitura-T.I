@@ -448,6 +448,7 @@ let actionToastTimeout = null;
 let actionToastLeftTimeout = null;
 let notificationItems = [];
 let notificationsClearedAt = null;
+let notificationsSuppressed = false;
 
   updateFilterBadges();
   renderImportHistory();
@@ -534,8 +535,15 @@ function closeNotificationPanel() {
 function clearNotifications() {
   notificationsClearedAt = Date.now();
   notificationItems = [];
+  notificationsSuppressed = true;
   renderNotifications();
   closeNotificationPanel();
+}
+
+function refreshNotifications() {
+  notificationsSuppressed = false;
+  updateNotifications(true);
+  toggleNotificationPanel(true);
 }
 
 function buildNotificationItem(id, title, description, count) {
@@ -593,6 +601,27 @@ function collectNotifications() {
       ));
     }
   }
+  if (moduloAtual?.id) {
+    const totalRegistros = Array.isArray(moduloRegistros) ? moduloRegistros.length : 0;
+    const totalCampos = Array.isArray(moduloCampos) ? moduloCampos.length : 0;
+    const emptyCells = countModuloEmptyCells();
+    if (totalCampos && totalRegistros === 0) {
+      items.push(buildNotificationItem(
+        'mod-sem-registros',
+        'Módulo sem registros',
+        'Adicione registros para começar a preencher a aba personalizada.',
+        1
+      ));
+    }
+    if (emptyCells) {
+      items.push(buildNotificationItem(
+        'mod-campos-vazios',
+        `${emptyCells} campo(s) vazio(s) no módulo`,
+        'Revise os registros para completar as informações.',
+        emptyCells
+      ));
+    }
+  }
   return items;
 }
 
@@ -616,7 +645,8 @@ function renderNotifications() {
   `).join('');
 }
 
-function updateNotifications() {
+function updateNotifications(force = false) {
+  if (notificationsSuppressed && !force) return;
   const items = collectNotifications();
   if (notificationsClearedAt) {
     const hasNew = items.some(item => item.count > 0);
@@ -660,9 +690,32 @@ function updateMachineSummary() {
   if (assetEl) assetEl.textContent = missingAsset;
 }
 
+function countModuloEmptyCells() {
+  if (!Array.isArray(moduloRegistros) || !Array.isArray(moduloCampos)) return 0;
+  return moduloRegistros.reduce((total, row) => {
+    return total + moduloCampos.filter(campo => !String(row?.[campo.nome] ?? '').trim()).length;
+  }, 0);
+}
+
+function updateModuleSummary() {
+  const totalRecords = Array.isArray(moduloRegistros) ? moduloRegistros.length : 0;
+  const totalFields = Array.isArray(moduloCampos) ? moduloCampos.length : 0;
+  const emptyCells = countModuloEmptyCells();
+  const { modCount } = getActiveFilterCounts();
+  const totalEl = document.getElementById('moduleTotalRecords');
+  const fieldsEl = document.getElementById('moduleTotalFields');
+  const emptyEl = document.getElementById('moduleEmptyCells');
+  const filtersEl = document.getElementById('moduleActiveFilters');
+  if (totalEl) totalEl.textContent = totalRecords;
+  if (fieldsEl) fieldsEl.textContent = totalFields;
+  if (emptyEl) emptyEl.textContent = emptyCells;
+  if (filtersEl) filtersEl.textContent = modCount;
+}
+
 function updateSummaries() {
   updateInventorySummary();
   updateMachineSummary();
+  updateModuleSummary();
 }
 
 function updateBulkUI() {
@@ -4267,6 +4320,8 @@ function renderModuloDinamico() {
     const chkAllMod = document.getElementById('chkAllMod');
     if (chkAllMod) chkAllMod.checked = false;
     updateBulkUI();
+    updateSummaries();
+    updateNotifications();
     return;
   }
 
@@ -4342,6 +4397,8 @@ function renderModuloDinamico() {
     flashTableRows('moduloTbody');
     moduloFlashAfterFetch = false;
   }
+  updateSummaries();
+  updateNotifications();
 }
 
 const moduloTbody = document.getElementById('moduloTbody');
@@ -6096,6 +6153,7 @@ window.closeBulkEditModal = closeBulkEditModal;
 window.closeBulkEditModalIfClicked = closeBulkEditModalIfClicked;
 window.applyBulkEdit = applyBulkEdit;
 window.clearNotifications = clearNotifications;
+window.refreshNotifications = refreshNotifications;
 
 
   /* ===========================
