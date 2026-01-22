@@ -1731,7 +1731,7 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 
 .create-tab-body {
   overflow-y: auto;
-  padding-right: 6px;
+  padding: 6px;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
 }
