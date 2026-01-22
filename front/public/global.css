@@ -1769,6 +1769,10 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
 }
 
+.modal-card-fixed .modal-body-scroll {
+  flex: 1;
+}
+
 .modal-body-scroll::-webkit-scrollbar {
   width: 8px;
 }
