@@ -1761,6 +1761,10 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   overflow: hidden;
 }
 
+#moduloRegistroModal .modal-card-fixed {
+  height: auto;
+}
+
 .modal-body-scroll {
   min-height: 0;
   overflow-y: auto;
