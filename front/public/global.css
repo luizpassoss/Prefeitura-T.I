@@ -204,6 +204,50 @@
   gap: 4px;
 }
 
+.notification-item-content {
+  display: grid;
+  gap: 4px;
+}
+
+.notification-item-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.notification-action,
+.notification-dismiss {
+  border: 0;
+  background: transparent;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.notification-dismiss {
+  color: #64748b;
+}
+
+.notification-action:hover,
+.notification-dismiss:hover {
+  text-decoration: underline;
+}
+
+.notification-item.is-high {
+  border-left: 3px solid #ef4444;
+}
+
+.notification-item.is-medium {
+  border-left: 3px solid #f59e0b;
+}
+
+.notification-item.is-low {
+  border-left: 3px solid #10b981;
+}
+
 .notification-item strong {
   font-size: 12px;
 }
@@ -269,6 +313,14 @@ body.theme-dark .notification-item {
   background: #23232b;
   border-color: #2f2f36;
   color: #e4e4e7;
+}
+
+body.theme-dark .notification-action {
+  color: #93c5fd;
+}
+
+body.theme-dark .notification-dismiss {
+  color: #a1a1aa;
 }
 
 body.theme-dark .notification-clear {
@@ -1648,6 +1700,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 .modal.hidden {
   display: none !important;
