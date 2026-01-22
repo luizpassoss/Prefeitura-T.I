@@ -591,10 +591,11 @@
 
 <!-- MODAL INVENTÁRIO -->
 <div id="modal" class="modal" onclick="closeModalIfClicked(event)">
-  <div class="card" onclick="event.stopPropagation()">
+  <div class="card modal-card-fixed" onclick="event.stopPropagation()">
     <h2 id="modalTitle">Novo Registro</h2>
 
-    <div class="form-grid">
+    <div class="modal-body-scroll">
+      <div class="form-grid">
 
       <!-- Categoria -->
       <div>
@@ -680,7 +681,8 @@
         <input id="inpEnd" type="text">
       </div>
 
-      <div id="manualCustomFieldsInv" class="form-full manual-custom-fields"></div>
+        <div id="manualCustomFieldsInv" class="form-full manual-custom-fields"></div>
+      </div>
     </div>
 
     <div class="modal-footer">
@@ -973,7 +975,7 @@
   </div>
 </div>
 <div id="importModal" class="modal" onclick="closeImportModalIfClicked(event)">
-  <div class="card" style="max-width: 1100px" onclick="event.stopPropagation()">
+  <div class="card modal-card-fixed" style="max-width: 1100px" onclick="event.stopPropagation()">
 
     <div class="modal-title-row">
       <h2 id="importTitle">Importar Planilha</h2>
@@ -991,82 +993,84 @@
       </span>
     </div>
 
-    <!-- STEP 1: UPLOAD -->
-    <div id="importStepUpload">
-      <div class="import-header">
-        <div class="file-input">
-          <input
-            type="file"
-            id="importFile"
-            accept=".xlsx,.xls"
-            onchange="handleImportFile()"
-          />
-          <label for="importFile" class="file-input-button">
-            Selecionar planilha
-          </label>
-          <span id="importFileName" class="file-input-name">Nenhum arquivo selecionado</span>
-        </div>
-        <small>Somente arquivos Excel (.xlsx)</small>
-      </div>
-    </div>
-
-    <!-- STEP 2: PREVIEW -->
-    <div id="importStepPreview" class="hidden">
-      <div class="import-guide">
-        <div>
-          <h3>Assistente de importação</h3>
-          <p>Revise os dados, confirme o cabeçalho e ajuste o mapeamento antes de importar.</p>
-          <ul>
-            <li>Passo 1: confirme se a primeira linha é cabeçalho.</li>
-            <li>Passo 2: confira o mapeamento sugerido.</li>
-            <li>Passo 3: revise as células destacadas.</li>
-          </ul>
-        </div>
-        <div class="import-guide-summary">
-          <div><strong>Linhas:</strong> <span id="importSummaryRows">0</span></div>
-          <div><strong>Colunas:</strong> <span id="importSummaryCols">0</span></div>
-          <div><strong>Cabeçalho:</strong> <span id="importSummaryHeader">Auto</span></div>
+    <div class="modal-body-scroll">
+      <!-- STEP 1: UPLOAD -->
+      <div id="importStepUpload">
+        <div class="import-header">
+          <div class="file-input">
+            <input
+              type="file"
+              id="importFile"
+              accept=".xlsx,.xls"
+              onchange="handleImportFile()"
+            />
+            <label for="importFile" class="file-input-button">
+              Selecionar planilha
+            </label>
+            <span id="importFileName" class="file-input-name">Nenhum arquivo selecionado</span>
+          </div>
+          <small>Somente arquivos Excel (.xlsx)</small>
         </div>
       </div>
-      <div class="import-controls">
-        <label for="importHeaderMode">Primeira linha é cabeçalho?</label>
-        <select id="importHeaderMode" class="select" onchange="setImportHeaderMode(this.value)">
-          <option value="auto">Detectar automaticamente</option>
-          <option value="yes">Sim</option>
-          <option value="no">Não</option>
-        </select>
-        <button type="button" class="btn secondary" onclick="autoMapImportColumns()">Auto mapear colunas</button>
-        <button type="button" class="btn secondary" onclick="clearImportMapping()">Limpar mapeamento</button>
-      </div>
-      <div id="importValidation" class="import-validation hidden"></div>
 
-      <div class="table-wrap" style="margin-top:20px">
-        <table id="importPreviewTable">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
+      <!-- STEP 2: PREVIEW -->
+      <div id="importStepPreview" class="hidden">
+        <div class="import-guide">
+          <div>
+            <h3>Assistente de importação</h3>
+            <p>Revise os dados, confirme o cabeçalho e ajuste o mapeamento antes de importar.</p>
+            <ul>
+              <li>Passo 1: confirme se a primeira linha é cabeçalho.</li>
+              <li>Passo 2: confira o mapeamento sugerido.</li>
+              <li>Passo 3: revise as células destacadas.</li>
+            </ul>
+          </div>
+          <div class="import-guide-summary">
+            <div><strong>Linhas:</strong> <span id="importSummaryRows">0</span></div>
+            <div><strong>Colunas:</strong> <span id="importSummaryCols">0</span></div>
+            <div><strong>Cabeçalho:</strong> <span id="importSummaryHeader">Auto</span></div>
+          </div>
+        </div>
+        <div class="import-controls">
+          <label for="importHeaderMode">Primeira linha é cabeçalho?</label>
+          <select id="importHeaderMode" class="select" onchange="setImportHeaderMode(this.value)">
+            <option value="auto">Detectar automaticamente</option>
+            <option value="yes">Sim</option>
+            <option value="no">Não</option>
+          </select>
+          <button type="button" class="btn secondary" onclick="autoMapImportColumns()">Auto mapear colunas</button>
+          <button type="button" class="btn secondary" onclick="clearImportMapping()">Limpar mapeamento</button>
+        </div>
+        <div id="importValidation" class="import-validation hidden"></div>
+
+        <div class="table-wrap" style="margin-top:20px">
+          <table id="importPreviewTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
       </div>
 
-    </div>
-
-    <div class="import-history">
-      <div class="import-history-header">
-        <h3>Histórico de importações</h3>
-        <button type="button" class="btn secondary" onclick="clearImportHistory()">Limpar histórico</button>
-      </div>
-      <div class="table-wrap">
-        <table id="importHistoryTable">
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Usuário</th>
-              <th>Arquivo</th>
-              <th>Status</th>
-              <th class="actions-header">Ações</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div class="import-history">
+        <div class="import-history-header">
+          <h3>Histórico de importações</h3>
+          <button type="button" class="btn secondary" onclick="clearImportHistory()">Limpar histórico</button>
+        </div>
+        <div class="table-wrap">
+          <table id="importHistoryTable">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Usuário</th>
+                <th>Arquivo</th>
+                <th>Status</th>
+                <th class="actions-header">Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
