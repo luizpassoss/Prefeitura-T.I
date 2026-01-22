@@ -54,6 +54,22 @@
         <span class="btn-add-tab-icon" aria-hidden="true">＋</span>
       </button>
     </nav>
+    <div class="notification-wrapper">
+      <button class="notification-btn" id="notificationToggle" type="button" aria-label="Notificações" aria-haspopup="dialog" aria-expanded="false">
+        <svg class="notification-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M9.5 19a2.5 2.5 0 0 0 5 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="notification-badge hidden" id="notificationBadge">0</span>
+      </button>
+      <div class="notification-panel hidden" id="notificationPanel" role="dialog" aria-label="Notificações">
+        <div class="notification-header">
+          <strong>Notificações inteligentes</strong>
+          <button type="button" class="notification-clear" onclick="clearNotifications()">Limpar</button>
+        </div>
+        <div class="notification-list" id="notificationList"></div>
+      </div>
+    </div>
     <button class="theme-toggle" id="themeToggle" type="button" aria-label="Alternar tema" title="Mudar para modo escuro">
       <span class="theme-toggle-track" aria-hidden="true">
         <span class="theme-toggle-thumb"></span>
@@ -151,6 +167,25 @@
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="summary-grid" id="inventorySummary">
+          <div class="summary-card">
+            <span class="summary-label">Total de registros</span>
+            <strong class="summary-value" id="inventoryTotal">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Sem telefone</span>
+            <strong class="summary-value" id="inventoryMissingPhone">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Sem endereço</span>
+            <strong class="summary-value" id="inventoryMissingAddress">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Sem local</span>
+            <strong class="summary-value" id="inventoryMissingLocal">0</strong>
           </div>
         </div>
 
@@ -323,6 +358,25 @@
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="summary-grid" id="machinesSummary">
+          <div class="summary-card">
+            <span class="summary-label">Total de máquinas</span>
+            <strong class="summary-value" id="machinesTotal">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Em manutenção</span>
+            <strong class="summary-value" id="machinesMaintenance">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Inativas</span>
+            <strong class="summary-value" id="machinesInactive">0</strong>
+          </div>
+          <div class="summary-card">
+            <span class="summary-label">Sem patrimônio</span>
+            <strong class="summary-value" id="machinesMissingAsset">0</strong>
           </div>
         </div>
 
@@ -700,9 +754,162 @@
 <div id="bulkActions" class="bulk-actions hidden">
   <span id="bulkCounter">0 selecionados</span>
 
+  <button class="bulk-btn secondary" onclick="openBulkEditModal()">
+    Editar selecionados
+  </button>
   <button class="bulk-btn danger" onclick="deleteSelected()">
     Excluir selecionados
   </button>
+</div>
+<!-- MODAL EDIÇÃO EM MASSA -->
+<div id="bulkEditModal" class="modal" onclick="closeBulkEditModalIfClicked(event)">
+  <div class="card" onclick="event.stopPropagation()">
+    <h2>Editar selecionados</h2>
+    <p class="modal-subtitle" id="bulkEditSubtitle">Atualize os campos desejados.</p>
+
+    <div class="form-grid" id="bulkEditInventoryFields">
+      <div>
+        <label>Categoria</label>
+        <select id="bulkCategoria">
+          <option value="">Não alterar</option>
+          <option value="Prefeitura">Prefeitura</option>
+          <option value="Educação">Educação</option>
+          <option value="Saúde">Saúde</option>
+          <option value="Assistência Cultural">Assistência Cultural</option>
+          <option value="Fundação Cultural">Fundação Cultural</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Link de Internet</label>
+        <select id="bulkLink">
+          <option value="">Não alterar</option>
+          <option value="Link Dedicado">Link Dedicado</option>
+          <option value="Interconexão (CONCENTRADOR)">Interconexão (CONCENTRADOR)</option>
+          <option value="Interconexão">Interconexão</option>
+          <option value="Banda Larga">Banda Larga</option>
+          <option value="Outro">Outro</option>
+        </select>
+        <input id="bulkLinkOutro" type="text" placeholder="Digite o link" style="display:none;margin-top:6px;">
+      </div>
+
+      <div>
+        <label>Velocidade (Download/Upload)</label>
+        <select id="bulkVel">
+          <option value="">Não alterar</option>
+          <option value="800/800">800/800</option>
+          <option value="1400/1400">1400/1400</option>
+          <option value="400/400">400/400</option>
+          <option value="100/100">100/100</option>
+          <option value="Outro">Outro</option>
+        </select>
+        <input id="bulkVelOutro" type="text" placeholder="Digite a velocidade" style="display:none;margin-top:6px;">
+      </div>
+
+      <div>
+        <label>Telefone</label>
+        <input id="bulkTel" type="text" placeholder="(47) 0000-0000" maxlength="15">
+      </div>
+
+      <div style="grid-column:1/3">
+        <label>Local</label>
+        <select id="bulkLocal">
+          <option value="">Não alterar</option>
+          <option value="Prefeitura Sede">Prefeitura Sede</option>
+          <option value="Multiuso">Multiuso</option>
+          <option value="Sec. de Obras">Sec. de Obras</option>
+          <option value="Sec. de Obras - Diretoria de Balneários">Sec. de Obras - Diretoria de Balneários</option>
+          <option value="Sec. de Administração - Patrimônio">Sec. de Administração - Patrimônio</option>
+          <option value="Sec. Atendimento ao Cidadão - Shopping">Sec. Atendimento ao Cidadão - Shopping</option>
+          <option value="Sec. de Esporte - Ginásio">Sec. de Esporte - Ginásio</option>
+          <option value="Sec. de Esporte - Terminal Walter Gama Lobo">Sec. de Esporte - Terminal Walter Gama Lobo</option>
+          <option value="Sec. Meio Ambiente - CBEA">Sec. Meio Ambiente - CBEA</option>
+          <option value="Sec. de Obras - Cemitério">Sec. de Obras - Cemitério</option>
+          <option value="Sec. de Obras - Gerência Ervino">Sec. de Obras - Gerência Ervino</option>
+          <option value="Sec. de Obras - Gerência Distrito do Saí">Sec. de Obras - Gerência Distrito do Saí</option>
+          <option value="PAV - Ponto de Atendimento Virtual">PAV - Ponto de Atendimento Virtual</option>
+          <option value="NAC - Núcleo de Atendimento ao Cidadão">NAC - Núcleo de Atendimento ao Cidadão</option>
+          <option value="Sec. Pesca - Gerência">Sec. Pesca - Gerência</option>
+          <option value="Sec. Pesca - Viveiro de Mudas">Sec. Pesca - Viveiro de Mudas</option>
+          <option value="Sec. Pesca - Fábrica de Gelo">Sec. Pesca - Fábrica de Gelo</option>
+          <option value="Sec. Pesca - Abrigo Pescador">Sec. Pesca - Abrigo Pescador</option>
+          <option value="Graer - Aeroclube">Graer - Aeroclube</option>
+          <option value="Base PM (Ponte Enseada)">Base PM (Ponte Enseada)</option>
+          <option value="Sec. PM (Vila da Glória)">Sec. PM (Vila da Glória)</option>
+          <option value="Diretoria de TI">Diretoria de TI</option>
+          <option value="OCR PM - BR280">OCR PM - BR280</option>
+          <option value="Container SINE">Container SINE</option>
+          <option value="Outro">Outro</option>
+        </select>
+        <input id="bulkLocalOutro" type="text" placeholder="Digite o local" style="display:none;margin-top:6px;">
+      </div>
+
+      <div style="grid-column:1/3">
+        <label>Endereço</label>
+        <input id="bulkEnd" type="text" placeholder="Não alterar">
+      </div>
+    </div>
+
+    <div class="form-grid" id="bulkEditMachineFields">
+      <div>
+        <label>Status</label>
+        <select id="bulkStatus">
+          <option value="">Não alterar</option>
+          <option value="Ativa">Ativa</option>
+          <option value="Manutenção">Manutenção</option>
+          <option value="Inativa">Inativa</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Patrimônio</label>
+        <input id="bulkPatrimonio" type="text" placeholder="Não alterar">
+      </div>
+
+      <div style="grid-column:1/3">
+        <label>Local</label>
+        <select id="bulkMachineLocal">
+          <option value="">Não alterar</option>
+          <option value="Prefeitura Sede">Prefeitura Sede</option>
+          <option value="Multiuso">Multiuso</option>
+          <option value="Sec. de Obras">Sec. de Obras</option>
+          <option value="Sec. de Obras - Diretoria de Balneários">Sec. de Obras - Diretoria de Balneários</option>
+          <option value="Sec. de Administração - Patrimônio">Sec. de Administração - Patrimônio</option>
+          <option value="Sec. Atendimento ao Cidadão - Shopping">Sec. Atendimento ao Cidadão - Shopping</option>
+          <option value="Sec. de Esporte - Ginásio">Sec. de Esporte - Ginásio</option>
+          <option value="Sec. de Esporte - Terminal Walter Gama Lobo">Sec. de Esporte - Terminal Walter Gama Lobo</option>
+          <option value="Sec. Meio Ambiente - CBEA">Sec. Meio Ambiente - CBEA</option>
+          <option value="Sec. de Obras - Cemitério">Sec. de Obras - Cemitério</option>
+          <option value="Sec. de Obras - Gerência Ervino">Sec. de Obras - Gerência Ervino</option>
+          <option value="Sec. de Obras - Gerência Distrito do Saí">Sec. de Obras - Gerência Distrito do Saí</option>
+          <option value="PAV - Ponto de Atendimento Virtual">PAV - Ponto de Atendimento Virtual</option>
+          <option value="NAC - Núcleo de Atendimento ao Cidadão">NAC - Núcleo de Atendimento ao Cidadão</option>
+          <option value="Sec. Pesca - Gerência">Sec. Pesca - Gerência</option>
+          <option value="Sec. Pesca - Viveiro de Mudas">Sec. Pesca - Viveiro de Mudas</option>
+          <option value="Sec. Pesca - Fábrica de Gelo">Sec. Pesca - Fábrica de Gelo</option>
+          <option value="Sec. Pesca - Abrigo Pescador">Sec. Pesca - Abrigo Pescador</option>
+          <option value="Graer - Aeroclube">Graer - Aeroclube</option>
+          <option value="Base PM (Ponte Enseada)">Base PM (Ponte Enseada)</option>
+          <option value="Sec. PM (Vila da Glória)">Sec. PM (Vila da Glória)</option>
+          <option value="Diretoria de TI">Diretoria de TI</option>
+          <option value="OCR PM - BR280">OCR PM - BR280</option>
+          <option value="Container SINE">Container SINE</option>
+          <option value="Outro">Outro</option>
+        </select>
+        <input id="bulkMachineLocalOutro" type="text" placeholder="Digite o local" style="display:none;margin-top:6px;">
+      </div>
+
+      <div style="grid-column:1/3">
+        <label>Descrição</label>
+        <textarea id="bulkDescricao" rows="3" placeholder="Não alterar"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeBulkEditModal()">Cancelar</button>
+      <button class="btn-salvar" onclick="applyBulkEdit()">Salvar alterações</button>
+    </div>
+  </div>
 </div>
 <div id="undoToast" class="undo-toast hidden" role="status" aria-live="polite">
   <span id="undoToastText"></span>
