@@ -2071,7 +2071,9 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 .import-controls .select {
   min-width: 180px;
   flex: 1 1 220px;
-  height: 30px;
+  height: 36px;
+  line-height: 1.2;
+  padding: 6px 36px 6px 10px;
 }
 
 .import-controls .btn {
