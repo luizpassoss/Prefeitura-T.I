@@ -446,6 +446,8 @@ let selectedMaqIds = new Set();
 let selectedModuloIds = new Set();
 let actionToastTimeout = null;
 let actionToastLeftTimeout = null;
+let importWarningVisible = false;
+let importWarningDismissed = false;
 let notificationItems = [];
 let notificationsClearedAt = null;
 let notificationsSuppressed = false;
@@ -519,6 +521,27 @@ function showActionToastLeft(message, duration = 3200) {
     () => actionToastLeftTimeout,
     (value) => { actionToastLeftTimeout = value; }
   );
+}
+
+function showImportWarningNotice(message) {
+  const notice = document.getElementById('importWarningNotice');
+  if (!notice) return;
+  const text = notice.querySelector('.import-warning-text');
+  if (text) text.textContent = message;
+  notice.classList.remove('hidden');
+  importWarningVisible = true;
+}
+
+function hideImportWarningNotice() {
+  const notice = document.getElementById('importWarningNotice');
+  if (!notice) return;
+  notice.classList.add('hidden');
+  importWarningVisible = false;
+}
+
+function dismissImportWarningNotice() {
+  importWarningDismissed = true;
+  hideImportWarningNotice();
 }
 
 function toggleNotificationPanel(forceOpen = null) {
@@ -3310,13 +3333,7 @@ function toggleSortMenu(tipo) {
 }
 function openImportModal(type) {
   importType = type;
-  importRows = [];
-  importHeaders = [];
-  importFileName = '';
-  importColumnMap = [];
-  importHasHeaderRow = false;
-  importRawRows = [];
-  importHeaderMode = 'auto';
+  resetImportState();
 
   document.getElementById('importTitle').innerText =
     type === 'inventario'
@@ -3331,7 +3348,7 @@ function openImportModal(type) {
   const fileName = document.getElementById('importFileName');
   if (fileName) fileName.textContent = 'Nenhum arquivo selecionado';
   const headerModeEl = document.getElementById('importHeaderMode');
-  if (headerModeEl) headerModeEl.value = 'auto';
+  if (headerModeEl) headerModeEl.value = 'yes';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -3344,6 +3361,7 @@ function openImportModal(type) {
     actionBtn.textContent = 'Confirmar Importação';
     actionBtn.disabled = false;
   }
+  setImportMappingButtonState();
   updateImportSummary();
   openModalById('importModal');
   renderImportHistory();
@@ -3352,14 +3370,50 @@ function openImportModal(type) {
 }
 
 function closeImportModal() {
-  document.getElementById('importModal').classList.remove('show');
-  document.getElementById('importStepPreview')?.classList.add('hidden');
+  closeImportMappingModal();
+  resetImportState();
+  const modal = document.getElementById('importModal');
+  if (modal) modal.classList.remove('show');
   document.getElementById('importStepUpload')?.classList.remove('hidden');
+  setImportMappingButtonState();
+}
+
+function closeImportModalIfClicked(e) {
+  if (e.target.id === 'importModal') closeImportModal();
+}
+
+function openImportUploadModal() {
+  document.getElementById('importStepUpload')?.classList.remove('hidden');
+  setImportMappingButtonState();
+  openModalById('importModal');
+}
+
+function openImportMappingModal() {
+  if (!importHeaders.length) {
+    showImportWarning('Selecione uma planilha antes de abrir o mapeamento.');
+    return;
+  }
+  openModalById('importMappingModal');
+  renderImportPreview();
+}
+
+function closeImportMappingModal() {
+  const modal = document.getElementById('importMappingModal');
+  if (modal) modal.classList.remove('show');
+}
+
+function closeImportMappingModalIfClicked(e) {
+  if (e.target.id === 'importMappingModal') closeImportMappingModal();
+}
+
+function resetImportState() {
+  importRows = [];
+  importHeaders = [];
   importFileName = '';
   importColumnMap = [];
   importHasHeaderRow = false;
   importRawRows = [];
-  importHeaderMode = 'auto';
+  importHeaderMode = 'yes';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -3372,10 +3426,17 @@ function closeImportModal() {
     actionBtn.textContent = 'Confirmar Importação';
     actionBtn.disabled = false;
   }
+  document.getElementById('importStepPreview')?.classList.add('hidden');
+  updateImportSummary();
+  updateImportWarningToast({ issues: [], errorCount: 0 });
+  importWarningDismissed = false;
 }
 
-function closeImportModalIfClicked(e) {
-  if (e.target.id === 'importModal') closeImportModal();
+function setImportMappingButtonState() {
+  const openBtn = document.getElementById('importOpenMappingBtn');
+  if (openBtn) {
+    openBtn.disabled = !importHeaders.length;
+  }
 }
 
 function openImportHistoryModal() {
@@ -3430,10 +3491,51 @@ function getImportFieldOptions() {
 
 function buildImportColumnMap(headers) {
   const options = getImportFieldOptions();
+  const expandedOptions = options.map((opt) => ({
+    ...opt,
+    aliases: Array.from(new Set([opt.key, opt.label, ...opt.aliases].filter(Boolean)))
+  }));
+
   return headers.map((header) => {
     const normalized = normalizeHeader(header);
-    const match = options.find(opt => opt.aliases.some(alias => normalizeHeader(alias) === normalized));
-    return match ? match.key : '';
+    const normalizedKey = normalizeHeaderKey(header);
+    const headerTokens = normalizedKey.match(/[a-z0-9]+/g) || [];
+    let bestMatch = null;
+    let bestScore = 0;
+
+    expandedOptions.forEach((opt) => {
+      opt.aliases.forEach((alias) => {
+        const aliasNormalized = normalizeHeader(alias);
+        const aliasKey = normalizeHeaderKey(alias);
+        const aliasTokens = aliasKey.match(/[a-z0-9]+/g) || [];
+        let score = 0;
+        if (aliasNormalized === normalized || aliasKey === normalizedKey) {
+          score = 3;
+        } else if (
+          normalizedKey.includes(aliasKey) ||
+          aliasKey.includes(normalizedKey)
+        ) {
+          score = 2;
+        } else if (
+          normalized.includes(aliasNormalized) ||
+          aliasNormalized.includes(normalized)
+        ) {
+          score = 1;
+        }
+        if (!score && headerTokens.length && aliasTokens.length) {
+          const overlap = headerTokens.filter(token => aliasTokens.includes(token)).length;
+          if (overlap) {
+            score = Math.min(2, overlap / Math.max(headerTokens.length, aliasTokens.length));
+          }
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = opt;
+        }
+      });
+    });
+
+    return bestMatch ? bestMatch.key : '';
   });
 }
 
@@ -3444,12 +3546,7 @@ function updateImportSummary() {
   if (rowsEl) rowsEl.textContent = importRows.length.toString();
   if (colsEl) colsEl.textContent = importHeaders.length.toString();
   if (headerEl) {
-    const headerLabel =
-      importHeaderMode === 'auto'
-        ? `Auto (${importHasHeaderRow ? 'Sim' : 'Não'})`
-        : importHeaderMode === 'yes'
-          ? 'Sim'
-          : 'Não';
+    const headerLabel = importHeaderMode === 'yes' ? 'Sim' : 'Não';
     headerEl.textContent = headerLabel;
   }
 }
@@ -3563,6 +3660,10 @@ function handleImportFile() {
     const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
     importRawRows = data.map(row => (row || []).map(cell => (cell ?? '').toString().trim()));
     processImportData();
+    setImportMappingButtonState();
+    if (importHeaders.length) {
+      openImportMappingModal();
+    }
   };
 
   reader.readAsBinaryString(file);
@@ -3673,7 +3774,6 @@ function renderImportPreview() {
   const tbody = document.querySelector('#importPreviewTable tbody');
   const preview = document.getElementById('importStepPreview');
   const actionBtn = document.getElementById('importActionBtn');
-  const uploadStep = document.getElementById('importStepUpload');
   const validationEl = document.getElementById('importValidation');
   const extraFieldWrapper = document.getElementById('importExtraField');
   const fieldOptions = getImportFieldOptions();
@@ -3754,7 +3854,6 @@ function renderImportPreview() {
   });
 
   preview?.classList.remove('hidden');
-  uploadStep?.classList.add('hidden');
   if (actionBtn) {
     actionBtn.textContent = `Importar ${importRows.length} linha(s)`;
     actionBtn.disabled = false;
@@ -3811,6 +3910,31 @@ function applyImportValidation() {
   updateImportExtraFieldOptions(getImportFieldOptions(), extraFieldWrapper);
 }
 
+function updateImportWarningToast(validation) {
+  const hasIssues = validation.issues.length || validation.errorCount > 0;
+  if (!hasIssues) {
+    if (importWarningVisible) {
+      hideImportWarningNotice();
+    }
+    importWarningDismissed = false;
+    return;
+  }
+
+  const issueCount = validation.issues.length;
+  const errorCount = validation.errorCount;
+  const parts = [];
+  if (issueCount > 0) {
+    parts.push(`${issueCount} campo(s) obrigatório(s) sem mapeamento`);
+  }
+  if (errorCount > 0) {
+    parts.push(`${errorCount} célula(s) obrigatória(s) vazia(s)`);
+  }
+  const message = `Antes de importar, corrija: ${parts.join(' e ')}.`;
+  if (!importWarningDismissed) {
+    showImportWarningNotice(message);
+  }
+}
+
 function updateImportExtraFieldOptions(options = [], wrapper) {
   if (!wrapper) return;
   const select = document.getElementById('importExtraFieldSelect');
@@ -3856,33 +3980,11 @@ function addImportColumn() {
 }
 
 function renderImportValidation(validation, validationEl) {
-  if (!validationEl) return;
-  if (validation.issues.length || validation.errorCount > 0) {
-    const issuesText = validation.issues.length
-      ? `<div class="import-validation-section"><span class="import-validation-label">Campos ausentes serão importados em branco:</span><ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul></div>`
-      : '';
-    const rowsText = validation.errorCount > 0
-      ? `<div class="import-validation-section">Existem ${validation.errorCount} célula(s) obrigatória(s) vazia(s). Você pode importar e editar depois.</div>`
-      : '';
-    const title = validation.errorCount > 0
-      ? 'Há campos obrigatórios vazios'
-      : 'Alguns campos não foram mapeados';
-    validationEl.innerHTML = `
-      <div class="import-validation-header">
-        <span class="import-validation-icon" aria-hidden="true">!</span>
-        <div>
-          <strong>${title}</strong>
-          <span class="import-validation-subtitle">Revise os dados antes de importar.</span>
-        </div>
-      </div>
-      ${issuesText}
-      ${rowsText}
-    `;
-    validationEl.classList.remove('hidden');
-  } else {
+  if (validationEl) {
     validationEl.classList.add('hidden');
     validationEl.innerHTML = '';
   }
+  updateImportWarningToast(validation);
 }
 function mapImportRows() {
   const getValue = (row, fieldKey, fallbackIndex) => {
@@ -4063,6 +4165,10 @@ function normalizeHeader(value = '') {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+function normalizeHeaderKey(value = '') {
+  return normalizeHeader(value).replace(/[^a-z0-9]/g, '');
+}
+
 function columnLetter(index) {
   let result = '';
   let n = index + 1;
@@ -4077,10 +4183,9 @@ async function confirmImport() {
   const actionBtn = document.getElementById('importActionBtn');
   const validation = validateImportRows();
   if (validation.issues.length || validation.errorCount > 0) {
-    showImportWarning('Existem campos obrigatórios vazios. Você pode importar e ajustar depois.');
-    if (importType === 'modulo') {
-      return;
-    }
+    importWarningDismissed = false;
+    updateImportWarningToast(validation);
+    return;
   }
   if (importType === 'modulo' && !moduloAtual?.id) {
     showImportWarning('Selecione uma aba personalizada antes de importar.');
@@ -6112,6 +6217,7 @@ async function salvarNovoModulo() {
 }
 function closeAllModals() {
   document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));
+  document.body.classList.remove('modal-open');
 }
 
 function closeModalByEsc(modalEl) {
@@ -6128,6 +6234,9 @@ function closeModalByEsc(modalEl) {
       break;
     case 'importModal':
       closeImportModal();
+      break;
+    case 'importMappingModal':
+      closeImportMappingModal();
       break;
     case 'createTabModal':
       closeCreateTabModal();
@@ -6170,6 +6279,7 @@ function openModalById(id) {
     el.classList.remove('hidden');
     el.classList.add('show');
     focusFirstField(el);
+    document.body.classList.add('modal-open');
   }
 }
 
@@ -6320,8 +6430,13 @@ document.addEventListener('keydown', (e) => {
   window.clearImportHistory = clearImportHistory;
   window.reprocessImport = reprocessImport;
   window.openImportModal = openImportModal;
+  window.openImportUploadModal = openImportUploadModal;
+  window.openImportMappingModal = openImportMappingModal;
   window.closeImportModal = closeImportModal;
+  window.closeImportMappingModal = closeImportMappingModal;
   window.closeImportModalIfClicked = closeImportModalIfClicked;
+  window.closeImportMappingModalIfClicked = closeImportMappingModalIfClicked;
+  window.dismissImportWarningNotice = dismissImportWarningNotice;
   window.openImportHistoryModal = openImportHistoryModal;
   window.closeImportHistoryModal = closeImportHistoryModal;
   window.closeImportHistoryModalIfClicked = closeImportHistoryModalIfClicked;
