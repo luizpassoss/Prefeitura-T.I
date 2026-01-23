@@ -3812,9 +3812,11 @@ function mapImportRows() {
 function mapModuloImportRows() {
   return importRows.map((row) => {
     const valores = {};
-    importColumnMap.forEach((fieldKey, idx) => {
+    (moduloCampos || []).forEach((campo) => {
+      const fieldKey = campo?.nome;
       if (!fieldKey) return;
-      valores[fieldKey] = row[idx] ?? '';
+      const colIndex = importColumnMap.indexOf(fieldKey);
+      valores[fieldKey] = colIndex >= 0 ? (row[colIndex] ?? '') : '';
     });
     return valores;
   });
@@ -3826,11 +3828,22 @@ async function runModuloImport(rows, moduleId) {
 
   for (let i = 0; i < rows.length; i++) {
     try {
-      await fetch(`${API_MODULOS}/${moduleId}/registros`, {
+      const response = await fetch(`${API_MODULOS}/${moduleId}/registros`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ valores: rows[i] })
       });
+      if (!response.ok) {
+        let message = `Falha ao importar (status ${response.status}).`;
+        try {
+          const data = await response.json();
+          if (data?.error) message = data.error;
+        } catch (err) {
+          // ignore parse errors
+        }
+        errors.push({ linha: i + 2, erro: message });
+        continue;
+      }
       successCount += 1;
     } catch (err) {
       errors.push({ linha: i + 2, erro: err.message });
