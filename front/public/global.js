@@ -4524,20 +4524,30 @@ async function carregarRegistrosModulo() {
 
 function getModuloDisplayConfig() {
   const normalizeFieldKey = (name) => normalizeHeader(name || '').replace(/\s+/g, '');
-  const linkField = moduloCampos.find((campo) => {
-    const key = normalizeFieldKey(campo.nome);
-    return key === 'link' || key === 'linkdeinternet' || key === 'internet';
-  });
   const categoriaField = moduloCampos.find(
     (campo) => normalizeFieldKey(campo.nome) === 'categoria'
   );
-  const shouldMergeCategoria = Boolean(linkField && categoriaField);
+  if (!categoriaField) {
+    return {
+      displayCampos: moduloCampos,
+      categoriaFieldName: '',
+      categoriaAnchorFieldName: '',
+      shouldMergeCategoria: false
+    };
+  }
+  const moduleOptions = loadModuleFieldOptions(moduloAtual?.id);
+  const storedAnchor = moduleOptions.__categoriaAnchor;
+  const anchorField = storedAnchor
+    ? moduloCampos.find((campo) => normalizeFieldKey(campo.nome) === storedAnchor)
+    : moduloCampos.find((campo) => normalizeFieldKey(campo.nome) !== 'categoria');
+  const shouldMergeCategoria = Boolean(anchorField && categoriaField);
   const displayCampos = shouldMergeCategoria
     ? moduloCampos.filter((campo) => campo.nome !== categoriaField.nome)
     : moduloCampos;
   return {
     displayCampos,
     categoriaFieldName: categoriaField?.nome || '',
+    categoriaAnchorFieldName: anchorField?.nome || '',
     shouldMergeCategoria
   };
 }
@@ -4551,7 +4561,7 @@ function renderModuloDinamico() {
   tab.classList.add('active');
 
   const filtered = getModuloFiltrado();
-  const { displayCampos, categoriaFieldName } = getModuloDisplayConfig();
+  const { displayCampos, categoriaFieldName, categoriaAnchorFieldName } = getModuloDisplayConfig();
   const moduleFiltersPanel = document.getElementById('moduleFilters');
   const moduleFiltersButton = document.querySelector('#tabModuloDinamico .filter-btn');
 
@@ -4647,7 +4657,7 @@ function renderModuloDinamico() {
         >
       </td>
       ${displayCampos.map(c => `
-        <td>${renderModuloCell(c.nome, row[c.nome], row, categoriaFieldName)}</td>
+        <td>${renderModuloCell(c.nome, row[c.nome], row, categoriaFieldName, categoriaAnchorFieldName)}</td>
       `).join('')}
       <td class="actions">
         <div class="action-group">
@@ -4743,13 +4753,14 @@ if (moduloTbody) {
   });
 }
 
-function renderModuloCell(fieldName, value, row = {}, categoriaFieldName = '') {
+function renderModuloCell(fieldName, value, row = {}, categoriaFieldName = '', categoriaAnchorFieldName = '') {
   const label = (value ?? '').toString();
   const formatted = formatDateForTable(label);
   const normalizedField = normalizeHeader(fieldName).replace(/\s+/g, '');
   if (
     categoriaFieldName &&
-    (normalizedField === 'link' || normalizedField === 'linkdeinternet' || normalizedField === 'internet')
+    categoriaAnchorFieldName &&
+    normalizeHeader(categoriaAnchorFieldName).replace(/\s+/g, '') === normalizedField
   ) {
     const categoriaValue = (row?.[categoriaFieldName] ?? '').toString().trim();
     return `
@@ -5352,6 +5363,54 @@ function buildFieldOptionsMap(fields) {
   }, {});
 }
 
+function getCategoriaAnchorKey(fields = []) {
+  const candidate = fields.find(field => normalizeHeader(field.nome) !== 'categoria');
+  return candidate ? normalizeModuloSortKey(candidate.nome) : '';
+}
+
+function updateCategoriaAnchorOptions() {
+  const wrapper = document.getElementById('categoriaAnchorWrapper');
+  const select = document.getElementById('categoriaAnchorSelect');
+  if (!wrapper || !select) return;
+
+  const activeFields = newTabFields.filter(field => !field.__deleted && field.nome?.trim());
+  const hasCategoria = activeFields.some(field => normalizeHeader(field.nome) === 'categoria');
+  if (!hasCategoria) {
+    wrapper.classList.add('hidden');
+    select.innerHTML = '';
+    delete newTabFieldOptions.__categoriaAnchor;
+    return;
+  }
+
+  const candidates = activeFields.filter(field => normalizeHeader(field.nome) !== 'categoria');
+  if (!candidates.length) {
+    wrapper.classList.add('hidden');
+    select.innerHTML = '';
+    return;
+  }
+
+  if (manageTabContext?.type !== 'module') {
+    newTabFieldOptions.__categoriaAnchor = newTabFieldOptions.__categoriaAnchor || getCategoriaAnchorKey(candidates);
+    wrapper.classList.add('hidden');
+    return;
+  }
+
+  wrapper.classList.remove('hidden');
+  select.innerHTML = candidates
+    .map(field => {
+      const value = normalizeModuloSortKey(field.nome);
+      return `<option value="${value}">${escapeHtml(field.nome)}</option>`;
+    })
+    .join('');
+
+  const selectedKey = newTabFieldOptions.__categoriaAnchor || getCategoriaAnchorKey(candidates);
+  select.value = selectedKey;
+  newTabFieldOptions.__categoriaAnchor = selectedKey;
+  select.onchange = () => {
+    newTabFieldOptions.__categoriaAnchor = select.value;
+  };
+}
+
 function initFieldDragAndDrop() {
   if (fieldDragInitialized) return;
   const container = document.getElementById('fieldsContainer');
@@ -5484,6 +5543,8 @@ function openCreateTabModal() {
   newTabSortOptions = [];
   newTabFieldOptions = {};
   document.getElementById('fieldsContainer').innerHTML = '';
+  const categoriaWrapper = document.getElementById('categoriaAnchorWrapper');
+  if (categoriaWrapper) categoriaWrapper.classList.add('hidden');
   document.getElementById('newTabName').value = '';
   document.getElementById('newTabDescription').value = '';
   const templateSelect = document.getElementById('newTabTemplate');
@@ -5497,6 +5558,7 @@ function openCreateTabModal() {
   if (submitBtn) submitBtn.textContent = 'Criar Aba';
   initFieldDragAndDrop();
   renderSortOptionsPicker();
+  updateCategoriaAnchorOptions();
   openModalById('createTabModal');
 }
 
@@ -5559,6 +5621,7 @@ async function openManageModule(mod) {
   newTabSortOptions = loadModuleSortOptions(mod.id);
   renderSortOptionsPicker(newTabSortOptions);
   initFieldDragAndDrop();
+  updateCategoriaAnchorOptions();
   openModalById('createTabModal');
 }
 
@@ -5636,6 +5699,9 @@ async function saveManagedModule() {
   const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
   saveModuleSortOptions(moduleId, resolvedSortOptions);
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
+  if (newTabFieldOptions.__categoriaAnchor) {
+    fieldOptionsMap.__categoriaAnchor = newTabFieldOptions.__categoriaAnchor;
+  }
   saveModuleFieldOptions(moduleId, fieldOptionsMap);
 
   closeCreateTabModal();
@@ -5961,6 +6027,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
   document.getElementById('fieldsContainer').appendChild(row);
   initFieldDragAndDrop();
   renderSortOptionsPicker();
+  updateCategoriaAnchorOptions();
 
   const typeSelect = row.querySelector('.field-type');
   if (typeSelect) {
@@ -6048,6 +6115,7 @@ function removeField(idx) {
     if (Number(r.dataset.idx) === idx) r.remove();
   });
   renderSortOptionsPicker();
+  updateCategoriaAnchorOptions();
 }
 
 function sortFieldsAlphabetically() {
@@ -6059,6 +6127,7 @@ function sortFieldsAlphabetically() {
   if (container) container.innerHTML = '';
   newTabFields.forEach(field => addFieldWithValues(field));
   renderSortOptionsPicker();
+  updateCategoriaAnchorOptions();
 }
 
 
@@ -6208,6 +6277,13 @@ async function salvarNovoModulo() {
   const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
   saveModuleSortOptions(modulo.id, resolvedSortOptions);
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
+  const hasCategoria = camposValidos.some(field => normalizeHeader(field.nome) === 'categoria');
+  if (hasCategoria) {
+    const categoriaAnchor = getCategoriaAnchorKey(camposValidos);
+    if (categoriaAnchor) {
+      fieldOptionsMap.__categoriaAnchor = categoriaAnchor;
+    }
+  }
   saveModuleFieldOptions(modulo.id, fieldOptionsMap);
 
 
