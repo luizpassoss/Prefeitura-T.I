@@ -6201,6 +6201,7 @@ async function salvarNovoModulo() {
 }
 function closeAllModals() {
   document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));
+  document.body.classList.remove('modal-open');
 }
 
 function closeModalByEsc(modalEl) {
@@ -6262,6 +6263,7 @@ function openModalById(id) {
     el.classList.remove('hidden');
     el.classList.add('show');
     focusFirstField(el);
+    document.body.classList.add('modal-open');
   }
 }
 

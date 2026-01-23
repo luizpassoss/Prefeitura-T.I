@@ -3078,6 +3078,10 @@ body.theme-dark .undo-toast {
   z-index: 10020;
 }
 
+.modal-open .action-toast {
+  bottom: 90px;
+}
+
 .action-toast-left {
   right: auto;
   left: 22px;
