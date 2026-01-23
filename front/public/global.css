@@ -1846,7 +1846,7 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 4px 6px 12px 2px;
+  padding: 8px 6px 16px 2px;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -1858,8 +1858,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal #importStepPreview .table-wrap {
-  max-height: clamp(220px, 34vh, 400px);
-  min-height: 180px;
+  max-height: clamp(220px, 32vh, 380px);
+  min-height: 200px;
   flex: 1 1 auto;
   overflow-x: auto;
   overflow-y: auto;
@@ -1885,6 +1885,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 #importModal .import-history .table-wrap {
@@ -1898,6 +1900,26 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.import-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.import-controls label {
+  flex: 1 1 160px;
+}
+
+.import-controls .select {
+  min-width: 220px;
+  flex: 1 1 260px;
+}
+
+.import-controls .btn {
+  flex: 0 0 auto;
 }
 
 .file-input {
@@ -3214,6 +3236,11 @@ body.theme-dark tbody tr:hover td.actions {
   flex-direction: column;
   gap: var(--space-2);
   min-height: 0;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+  position: relative;
+  z-index: 1;
 }
 
 #importModal .card {
@@ -3263,6 +3290,15 @@ body.theme-dark #importModal .card {
 
 body.theme-dark .import-history-header {
   background: #121826;
+}
+
+body.theme-dark .import-history {
+  background: #121826;
+  border-top-color: rgba(148, 163, 184, 0.2);
+}
+
+body.theme-dark #importModal #importStepPreview {
+  border-bottom-color: rgba(148, 163, 184, 0.2);
 }
 
 .import-history-header {
