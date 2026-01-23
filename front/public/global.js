@@ -5823,11 +5823,16 @@ async function saveManagedModule() {
     return;
   }
 
-  await fetch(`${API_MODULOS}/${moduleId}`, {
+  const updateRes = await fetch(`${API_MODULOS}/${moduleId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nome, descricao })
   });
+  if (!updateRes.ok) {
+    const error = await updateRes.json().catch(() => ({}));
+    showErrorMessage(error?.error || 'Erro ao atualizar a aba.');
+    return;
+  }
 
   const existingIds = new Set(manageTabContext.campos.map(campo => campo.id));
   const nextIds = new Set(camposValidos.filter(campo => campo.id).map(campo => campo.id));

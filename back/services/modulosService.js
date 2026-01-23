@@ -32,6 +32,30 @@ exports.listModulos = async () => {
   return rows;
 };
 
+exports.updateModulo = async (moduloId, nome, descricao) => {
+  const slug = nome.toLowerCase().replace(/\s+/g, '_');
+
+  try {
+    const [result] = await pool.query(
+      'UPDATE modulos SET nome = ?, slug = ?, descricao = ? WHERE id = ?',
+      [nome, slug, descricao || null, moduloId]
+    );
+
+    return { updated: result.affectedRows > 0, modulo: { id: moduloId, nome, slug, descricao: descricao || null } };
+  } catch (err) {
+    if (err.code !== 'ER_BAD_FIELD_ERROR') {
+      throw err;
+    }
+
+    const [result] = await pool.query(
+      'UPDATE modulos SET nome = ?, slug = ? WHERE id = ?',
+      [nome, slug, moduloId]
+    );
+
+    return { updated: result.affectedRows > 0, modulo: { id: moduloId, nome, slug, descricao: null } };
+  }
+};
+
 exports.deleteModulo = async (moduloId) => {
   const conn = await pool.getConnection();
 
