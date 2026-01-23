@@ -3587,10 +3587,33 @@ function resolveImportColumnIndex(headerMap, keys, fallbackIndex) {
 function validateImportRows() {
   if (importType === 'modulo') {
     const issues = [];
+    const cellIssues = new Set();
+    let errorCount = 0;
+    const requiredFields = (moduloCampos || []).filter(campo => campo?.obrigatorio);
+
     if (!importColumnMap.some((value) => value)) {
       issues.push('Selecione ao menos um campo para mapear.');
     }
-    return { issues, cellIssues: new Set(), errorCount: 0 };
+
+    requiredFields.forEach((field) => {
+      if (!importColumnMap.includes(field.nome)) {
+        issues.push(`Campo obrigatório não mapeado: ${field.nome}`);
+      }
+    });
+
+    importRows.forEach((row, rowIndex) => {
+      requiredFields.forEach((field) => {
+        const colIndex = importColumnMap.indexOf(field.nome);
+        if (colIndex === -1) return;
+        const value = (row[colIndex] ?? '').toString().trim();
+        if (!value) {
+          errorCount += 1;
+          cellIssues.add(`${rowIndex}-${colIndex}`);
+        }
+      });
+    });
+
+    return { issues, cellIssues, errorCount };
   }
 
   const issues = [];
@@ -3659,6 +3682,19 @@ function renderImportPreview() {
       `).join('')}
       <th>Mapeamento</th>
     </tr>
+    <tr class="import-bulk-row">
+      ${importHeaders.map((_, idx) => `
+        <th>
+          <input
+            type="text"
+            class="import-bulk-input"
+            placeholder="Preencher coluna"
+            oninput="fillImportColumn(${idx}, this.value)"
+          />
+        </th>
+      `).join('')}
+      <th>Preencher</th>
+    </tr>
     <tr>
       ${importHeaders.map(h => `<th>${h}</th>`).join('')}
       <th>Ação</th>
@@ -3720,6 +3756,18 @@ function updateImportMapping(col, value) {
   applyImportValidation();
 }
 
+function fillImportColumn(col, value) {
+  importRows.forEach((row) => {
+    row[col] = value;
+  });
+  document
+    .querySelectorAll(`#importPreviewTable tbody td[data-col="${col}"]`)
+    .forEach((td) => {
+      td.innerText = value;
+    });
+  applyImportValidation();
+}
+
 function removeImportRow(index) {
   importRows.splice(index, 1);
   renderImportPreview();
@@ -3740,6 +3788,14 @@ function applyImportValidation() {
   }
 
   renderImportValidation(validation, validationEl);
+}
+
+function addImportColumn() {
+  const nextIndex = importHeaders.length + 1;
+  importHeaders.push(`Nova coluna ${nextIndex}`);
+  importColumnMap.push('');
+  importRows = importRows.map((row) => [...row, '']);
+  renderImportPreview();
 }
 
 function renderImportValidation(validation, validationEl) {
@@ -3812,9 +3868,11 @@ function mapImportRows() {
 function mapModuloImportRows() {
   return importRows.map((row) => {
     const valores = {};
-    importColumnMap.forEach((fieldKey, idx) => {
+    (moduloCampos || []).forEach((campo) => {
+      const fieldKey = campo?.nome;
       if (!fieldKey) return;
-      valores[fieldKey] = row[idx] ?? '';
+      const colIndex = importColumnMap.indexOf(fieldKey);
+      valores[fieldKey] = colIndex >= 0 ? (row[colIndex] ?? '') : '';
     });
     return valores;
   });
@@ -3826,11 +3884,22 @@ async function runModuloImport(rows, moduleId) {
 
   for (let i = 0; i < rows.length; i++) {
     try {
-      await fetch(`${API_MODULOS}/${moduleId}/registros`, {
+      const response = await fetch(`${API_MODULOS}/${moduleId}/registros`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ valores: rows[i] })
       });
+      if (!response.ok) {
+        let message = `Falha ao importar (status ${response.status}).`;
+        try {
+          const data = await response.json();
+          if (data?.error) message = data.error;
+        } catch (err) {
+          // ignore parse errors
+        }
+        errors.push({ linha: i + 2, erro: message });
+        continue;
+      }
       successCount += 1;
     } catch (err) {
       errors.push({ linha: i + 2, erro: err.message });
@@ -3952,6 +4021,9 @@ async function confirmImport() {
   const validation = validateImportRows();
   if (validation.issues.length || validation.errorCount > 0) {
     showImportWarning('Existem campos obrigatórios vazios. Você pode importar e ajustar depois.');
+    if (importType === 'modulo') {
+      return;
+    }
   }
   if (importType === 'modulo' && !moduloAtual?.id) {
     showImportWarning('Selecione uma aba personalizada antes de importar.');

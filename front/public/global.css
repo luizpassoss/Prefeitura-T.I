@@ -1832,17 +1832,21 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal .card {
-  height: min(90vh, 760px);
-  max-height: min(90vh, 760px);
+  height: min(calc(100vh - 40px), 820px);
+  max-height: calc(100vh - 40px);
   overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--space-4);
 }
 
 #importModal .modal-body-scroll {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-bottom: 8px;
+  gap: 20px;
+  padding: 8px 6px 16px 2px;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -1854,19 +1858,40 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal #importStepPreview .table-wrap {
-  max-height: clamp(220px, 38vh, 420px);
+  max-height: clamp(220px, 32vh, 380px);
+  min-height: 200px;
+  flex: 1 1 auto;
   overflow-x: auto;
   overflow-y: auto;
+}
+
+.import-bulk-row th {
+  padding-top: 6px;
+}
+
+.import-bulk-input {
+  width: 100%;
+  min-width: 120px;
+  padding: 6px 8px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #fff;
+  color: var(--text);
 }
 
 #importModal #importStepPreview {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 #importModal .import-history .table-wrap {
   max-height: clamp(180px, 28vh, 320px);
+  min-height: 160px;
   overflow-x: auto;
   overflow-y: auto;
 }
@@ -1875,6 +1900,26 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.import-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.import-controls label {
+  flex: 1 1 160px;
+}
+
+.import-controls .select {
+  min-width: 220px;
+  flex: 1 1 260px;
+}
+
+.import-controls .btn {
+  flex: 0 0 auto;
 }
 
 .file-input {
@@ -3187,14 +3232,23 @@ body.theme-dark tbody tr:hover td.actions {
 
 .import-history {
   margin-top: var(--space-4);
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
+  min-height: 0;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+  position: relative;
+  z-index: 1;
 }
 
 #importModal .card {
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
+  height: min(calc(100vh - 40px), 820px);
+  max-height: calc(100vh - 40px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--space-4);
   overflow: hidden;
 }
 
@@ -3204,11 +3258,12 @@ body.theme-dark tbody tr:hover td.actions {
 
 .import-history {
   flex: 1 1 auto;
-  min-height: 0;
 }
 
 .import-history .table-wrap {
-  max-height: 320px;
+  flex: 1 1 auto;
+  min-height: 160px;
+  max-height: clamp(180px, 28vh, 320px);
   overflow: auto;
 }
 
@@ -3233,11 +3288,29 @@ body.theme-dark #importModal .card {
   background: #121826;
 }
 
+body.theme-dark .import-history-header {
+  background: #121826;
+}
+
+body.theme-dark .import-history {
+  background: #121826;
+  border-top-color: rgba(148, 163, 184, 0.2);
+}
+
+body.theme-dark #importModal #importStepPreview {
+  border-bottom-color: rgba(148, 163, 184, 0.2);
+}
+
 .import-history-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fff;
+  padding: 4px 0;
 }
 
 .import-history h3 {
