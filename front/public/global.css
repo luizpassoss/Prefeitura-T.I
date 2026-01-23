@@ -1832,17 +1832,69 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal .card {
-  height: min(90vh, 760px);
-  max-height: min(90vh, 760px);
+  height: min(calc(100vh - 40px), 820px);
+  max-height: calc(100vh - 40px);
   overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  font-size: 13px;
+}
+
+#importModal .modal-title-row h2 {
+  font-size: 18px;
+}
+
+#importModal .modal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.import-history-btn {
+  padding: 4px 10px;
+  height: 30px;
+  font-size: 11px;
+}
+
+#importModal h3 {
+  font-size: 14px;
+}
+
+#importModal p,
+#importModal ul,
+#importModal li,
+#importModal small {
+  font-size: 12px;
+}
+
+#importModal .btn,
+#importModal .btn-cancelar,
+#importModal .btn-salvar {
+  font-size: 12px;
+  padding: 6px 12px;
+  height: 34px;
+}
+
+#importModal table th,
+#importModal table td {
+  font-size: 12px;
 }
 
 #importModal .modal-body-scroll {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-bottom: 8px;
+  gap: 20px;
+  padding: 8px 6px 16px 2px;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -1854,27 +1906,90 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal #importStepPreview .table-wrap {
-  max-height: clamp(220px, 38vh, 420px);
+  max-height: clamp(220px, 32vh, 380px);
+  min-height: 200px;
+  flex: 1 1 auto;
   overflow-x: auto;
   overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.import-bulk-row th {
+  padding-top: 6px;
+}
+
+.import-bulk-input {
+  width: 100%;
+  min-width: 120px;
+  padding: 6px 8px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #fff;
+  color: var(--text);
 }
 
 #importModal #importStepPreview {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-#importModal .import-history .table-wrap {
-  max-height: clamp(180px, 28vh, 320px);
-  overflow-x: auto;
-  overflow-y: auto;
+.import-extra-field {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.import-extra-field label {
+  font-size: 12px;
+}
+
+.import-extra-field input,
+.import-extra-field select {
+  width: 100%;
+  height: 34px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid #d9e2ec;
+  background: #fff;
+  font-size: 12px;
 }
 
 .import-header {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.import-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.import-controls label {
+  flex: 1 1 160px;
+}
+
+.import-controls .select {
+  min-width: 220px;
+  flex: 1 1 260px;
+}
+
+.import-controls .btn {
+  flex: 0 0 auto;
 }
 
 .file-input {
@@ -3185,59 +3300,33 @@ body.theme-dark tbody tr:hover td.actions {
   white-space: nowrap;
 }
 
-.import-history {
-  margin-top: var(--space-4);
-  display: grid;
-  gap: var(--space-2);
-}
-
-#importModal .card {
-  max-height: 90vh;
+#importHistoryModal .import-history-modal-card {
+  max-width: 980px;
+  height: min(84vh, 680px);
+  max-height: min(84vh, 680px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-#importModal .card > :not(.import-history) {
-  flex: 0 0 auto;
-}
-
-.import-history {
+.import-history-modal-body {
   flex: 1 1 auto;
   min-height: 0;
-}
-
-.import-history .table-wrap {
-  max-height: 320px;
   overflow: auto;
 }
 
-.import-history table {
-  min-width: 640px;
+#importHistoryModal .table-wrap {
+  max-height: none;
 }
 
-.import-history thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+body.theme-dark #importModal #importStepPreview {
+  border-bottom-color: rgba(148, 163, 184, 0.2);
 }
 
-.import-history td:nth-child(3) {
-  max-width: 240px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-body.theme-dark #importModal .card {
-  background: #121826;
-}
-
-.import-history-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+body.theme-dark #importModal #importStepPreview .table-wrap,
+body.theme-dark .import-extra-field {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(148, 163, 184, 0.2);
 }
 
 .import-history h3 {

@@ -979,18 +979,21 @@
 
     <div class="modal-title-row">
       <h2 id="importTitle">Importar Planilha</h2>
-      <span
-        class="help-tip"
-        role="img"
-        aria-label="Ajuda sobre importação"
-        data-help-title="Importação de Planilhas"
-        data-help-more="Use uma planilha exportada do sistema. Confira a prévia, ajuste dados quando necessário e confirme para importar."
-      >
-        <span class="help-tip-icon">?</span>
-        <span class="help-tooltip">
-          <span class="help-tooltip-text">Use uma planilha exportada do sistema.</span>
+      <div class="modal-title-actions">
+        <button type="button" class="btn secondary import-history-btn" onclick="openImportHistoryModal()">Histórico</button>
+        <span
+          class="help-tip"
+          role="img"
+          aria-label="Ajuda sobre importação"
+          data-help-title="Importação de Planilhas"
+          data-help-more="Use uma planilha exportada do sistema. Confira a prévia, ajuste dados quando necessário e confirme para importar."
+        >
+          <span class="help-tip-icon">?</span>
+          <span class="help-tooltip">
+            <span class="help-tooltip-text">Use uma planilha exportada do sistema.</span>
+          </span>
         </span>
-      </span>
+      </div>
     </div>
 
     <div class="modal-body-scroll">
@@ -1043,6 +1046,18 @@
         </div>
         <div id="importValidation" class="import-validation hidden"></div>
 
+        <div id="importExtraField" class="import-extra-field hidden">
+          <div>
+            <label for="importExtraFieldSelect">Adicionar campo ausente</label>
+            <select id="importExtraFieldSelect" class="select"></select>
+          </div>
+          <div>
+            <label for="importExtraFieldValue">Valor para todas as linhas</label>
+            <input id="importExtraFieldValue" type="text" placeholder="Ex: Centro" />
+          </div>
+          <button type="button" class="btn secondary" onclick="addMissingImportField()">Adicionar campo</button>
+        </div>
+
         <div class="table-wrap" style="margin-top:20px">
           <table id="importPreviewTable">
             <thead></thead>
@@ -1050,27 +1065,6 @@
           </table>
         </div>
 
-      </div>
-
-      <div class="import-history">
-        <div class="import-history-header">
-          <h3>Histórico de importações</h3>
-          <button type="button" class="btn secondary" onclick="clearImportHistory()">Limpar histórico</button>
-        </div>
-        <div class="table-wrap">
-          <table id="importHistoryTable">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Usuário</th>
-                <th>Arquivo</th>
-                <th>Status</th>
-                <th class="actions-header">Ações</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
       </div>
     </div>
 
@@ -1087,6 +1081,33 @@
       </button>
     </div>
 
+  </div>
+</div>
+<div id="importHistoryModal" class="modal" onclick="closeImportHistoryModalIfClicked(event)">
+  <div class="card modal-card-fixed import-history-modal-card" onclick="event.stopPropagation()">
+    <div class="modal-title-row">
+      <h2>Histórico de importações</h2>
+      <button type="button" class="btn secondary" onclick="clearImportHistory()">Limpar histórico</button>
+    </div>
+    <div class="import-history-modal-body">
+      <div class="table-wrap">
+        <table id="importHistoryTableModal">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Usuário</th>
+              <th>Arquivo</th>
+              <th>Status</th>
+              <th class="actions-header">Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeImportHistoryModal()">Fechar</button>
+    </div>
   </div>
 </div>
 <div id="createTabModal" class="modal" onclick="closeCreateTabModal(event)">
