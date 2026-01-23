@@ -1841,7 +1841,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal .modal-body-scroll {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1858,6 +1859,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 
 #importModal #importStepPreview .table-wrap {
   max-height: clamp(220px, 38vh, 420px);
+  min-height: 180px;
+  flex: 1 1 auto;
   overflow-x: auto;
   overflow-y: auto;
 }
@@ -1866,6 +1869,7 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
 }
 
 #importModal .import-history .table-wrap {
