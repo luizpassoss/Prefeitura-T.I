@@ -2395,6 +2395,10 @@ body.theme-dark .file-input-name {
   border-top: 1px dashed rgba(148, 163, 184, 0.35);
 }
 
+.categoria-anchor-setting.hidden {
+  display: none;
+}
+
 .categoria-anchor-header {
   display: inline-flex;
   align-items: center;

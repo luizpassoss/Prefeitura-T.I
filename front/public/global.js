@@ -4640,7 +4640,6 @@ function renderModuloDinamico() {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   tab.classList.add('active');
 
-  const filtered = getModuloFiltrado();
   const { displayCampos, categoriaFieldName, categoriaAnchorFieldName } = getModuloDisplayConfig();
   const moduleFiltersPanel = document.getElementById('moduleFilters');
   const moduleFiltersButton = document.querySelector('#tabModuloDinamico .filter-btn');
@@ -4675,11 +4674,11 @@ function renderModuloDinamico() {
     const field = input.dataset.field;
     input.value = moduloColumnFilters[field] || '';
     input.addEventListener('input', (event) => {
-      const field = event.target.dataset.field;
-      moduloColumnFilters[field] = event.target.value;
-      filtrarModulo();
+      updateModuloColumnFilter(field, event.target.value, 'header');
     });
   });
+
+  renderModuloFilterControls(displayCampos);
 
   if (moduleFiltersPanel && !displayCampos.length) {
     moduleFiltersPanel.classList.add('hidden');
@@ -4695,7 +4694,57 @@ function renderModuloDinamico() {
     initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
   }
 
-  // BODY
+  renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName);
+}
+
+function renderModuloFilterControls(displayCampos) {
+  const panel = document.getElementById('moduleFilters');
+  if (!panel) return;
+  const filtersMarkup = displayCampos
+    .map((campo) => `
+      <input
+        class="input"
+        data-field="${escapeHtml(campo.nome)}"
+        placeholder="Filtrar ${escapeHtml(campo.nome)}"
+        value="${escapeHtml(moduloColumnFilters[campo.nome] || '')}"
+      />
+    `)
+    .join('');
+  panel.innerHTML = `
+    <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar filtros</button>
+    ${filtersMarkup}
+  `;
+  panel.querySelectorAll('input[data-field]').forEach((input) => {
+    const field = input.dataset.field;
+    input.addEventListener('input', (event) => {
+      updateModuloColumnFilter(field, event.target.value, 'panel');
+    });
+  });
+}
+
+function getModuloFilterSelector(field) {
+  const safeField = window.CSS && CSS.escape ? CSS.escape(field) : field.replace(/"/g, '\\"');
+  return `[data-field="${safeField}"]`;
+}
+
+function updateModuloColumnFilter(field, value, source) {
+  moduloColumnFilters[field] = value;
+  const selector = getModuloFilterSelector(field);
+  if (source !== 'header') {
+    const headerInput = document.querySelector(`#moduloThead .table-filter-input${selector}`);
+    if (headerInput) headerInput.value = value;
+  }
+  if (source !== 'panel') {
+    const panelInput = document.querySelector(`#moduleFilters input${selector}`);
+    if (panelInput) panelInput.value = value;
+  }
+  filtrarModulo();
+}
+
+function renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName) {
+  const tbody = document.getElementById('moduloTbody');
+  if (!tbody) return;
+  const filtered = getModuloFiltrado();
   tbody.innerHTML = '';
 
   const state = paginationState.modules;
@@ -4940,6 +4989,9 @@ function clearModuloFilters() {
   document.querySelectorAll('#moduloThead .table-filter-input').forEach((input) => {
     input.value = '';
   });
+  document.querySelectorAll('#moduleFilters input[data-field]').forEach((input) => {
+    input.value = '';
+  });
   paginationState.modules.page = 1;
   filtrarModulo();
 }
@@ -4948,7 +5000,8 @@ function filtrarModulo() {
   const { modCount } = getActiveFilterCounts();
   moduloFlashAfterFetch = modCount > 0;
   paginationState.modules.page = 1;
-  renderModuloDinamico();
+  const { displayCampos, categoriaFieldName, categoriaAnchorFieldName } = getModuloDisplayConfig();
+  renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName);
   updateFilterBadges();
 }
 async function excluirRegistroModulo(id) {
