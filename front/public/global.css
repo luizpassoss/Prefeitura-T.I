@@ -3115,15 +3115,103 @@ body.theme-dark .action-toast {
   box-shadow: 0 18px 45px rgba(8, 8, 10, 0.55);
 }
 
-body.theme-dark .action-toast.import-warning-toast {
-  background: rgba(120, 53, 15, 0.25);
-  color: #fcd34d;
-  border-color: rgba(251, 191, 36, 0.45);
-  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.55);
+.import-warning-notice {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 10030;
 }
 
-body.theme-dark .action-toast.import-warning-toast .action-toast-icon {
+.import-warning-notice.hidden {
+  display: none;
+}
+
+.import-warning-card {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid rgba(217, 119, 6, 0.55);
+  border-radius: 16px;
+  padding: 16px 18px;
+  width: min(520px, 92vw);
+  box-shadow: 0 24px 50px rgba(120, 53, 15, 0.25);
+}
+
+.import-warning-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.import-warning-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(217, 119, 6, 0.15);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.import-warning-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: #d97706;
+  fill: none;
+  stroke-width: 2;
+}
+
+.import-warning-text {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #92400e;
+}
+
+.import-warning-close {
+  border: none;
+  background: transparent;
+  color: #92400e;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.import-warning-close:hover {
+  color: #b45309;
+}
+
+body.theme-dark .import-warning-card {
+  background: rgba(120, 53, 15, 0.3);
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, 0.45);
+  box-shadow: 0 24px 50px rgba(2, 6, 23, 0.55);
+}
+
+body.theme-dark .import-warning-text {
+  color: #fcd34d;
+}
+
+body.theme-dark .import-warning-icon {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+body.theme-dark .import-warning-icon svg {
   stroke: #fbbf24;
+}
+
+body.theme-dark .import-warning-close {
+  color: #fcd34d;
+}
+
+body.theme-dark .import-warning-close:hover {
+  color: #fbbf24;
 }
 
 .action-toast-icon {

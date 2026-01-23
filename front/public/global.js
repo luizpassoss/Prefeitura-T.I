@@ -447,6 +447,7 @@ let selectedModuloIds = new Set();
 let actionToastTimeout = null;
 let actionToastLeftTimeout = null;
 let importWarningVisible = false;
+let importWarningDismissed = false;
 let notificationItems = [];
 let notificationsClearedAt = null;
 let notificationsSuppressed = false;
@@ -522,24 +523,25 @@ function showActionToastLeft(message, duration = 3200) {
   );
 }
 
-function showPersistentToast(toastId, message) {
-  const toast = document.getElementById(toastId);
-  if (!toast) return;
-  const text = toast.querySelector('.action-toast-text');
+function showImportWarningNotice(message) {
+  const notice = document.getElementById('importWarningNotice');
+  if (!notice) return;
+  const text = notice.querySelector('.import-warning-text');
   if (text) text.textContent = message;
-  toast.classList.remove('hidden');
-  requestAnimationFrame(() => {
-    toast.classList.add('show');
-  });
+  notice.classList.remove('hidden');
+  importWarningVisible = true;
 }
 
-function hidePersistentToast(toastId) {
-  const toast = document.getElementById(toastId);
-  if (!toast) return;
-  toast.classList.remove('show');
-  setTimeout(() => {
-    toast.classList.add('hidden');
-  }, 200);
+function hideImportWarningNotice() {
+  const notice = document.getElementById('importWarningNotice');
+  if (!notice) return;
+  notice.classList.add('hidden');
+  importWarningVisible = false;
+}
+
+function dismissImportWarningNotice() {
+  importWarningDismissed = true;
+  hideImportWarningNotice();
 }
 
 function toggleNotificationPanel(forceOpen = null) {
@@ -3427,6 +3429,7 @@ function resetImportState() {
   document.getElementById('importStepPreview')?.classList.add('hidden');
   updateImportSummary();
   updateImportWarningToast({ issues: [], errorCount: 0 });
+  importWarningDismissed = false;
 }
 
 function setImportMappingButtonState() {
@@ -3488,16 +3491,23 @@ function getImportFieldOptions() {
 
 function buildImportColumnMap(headers) {
   const options = getImportFieldOptions();
+  const expandedOptions = options.map((opt) => ({
+    ...opt,
+    aliases: Array.from(new Set([opt.key, opt.label, ...opt.aliases].filter(Boolean)))
+  }));
+
   return headers.map((header) => {
     const normalized = normalizeHeader(header);
     const normalizedKey = normalizeHeaderKey(header);
+    const headerTokens = normalizedKey.match(/[a-z0-9]+/g) || [];
     let bestMatch = null;
     let bestScore = 0;
 
-    options.forEach((opt) => {
+    expandedOptions.forEach((opt) => {
       opt.aliases.forEach((alias) => {
         const aliasNormalized = normalizeHeader(alias);
         const aliasKey = normalizeHeaderKey(alias);
+        const aliasTokens = aliasKey.match(/[a-z0-9]+/g) || [];
         let score = 0;
         if (aliasNormalized === normalized || aliasKey === normalizedKey) {
           score = 3;
@@ -3511,6 +3521,12 @@ function buildImportColumnMap(headers) {
           aliasNormalized.includes(normalized)
         ) {
           score = 1;
+        }
+        if (!score && headerTokens.length && aliasTokens.length) {
+          const overlap = headerTokens.filter(token => aliasTokens.includes(token)).length;
+          if (overlap) {
+            score = Math.min(2, overlap / Math.max(headerTokens.length, aliasTokens.length));
+          }
         }
         if (score > bestScore) {
           bestScore = score;
@@ -3898,9 +3914,9 @@ function updateImportWarningToast(validation) {
   const hasIssues = validation.issues.length || validation.errorCount > 0;
   if (!hasIssues) {
     if (importWarningVisible) {
-      hidePersistentToast('importWarningToast');
-      importWarningVisible = false;
+      hideImportWarningNotice();
     }
+    importWarningDismissed = false;
     return;
   }
 
@@ -3913,9 +3929,10 @@ function updateImportWarningToast(validation) {
   if (errorCount > 0) {
     parts.push(`${errorCount} célula(s) obrigatória(s) vazia(s)`);
   }
-  const message = `Mapeamento com pendências: ${parts.join(' e ')}.`;
-  showPersistentToast('importWarningToast', message);
-  importWarningVisible = true;
+  const message = `Antes de importar, corrija: ${parts.join(' e ')}.`;
+  if (!importWarningDismissed) {
+    showImportWarningNotice(message);
+  }
 }
 
 function updateImportExtraFieldOptions(options = [], wrapper) {
@@ -4166,10 +4183,9 @@ async function confirmImport() {
   const actionBtn = document.getElementById('importActionBtn');
   const validation = validateImportRows();
   if (validation.issues.length || validation.errorCount > 0) {
-    showImportWarning('Existem campos obrigatórios vazios. Você pode importar e ajustar depois.');
-    if (importType === 'modulo') {
-      return;
-    }
+    importWarningDismissed = false;
+    updateImportWarningToast(validation);
+    return;
   }
   if (importType === 'modulo' && !moduloAtual?.id) {
     showImportWarning('Selecione uma aba personalizada antes de importar.');
@@ -6420,6 +6436,7 @@ document.addEventListener('keydown', (e) => {
   window.closeImportMappingModal = closeImportMappingModal;
   window.closeImportModalIfClicked = closeImportModalIfClicked;
   window.closeImportMappingModalIfClicked = closeImportMappingModalIfClicked;
+  window.dismissImportWarningNotice = dismissImportWarningNotice;
   window.openImportHistoryModal = openImportHistoryModal;
   window.closeImportHistoryModal = closeImportHistoryModal;
   window.closeImportHistoryModalIfClicked = closeImportHistoryModalIfClicked;

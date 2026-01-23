@@ -945,13 +945,21 @@
   </svg>
   <span class="action-toast-text"></span>
 </div>
-<div id="importWarningToast" class="action-toast import-warning-toast hidden" role="status" aria-live="polite">
-  <svg class="action-toast-icon" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M12 9v4"></path>
-    <path d="M12 17h.01"></path>
-    <path d="M10.3 3.9 2.5 17.5a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path>
-  </svg>
-  <span class="action-toast-text"></span>
+<div id="importWarningNotice" class="import-warning-notice hidden" role="alertdialog" aria-live="assertive">
+  <div class="import-warning-card" role="document">
+    <div class="import-warning-header">
+      <div class="import-warning-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 9v4"></path>
+          <path d="M12 17h.01"></path>
+          <path d="M10.3 3.9 2.5 17.5a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path>
+        </svg>
+      </div>
+      <strong>Mapeamento com pendências</strong>
+      <button type="button" class="import-warning-close" aria-label="Fechar aviso" onclick="dismissImportWarningNotice()">✕</button>
+    </div>
+    <p class="import-warning-text"></p>
+  </div>
 </div>
 <div id="actionToastLeft" class="action-toast action-toast-left hidden" role="status" aria-live="polite">
   <svg class="action-toast-icon" viewBox="0 0 24 24" aria-hidden="true">
