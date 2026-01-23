@@ -1831,7 +1831,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: none !important;
 }
 
-#importModal .card {
+#importModal .card,
+#importMappingModal .card {
   height: min(calc(100vh - 40px), 820px);
   max-height: calc(100vh - 40px);
   overflow: hidden;
@@ -1841,11 +1842,13 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   font-size: 13px;
 }
 
-#importModal .modal-title-row h2 {
+#importModal .modal-title-row h2,
+#importMappingModal .modal-title-row h2 {
   font-size: 18px;
 }
 
-#importModal .modal-title-row {
+#importModal .modal-title-row,
+#importMappingModal .modal-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1864,31 +1867,42 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   font-size: 11px;
 }
 
-#importModal h3 {
+#importModal h3,
+#importMappingModal h3 {
   font-size: 13px;
 }
 
 #importModal p,
 #importModal ul,
 #importModal li,
-#importModal small {
+#importModal small,
+#importMappingModal p,
+#importMappingModal ul,
+#importMappingModal li,
+#importMappingModal small {
   font-size: 11px;
 }
 
 #importModal .btn,
 #importModal .btn-cancelar,
-#importModal .btn-salvar {
+#importModal .btn-salvar,
+#importMappingModal .btn,
+#importMappingModal .btn-cancelar,
+#importMappingModal .btn-salvar {
   font-size: 11px;
   padding: 5px 10px;
   height: 30px;
 }
 
 #importModal table th,
-#importModal table td {
+#importModal table td,
+#importMappingModal table th,
+#importMappingModal table td {
   font-size: 11px;
 }
 
-#importModal .modal-body-scroll {
+#importModal .modal-body-scroll,
+#importMappingModal .modal-body-scroll {
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
@@ -1899,23 +1913,27 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   min-height: 0;
 }
 
-#importModal .modal-card-fixed {
+#importModal .modal-card-fixed,
+#importMappingModal .modal-card-fixed {
   padding: var(--space-4);
   overflow: visible;
 }
 
-#importModal .modal-title-actions {
+#importModal .modal-title-actions,
+#importMappingModal .modal-title-actions {
   position: relative;
   align-items: center;
 }
 
-#importModal .modal-title-actions .help-tooltip {
+#importModal .modal-title-actions .help-tooltip,
+#importMappingModal .modal-title-actions .help-tooltip {
   left: auto;
   right: 0;
   transform: translate(0, 8px);
 }
 
-#importModal .modal-title-actions .help-tooltip::before {
+#importModal .modal-title-actions .help-tooltip::before,
+#importMappingModal .modal-title-actions .help-tooltip::before {
   left: auto;
   right: 12px;
   transform: rotate(45deg);
@@ -1927,7 +1945,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   min-width: 100%;
 }
 
-#importModal #importStepPreview .table-wrap {
+#importModal #importStepPreview .table-wrap,
+#importMappingModal #importStepPreview .table-wrap {
   max-height: clamp(260px, 48vh, 520px);
   min-height: 220px;
   flex: 1 1 auto;
@@ -1968,7 +1987,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   color: var(--text);
 }
 
-#importModal #importStepPreview {
+#importModal #importStepPreview,
+#importMappingModal #importStepPreview {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2007,6 +2027,10 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.import-open-mapping {
+  align-self: flex-start;
 }
 
 .import-controls {
@@ -3358,11 +3382,13 @@ body.theme-dark tbody tr:hover td.actions {
   max-height: none;
 }
 
-body.theme-dark #importModal #importStepPreview {
+body.theme-dark #importModal #importStepPreview,
+body.theme-dark #importMappingModal #importStepPreview {
   border-bottom-color: rgba(148, 163, 184, 0.2);
 }
 
 body.theme-dark #importModal #importStepPreview .table-wrap,
+body.theme-dark #importMappingModal #importStepPreview .table-wrap,
 body.theme-dark .import-extra-field {
   background: rgba(15, 23, 42, 0.6);
   border-color: rgba(148, 163, 184, 0.2);

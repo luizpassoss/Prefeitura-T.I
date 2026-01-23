@@ -1013,10 +1013,35 @@
             <span id="importFileName" class="file-input-name">Nenhum arquivo selecionado</span>
           </div>
           <small>Somente arquivos Excel (.xlsx)</small>
+          <button
+            id="importOpenMappingBtn"
+            type="button"
+            class="btn secondary import-open-mapping"
+            onclick="openImportMappingModal()"
+            disabled
+          >
+            Abrir mapeamento
+          </button>
         </div>
       </div>
+    </div>
 
-      <!-- STEP 2: PREVIEW -->
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeImportModal()">Cancelar</button>
+    </div>
+
+  </div>
+</div>
+<div id="importMappingModal" class="modal" onclick="closeImportMappingModalIfClicked(event)">
+  <div class="card modal-card-fixed import-mapping-card" style="max-width: 1100px" onclick="event.stopPropagation()">
+    <div class="modal-title-row">
+      <h2>Mapeamento da planilha</h2>
+      <div class="modal-title-actions">
+        <button type="button" class="btn secondary" onclick="openImportUploadModal()">Voltar</button>
+      </div>
+    </div>
+
+    <div class="modal-body-scroll">
       <div id="importStepPreview" class="hidden">
         <div class="import-guide">
           <div>
@@ -1071,8 +1096,6 @@
 
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeImportModal()">Cancelar</button>
-
-      <!-- BOTÃO MUDA DE FUNÇÃO -->
       <button
         id="importActionBtn"
         class="btn-salvar"
@@ -1081,7 +1104,6 @@
         Confirmar Importação
       </button>
     </div>
-
   </div>
 </div>
 <div id="importHistoryModal" class="modal" onclick="closeImportHistoryModalIfClicked(event)">
