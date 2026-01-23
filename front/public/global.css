@@ -1865,27 +1865,27 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal h3 {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 #importModal p,
 #importModal ul,
 #importModal li,
 #importModal small {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 #importModal .btn,
 #importModal .btn-cancelar,
 #importModal .btn-salvar {
-  font-size: 12px;
-  padding: 6px 12px;
-  height: 34px;
+  font-size: 11px;
+  padding: 5px 10px;
+  height: 30px;
 }
 
 #importModal table th,
 #importModal table td {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 #importModal .modal-body-scroll {
@@ -1893,10 +1893,32 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 8px 6px 16px 2px;
+  gap: 14px;
+  padding: 6px 4px 12px 2px;
   flex: 1 1 auto;
   min-height: 0;
+}
+
+#importModal .modal-card-fixed {
+  padding: var(--space-4);
+  overflow: visible;
+}
+
+#importModal .modal-title-actions {
+  position: relative;
+  align-items: center;
+}
+
+#importModal .modal-title-actions .help-tooltip {
+  left: auto;
+  right: 0;
+  transform: translate(0, 8px);
+}
+
+#importModal .modal-title-actions .help-tooltip::before {
+  left: auto;
+  right: 12px;
+  transform: rotate(45deg);
 }
 
 #importPreviewTable {
@@ -1906,8 +1928,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal #importStepPreview .table-wrap {
-  max-height: clamp(220px, 32vh, 380px);
-  min-height: 200px;
+  max-height: clamp(260px, 48vh, 520px);
+  min-height: 220px;
   flex: 1 1 auto;
   overflow-x: auto;
   overflow-y: auto;
@@ -1949,7 +1971,7 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 #importModal #importStepPreview {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   min-height: 0;
   padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
@@ -1960,25 +1982,25 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr) auto;
   gap: 12px;
   align-items: end;
-  padding: 12px;
+  padding: 10px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
 
 .import-extra-field label {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .import-extra-field input,
 .import-extra-field select {
   width: 100%;
-  height: 34px;
-  padding: 6px 10px;
+  height: 30px;
+  padding: 5px 8px;
   border-radius: 10px;
   border: 1px solid #d9e2ec;
   background: #fff;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .import-header {
@@ -1990,17 +2012,19 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 .import-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
 .import-controls label {
   flex: 1 1 160px;
+  font-size: 11px;
 }
 
 .import-controls .select {
   min-width: 220px;
   flex: 1 1 260px;
+  height: 30px;
 }
 
 .import-controls .btn {
@@ -3888,33 +3912,33 @@ body.theme-dark .sort-option-item {
 .import-validation {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 12px 14px 10px;
   border-radius: 12px;
   border: 1px solid rgba(245, 158, 11, 0.35);
   background: linear-gradient(120deg, rgba(251, 191, 36, 0.18), rgba(251, 191, 36, 0.06));
   color: #92400e;
-  font-size: 13px;
-  margin-bottom: 12px;
+  font-size: 12px;
+  margin: 4px 0 12px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .import-guide {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
+  gap: 12px;
+  padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .import-guide h3 {
   margin: 0 0 6px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .import-guide p {
@@ -3929,19 +3953,19 @@ body.theme-dark .sort-option-item {
 }
 
 .import-guide-summary {
-  min-width: 180px;
+  min-width: 160px;
   display: grid;
-  gap: 6px;
-  font-size: 12px;
+  gap: 4px;
+  font-size: 11px;
   color: #334155;
 }
 
 .import-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .import-controls label {
