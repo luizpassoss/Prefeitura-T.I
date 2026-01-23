@@ -3587,10 +3587,33 @@ function resolveImportColumnIndex(headerMap, keys, fallbackIndex) {
 function validateImportRows() {
   if (importType === 'modulo') {
     const issues = [];
+    const cellIssues = new Set();
+    let errorCount = 0;
+    const requiredFields = (moduloCampos || []).filter(campo => campo?.obrigatorio);
+
     if (!importColumnMap.some((value) => value)) {
       issues.push('Selecione ao menos um campo para mapear.');
     }
-    return { issues, cellIssues: new Set(), errorCount: 0 };
+
+    requiredFields.forEach((field) => {
+      if (!importColumnMap.includes(field.nome)) {
+        issues.push(`Campo obrigatório não mapeado: ${field.nome}`);
+      }
+    });
+
+    importRows.forEach((row, rowIndex) => {
+      requiredFields.forEach((field) => {
+        const colIndex = importColumnMap.indexOf(field.nome);
+        if (colIndex === -1) return;
+        const value = (row[colIndex] ?? '').toString().trim();
+        if (!value) {
+          errorCount += 1;
+          cellIssues.add(`${rowIndex}-${colIndex}`);
+        }
+      });
+    });
+
+    return { issues, cellIssues, errorCount };
   }
 
   const issues = [];
@@ -3659,6 +3682,19 @@ function renderImportPreview() {
       `).join('')}
       <th>Mapeamento</th>
     </tr>
+    <tr class="import-bulk-row">
+      ${importHeaders.map((_, idx) => `
+        <th>
+          <input
+            type="text"
+            class="import-bulk-input"
+            placeholder="Preencher coluna"
+            oninput="fillImportColumn(${idx}, this.value)"
+          />
+        </th>
+      `).join('')}
+      <th>Preencher</th>
+    </tr>
     <tr>
       ${importHeaders.map(h => `<th>${h}</th>`).join('')}
       <th>Ação</th>
@@ -3720,6 +3756,18 @@ function updateImportMapping(col, value) {
   applyImportValidation();
 }
 
+function fillImportColumn(col, value) {
+  importRows.forEach((row) => {
+    row[col] = value;
+  });
+  document
+    .querySelectorAll(`#importPreviewTable tbody td[data-col="${col}"]`)
+    .forEach((td) => {
+      td.innerText = value;
+    });
+  applyImportValidation();
+}
+
 function removeImportRow(index) {
   importRows.splice(index, 1);
   renderImportPreview();
@@ -3740,6 +3788,14 @@ function applyImportValidation() {
   }
 
   renderImportValidation(validation, validationEl);
+}
+
+function addImportColumn() {
+  const nextIndex = importHeaders.length + 1;
+  importHeaders.push(`Nova coluna ${nextIndex}`);
+  importColumnMap.push('');
+  importRows = importRows.map((row) => [...row, '']);
+  renderImportPreview();
 }
 
 function renderImportValidation(validation, validationEl) {
@@ -3965,6 +4021,9 @@ async function confirmImport() {
   const validation = validateImportRows();
   if (validation.issues.length || validation.errorCount > 0) {
     showImportWarning('Existem campos obrigatórios vazios. Você pode importar e ajustar depois.');
+    if (importType === 'modulo') {
+      return;
+    }
   }
   if (importType === 'modulo' && !moduloAtual?.id) {
     showImportWarning('Selecione uma aba personalizada antes de importar.');

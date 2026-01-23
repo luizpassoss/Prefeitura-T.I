@@ -1845,8 +1845,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-bottom: 8px;
+  gap: 20px;
+  padding: 4px 6px 12px 2px;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -1858,11 +1858,26 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal #importStepPreview .table-wrap {
-  max-height: clamp(220px, 38vh, 420px);
+  max-height: clamp(220px, 34vh, 400px);
   min-height: 180px;
   flex: 1 1 auto;
   overflow-x: auto;
   overflow-y: auto;
+}
+
+.import-bulk-row th {
+  padding-top: 6px;
+}
+
+.import-bulk-input {
+  width: 100%;
+  min-width: 120px;
+  padding: 6px 8px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #fff;
+  color: var(--text);
 }
 
 #importModal #importStepPreview {
@@ -3246,11 +3261,20 @@ body.theme-dark #importModal .card {
   background: #121826;
 }
 
+body.theme-dark .import-history-header {
+  background: #121826;
+}
+
 .import-history-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fff;
+  padding: 4px 0;
 }
 
 .import-history h3 {
