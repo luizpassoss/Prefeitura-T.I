@@ -368,7 +368,8 @@ const sortState = {
 const IMPORT_HISTORY_KEY = 'ti-import-history';
 const paginationState = {
   inventory: { page: 1, pageSize: 20, total: 0, isLoading: false },
-  machines: { page: 1, pageSize: 20, total: 0, isLoading: false }
+  machines: { page: 1, pageSize: 20, total: 0, isLoading: false },
+  modules: { page: 1, pageSize: 20, total: 0, isLoading: false }
 };
 let inventoryFilterTimeout = null;
 let machineFilterTimeout = null;
@@ -864,6 +865,8 @@ function resetBulkEditForm() {
   safe('bulkMachineLocal', '');
   safe('bulkMachineLocalOutro', '');
   safe('bulkDescricao', '');
+  const moduleFields = document.getElementById('bulkEditModuleFields');
+  if (moduleFields) moduleFields.innerHTML = '';
   const toggleOutro = (selectId, inputId) => {
     const input = document.getElementById(inputId);
     if (input) input.style.display = 'none';
@@ -880,22 +883,23 @@ function openBulkEditModal() {
     showMessage('Selecione itens para editar em massa.');
     return;
   }
-  if (context.type === 'modulo') {
-    showMessage('Edição em massa disponível apenas para Inventário e Máquinas.');
-    return;
-  }
   const modal = document.getElementById('bulkEditModal');
   const subtitle = document.getElementById('bulkEditSubtitle');
   const inventoryFields = document.getElementById('bulkEditInventoryFields');
   const machineFields = document.getElementById('bulkEditMachineFields');
-  if (!modal || !inventoryFields || !machineFields) return;
+  const moduleFields = document.getElementById('bulkEditModuleFields');
+  if (!modal || !inventoryFields || !machineFields || !moduleFields) return;
   resetBulkEditForm();
-  const label = context.type === 'inventario' ? 'Inventário' : 'Máquinas';
+  const label = context.type === 'inventario' ? 'Inventário' : context.type === 'maquinas' ? 'Máquinas' : 'Módulos';
   if (subtitle) {
     subtitle.textContent = `Você está editando ${context.ids.length} item(ns) de ${label}. Preencha apenas os campos que deseja alterar.`;
   }
   inventoryFields.style.display = context.type === 'inventario' ? 'grid' : 'none';
   machineFields.style.display = context.type === 'maquinas' ? 'grid' : 'none';
+  moduleFields.style.display = context.type === 'modulo' ? 'grid' : 'none';
+  if (context.type === 'modulo') {
+    renderBulkModuleFields(moduleFields);
+  }
   showModal(modal);
 }
 
@@ -949,11 +953,61 @@ function getBulkMachineUpdates() {
   return updates;
 }
 
+function renderBulkModuleFields(container) {
+  if (!container) return;
+  if (!Array.isArray(moduloCampos) || !moduloCampos.length) {
+    container.innerHTML = '<p class="small">Nenhum campo disponível para edição em massa.</p>';
+    return;
+  }
+  const moduleOptions = loadModuleFieldOptions(moduloAtual?.id);
+  container.innerHTML = moduloCampos
+    .map((campo, index) => {
+      const key = normalizeModuloSortKey(campo.nome);
+      const options = Array.isArray(moduleOptions[key]) ? moduleOptions[key] : [];
+      const inputId = `bulkModuloField-${index}`;
+      if (campo.tipo === 'select' && options.length) {
+        return `
+          <div>
+            <label>${escapeHtml(campo.nome)}</label>
+            <select id="${inputId}" data-field="${escapeHtml(campo.nome)}">
+              <option value="">Não alterar</option>
+              ${options.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      }
+      return `
+        <div>
+          <label>${escapeHtml(campo.nome)}</label>
+          <input id="${inputId}" type="text" data-field="${escapeHtml(campo.nome)}" placeholder="Não alterar" />
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function getBulkModuleUpdates() {
+  const updates = {};
+  const container = document.getElementById('bulkEditModuleFields');
+  if (!container) return updates;
+  container.querySelectorAll('[data-field]').forEach((input) => {
+    const value = (input.value || '').trim();
+    if (value) {
+      updates[input.dataset.field] = value;
+    }
+  });
+  return updates;
+}
+
 async function applyBulkEdit() {
   const context = getBulkSelectionContext();
   if (!context) return;
   const saveBtn = document.querySelector('#bulkEditModal .btn-salvar');
-  const updates = context.type === 'inventario' ? getBulkInventoryUpdates() : getBulkMachineUpdates();
+  const updates = context.type === 'inventario'
+    ? getBulkInventoryUpdates()
+    : context.type === 'maquinas'
+      ? getBulkMachineUpdates()
+      : getBulkModuleUpdates();
   if (!Object.keys(updates).length) {
     showMessage('Informe ao menos um campo para atualizar.');
     return;
@@ -985,6 +1039,20 @@ async function applyBulkEdit() {
         });
       }).filter(Boolean);
       await fetchMachines();
+    } else if (context.type === 'modulo') {
+      const requests = context.ids.map((id) => {
+        const item = moduloRegistros.find((row) => row.id === id);
+        if (!item) return null;
+        const payload = { ...item, ...updates };
+        return fetch(`${API_MODULOS}/${moduloAtual.id}/registros/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ valores: payload })
+        });
+      }).filter(Boolean);
+      await Promise.all(requests);
+      await carregarRegistrosModulo();
+      renderModuloDinamico();
     }
     closeBulkEditModal();
     showActionToast('Registros atualizados com sucesso.');
@@ -1095,6 +1163,8 @@ function setPage(scope, nextPage) {
     fetchData();
   } else if (scope === 'machines') {
     fetchMachines();
+  } else if (scope === 'modules') {
+    renderModuloDinamico();
   }
 }
 
@@ -1126,6 +1196,15 @@ function initPaginationControls() {
       paginationState.machines.pageSize = event.target.value === 'all' ? 'all' : Number(event.target.value);
       paginationState.machines.page = 1;
       fetchMachines();
+    });
+  }
+
+  const modulesSelect = document.getElementById('modulesPageSize');
+  if (modulesSelect) {
+    modulesSelect.addEventListener('change', (event) => {
+      paginationState.modules.pageSize = event.target.value === 'all' ? 'all' : Number(event.target.value);
+      paginationState.modules.page = 1;
+      renderModuloDinamico();
     });
   }
 }
@@ -4492,6 +4571,7 @@ async function confirmDeleteModulo() {
 async function abrirModulo(mod) {
   closeTabMenus();
   moduloAtual = mod;
+  paginationState.modules.page = 1;
 
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav a, .nav .tab-dinamica').forEach(a => a.classList.remove('active'));
@@ -4618,6 +4698,8 @@ function renderModuloDinamico() {
   // BODY
   tbody.innerHTML = '';
 
+  const state = paginationState.modules;
+  state.total = filtered.length;
   let sorted = filtered;
   if (moduloSortState.key) {
     const key = moduloSortState.key;
@@ -4640,10 +4722,17 @@ function renderModuloDinamico() {
     updateBulkUI();
     updateSummaries();
     updateNotifications();
+    updatePaginationUI('modules');
     return;
   }
 
-  sorted.forEach(({ row, idx }) => {
+  let pagedRows = sorted;
+  if (state.pageSize !== 'all') {
+    const start = (state.page - 1) * state.pageSize;
+    pagedRows = sorted.slice(start, start + state.pageSize);
+  }
+
+  pagedRows.forEach(({ row, idx }) => {
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
 
@@ -4717,6 +4806,7 @@ function renderModuloDinamico() {
   }
   updateSummaries();
   updateNotifications();
+  updatePaginationUI('modules');
 }
 
 const moduloTbody = document.getElementById('moduloTbody');
@@ -4850,12 +4940,14 @@ function clearModuloFilters() {
   document.querySelectorAll('#moduloThead .table-filter-input').forEach((input) => {
     input.value = '';
   });
+  paginationState.modules.page = 1;
   filtrarModulo();
 }
 
 function filtrarModulo() {
   const { modCount } = getActiveFilterCounts();
   moduloFlashAfterFetch = modCount > 0;
+  paginationState.modules.page = 1;
   renderModuloDinamico();
   updateFilterBadges();
 }
@@ -5386,12 +5478,6 @@ function updateCategoriaAnchorOptions() {
   if (!candidates.length) {
     wrapper.classList.add('hidden');
     select.innerHTML = '';
-    return;
-  }
-
-  if (manageTabContext?.type !== 'module') {
-    newTabFieldOptions.__categoriaAnchor = newTabFieldOptions.__categoriaAnchor || getCategoriaAnchorKey(candidates);
-    wrapper.classList.add('hidden');
     return;
   }
 
@@ -5952,6 +6038,7 @@ function applyTabTemplate() {
     opcoes: getInheritedFieldOptions(field.nome, field.tipo)
   }));
   renderSortOptionsPicker();
+  updateCategoriaAnchorOptions();
 }
 
 function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id = null, opcoes = [] } = {}) {
@@ -6279,7 +6366,7 @@ async function salvarNovoModulo() {
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
   const hasCategoria = camposValidos.some(field => normalizeHeader(field.nome) === 'categoria');
   if (hasCategoria) {
-    const categoriaAnchor = getCategoriaAnchorKey(camposValidos);
+    const categoriaAnchor = newTabFieldOptions.__categoriaAnchor || getCategoriaAnchorKey(camposValidos);
     if (categoriaAnchor) {
       fieldOptionsMap.__categoriaAnchor = categoriaAnchor;
     }
