@@ -446,6 +446,7 @@ let selectedMaqIds = new Set();
 let selectedModuloIds = new Set();
 let actionToastTimeout = null;
 let actionToastLeftTimeout = null;
+let importWarningVisible = false;
 let notificationItems = [];
 let notificationsClearedAt = null;
 let notificationsSuppressed = false;
@@ -519,6 +520,26 @@ function showActionToastLeft(message, duration = 3200) {
     () => actionToastLeftTimeout,
     (value) => { actionToastLeftTimeout = value; }
   );
+}
+
+function showPersistentToast(toastId, message) {
+  const toast = document.getElementById(toastId);
+  if (!toast) return;
+  const text = toast.querySelector('.action-toast-text');
+  if (text) text.textContent = message;
+  toast.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+  });
+}
+
+function hidePersistentToast(toastId) {
+  const toast = document.getElementById(toastId);
+  if (!toast) return;
+  toast.classList.remove('show');
+  setTimeout(() => {
+    toast.classList.add('hidden');
+  }, 200);
 }
 
 function toggleNotificationPanel(forceOpen = null) {
@@ -3405,6 +3426,7 @@ function resetImportState() {
   }
   document.getElementById('importStepPreview')?.classList.add('hidden');
   updateImportSummary();
+  updateImportWarningToast({ issues: [], errorCount: 0 });
 }
 
 function setImportMappingButtonState() {
@@ -3468,8 +3490,36 @@ function buildImportColumnMap(headers) {
   const options = getImportFieldOptions();
   return headers.map((header) => {
     const normalized = normalizeHeader(header);
-    const match = options.find(opt => opt.aliases.some(alias => normalizeHeader(alias) === normalized));
-    return match ? match.key : '';
+    const normalizedKey = normalizeHeaderKey(header);
+    let bestMatch = null;
+    let bestScore = 0;
+
+    options.forEach((opt) => {
+      opt.aliases.forEach((alias) => {
+        const aliasNormalized = normalizeHeader(alias);
+        const aliasKey = normalizeHeaderKey(alias);
+        let score = 0;
+        if (aliasNormalized === normalized || aliasKey === normalizedKey) {
+          score = 3;
+        } else if (
+          normalizedKey.includes(aliasKey) ||
+          aliasKey.includes(normalizedKey)
+        ) {
+          score = 2;
+        } else if (
+          normalized.includes(aliasNormalized) ||
+          aliasNormalized.includes(normalized)
+        ) {
+          score = 1;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = opt;
+        }
+      });
+    });
+
+    return bestMatch ? bestMatch.key : '';
   });
 }
 
@@ -3844,6 +3894,30 @@ function applyImportValidation() {
   updateImportExtraFieldOptions(getImportFieldOptions(), extraFieldWrapper);
 }
 
+function updateImportWarningToast(validation) {
+  const hasIssues = validation.issues.length || validation.errorCount > 0;
+  if (!hasIssues) {
+    if (importWarningVisible) {
+      hidePersistentToast('importWarningToast');
+      importWarningVisible = false;
+    }
+    return;
+  }
+
+  const issueCount = validation.issues.length;
+  const errorCount = validation.errorCount;
+  const parts = [];
+  if (issueCount > 0) {
+    parts.push(`${issueCount} campo(s) obrigatório(s) sem mapeamento`);
+  }
+  if (errorCount > 0) {
+    parts.push(`${errorCount} célula(s) obrigatória(s) vazia(s)`);
+  }
+  const message = `Mapeamento com pendências: ${parts.join(' e ')}.`;
+  showPersistentToast('importWarningToast', message);
+  importWarningVisible = true;
+}
+
 function updateImportExtraFieldOptions(options = [], wrapper) {
   if (!wrapper) return;
   const select = document.getElementById('importExtraFieldSelect');
@@ -3889,33 +3963,11 @@ function addImportColumn() {
 }
 
 function renderImportValidation(validation, validationEl) {
-  if (!validationEl) return;
-  if (validation.issues.length || validation.errorCount > 0) {
-    const issuesText = validation.issues.length
-      ? `<div class="import-validation-section"><span class="import-validation-label">Campos ausentes serão importados em branco:</span><ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul></div>`
-      : '';
-    const rowsText = validation.errorCount > 0
-      ? `<div class="import-validation-section">Existem ${validation.errorCount} célula(s) obrigatória(s) vazia(s). Você pode importar e editar depois.</div>`
-      : '';
-    const title = validation.errorCount > 0
-      ? 'Há campos obrigatórios vazios'
-      : 'Alguns campos não foram mapeados';
-    validationEl.innerHTML = `
-      <div class="import-validation-header">
-        <span class="import-validation-icon" aria-hidden="true">!</span>
-        <div>
-          <strong>${title}</strong>
-          <span class="import-validation-subtitle">Revise os dados antes de importar.</span>
-        </div>
-      </div>
-      ${issuesText}
-      ${rowsText}
-    `;
-    validationEl.classList.remove('hidden');
-  } else {
+  if (validationEl) {
     validationEl.classList.add('hidden');
     validationEl.innerHTML = '';
   }
+  updateImportWarningToast(validation);
 }
 function mapImportRows() {
   const getValue = (row, fieldKey, fallbackIndex) => {
@@ -4094,6 +4146,10 @@ function normalizeHeader(value = '') {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+}
+
+function normalizeHeaderKey(value = '') {
+  return normalizeHeader(value).replace(/[^a-z0-9]/g, '');
 }
 
 function columnLetter(index) {
