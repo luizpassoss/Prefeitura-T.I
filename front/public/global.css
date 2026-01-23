@@ -1832,17 +1832,19 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal .card {
+  height: min(90vh, 760px);
   max-height: min(90vh, 760px);
   overflow: hidden;
 }
 
 #importModal .modal-body-scroll {
   overflow: auto;
-  max-height: 100%;
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding-bottom: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 #importPreviewTable {
@@ -1852,9 +1854,9 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal #importStepPreview .table-wrap {
-  max-height: none;
+  max-height: clamp(220px, 38vh, 420px);
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: auto;
 }
 
 #importModal #importStepPreview {
@@ -1864,9 +1866,9 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal .import-history .table-wrap {
-  max-height: none;
+  max-height: clamp(180px, 28vh, 320px);
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: auto;
 }
 
 .import-header {
