@@ -3310,13 +3310,7 @@ function toggleSortMenu(tipo) {
 }
 function openImportModal(type) {
   importType = type;
-  importRows = [];
-  importHeaders = [];
-  importFileName = '';
-  importColumnMap = [];
-  importHasHeaderRow = false;
-  importRawRows = [];
-  importHeaderMode = 'auto';
+  resetImportState();
 
   document.getElementById('importTitle').innerText =
     type === 'inventario'
@@ -3344,6 +3338,7 @@ function openImportModal(type) {
     actionBtn.textContent = 'Confirmar Importação';
     actionBtn.disabled = false;
   }
+  setImportMappingButtonState();
   updateImportSummary();
   openModalById('importModal');
   renderImportHistory();
@@ -3352,9 +3347,45 @@ function openImportModal(type) {
 }
 
 function closeImportModal() {
-  document.getElementById('importModal').classList.remove('show');
-  document.getElementById('importStepPreview')?.classList.add('hidden');
+  closeImportMappingModal();
+  resetImportState();
+  const modal = document.getElementById('importModal');
+  if (modal) modal.classList.remove('show');
   document.getElementById('importStepUpload')?.classList.remove('hidden');
+  setImportMappingButtonState();
+}
+
+function closeImportModalIfClicked(e) {
+  if (e.target.id === 'importModal') closeImportModal();
+}
+
+function openImportUploadModal() {
+  document.getElementById('importStepUpload')?.classList.remove('hidden');
+  setImportMappingButtonState();
+  openModalById('importModal');
+}
+
+function openImportMappingModal() {
+  if (!importHeaders.length) {
+    showImportWarning('Selecione uma planilha antes de abrir o mapeamento.');
+    return;
+  }
+  openModalById('importMappingModal');
+  renderImportPreview();
+}
+
+function closeImportMappingModal() {
+  const modal = document.getElementById('importMappingModal');
+  if (modal) modal.classList.remove('show');
+}
+
+function closeImportMappingModalIfClicked(e) {
+  if (e.target.id === 'importMappingModal') closeImportMappingModal();
+}
+
+function resetImportState() {
+  importRows = [];
+  importHeaders = [];
   importFileName = '';
   importColumnMap = [];
   importHasHeaderRow = false;
@@ -3372,10 +3403,15 @@ function closeImportModal() {
     actionBtn.textContent = 'Confirmar Importação';
     actionBtn.disabled = false;
   }
+  document.getElementById('importStepPreview')?.classList.add('hidden');
+  updateImportSummary();
 }
 
-function closeImportModalIfClicked(e) {
-  if (e.target.id === 'importModal') closeImportModal();
+function setImportMappingButtonState() {
+  const openBtn = document.getElementById('importOpenMappingBtn');
+  if (openBtn) {
+    openBtn.disabled = !importHeaders.length;
+  }
 }
 
 function openImportHistoryModal() {
@@ -3563,6 +3599,10 @@ function handleImportFile() {
     const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
     importRawRows = data.map(row => (row || []).map(cell => (cell ?? '').toString().trim()));
     processImportData();
+    setImportMappingButtonState();
+    if (importHeaders.length) {
+      openImportMappingModal();
+    }
   };
 
   reader.readAsBinaryString(file);
@@ -3673,7 +3713,6 @@ function renderImportPreview() {
   const tbody = document.querySelector('#importPreviewTable tbody');
   const preview = document.getElementById('importStepPreview');
   const actionBtn = document.getElementById('importActionBtn');
-  const uploadStep = document.getElementById('importStepUpload');
   const validationEl = document.getElementById('importValidation');
   const extraFieldWrapper = document.getElementById('importExtraField');
   const fieldOptions = getImportFieldOptions();
@@ -3754,7 +3793,6 @@ function renderImportPreview() {
   });
 
   preview?.classList.remove('hidden');
-  uploadStep?.classList.add('hidden');
   if (actionBtn) {
     actionBtn.textContent = `Importar ${importRows.length} linha(s)`;
     actionBtn.disabled = false;
@@ -6129,6 +6167,9 @@ function closeModalByEsc(modalEl) {
     case 'importModal':
       closeImportModal();
       break;
+    case 'importMappingModal':
+      closeImportMappingModal();
+      break;
     case 'createTabModal':
       closeCreateTabModal();
       break;
@@ -6320,8 +6361,12 @@ document.addEventListener('keydown', (e) => {
   window.clearImportHistory = clearImportHistory;
   window.reprocessImport = reprocessImport;
   window.openImportModal = openImportModal;
+  window.openImportUploadModal = openImportUploadModal;
+  window.openImportMappingModal = openImportMappingModal;
   window.closeImportModal = closeImportModal;
+  window.closeImportMappingModal = closeImportMappingModal;
   window.closeImportModalIfClicked = closeImportModalIfClicked;
+  window.closeImportMappingModalIfClicked = closeImportMappingModalIfClicked;
   window.openImportHistoryModal = openImportHistoryModal;
   window.closeImportHistoryModal = closeImportHistoryModal;
   window.closeImportHistoryModalIfClicked = closeImportHistoryModalIfClicked;
