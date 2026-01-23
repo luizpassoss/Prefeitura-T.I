@@ -3655,29 +3655,31 @@ function processImportData() {
   let maxCols = dataRows.reduce((max, row) => Math.max(max, row.length), 0);
   let headerRowIndex = null;
   let hasHeaderRow = false;
+  const headerCandidates = cleaned.map((row, index) => {
+    const normalized = row.map(cell => normalizeHeader(cell));
+    const nonEmptyCount = normalized.filter(cell => cell).length;
+    const score = normalized.reduce((acc, cell) => {
+      if (!cell) return acc;
+      const hasMatch = options.some(opt => opt.aliases.some(alias => normalizeHeader(alias) === cell));
+      return hasMatch ? acc + 1 : acc;
+    }, 0);
+    return { index, score, row, normalized, nonEmptyCount };
+  });
+  const bestCandidate = headerCandidates
+    .filter(item => item.score > 0 && item.nonEmptyCount > 0)
+    .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
 
   if (importHeaderMode === 'yes') {
     headerRowIndex = cleaned.findIndex(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
     hasHeaderRow = headerRowIndex !== -1;
+    const firstCandidate = headerRowIndex !== -1 ? headerCandidates[headerRowIndex] : null;
+    if (bestCandidate && firstCandidate && bestCandidate.score > firstCandidate.score) {
+      headerRowIndex = bestCandidate.index;
+    }
   } else if (importHeaderMode === 'no') {
     headerRowIndex = null;
     hasHeaderRow = false;
   } else {
-    const headerCandidates = cleaned.map((row, index) => {
-      const normalized = row.map(cell => normalizeHeader(cell));
-      const nonEmptyCount = normalized.filter(cell => cell).length;
-      const score = normalized.reduce((acc, cell) => {
-        if (!cell) return acc;
-        const hasMatch = options.some(opt => opt.aliases.some(alias => normalizeHeader(alias) === cell));
-        return hasMatch ? acc + 1 : acc;
-      }, 0);
-      return { index, score, row, normalized, nonEmptyCount };
-    });
-
-    const bestCandidate = headerCandidates
-      .filter(item => item.score > 0 && item.nonEmptyCount > 0)
-      .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
-
     if (bestCandidate) {
       headerRowIndex = bestCandidate.index;
       hasHeaderRow = true;
@@ -5821,11 +5823,16 @@ async function saveManagedModule() {
     return;
   }
 
-  await fetch(`${API_MODULOS}/${moduleId}`, {
+  const updateRes = await fetch(`${API_MODULOS}/${moduleId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nome, descricao })
   });
+  if (!updateRes.ok) {
+    const error = await updateRes.json().catch(() => ({}));
+    showErrorMessage(error?.error || 'Erro ao atualizar a aba.');
+    return;
+  }
 
   const existingIds = new Set(manageTabContext.campos.map(campo => campo.id));
   const nextIds = new Set(camposValidos.filter(campo => campo.id).map(campo => campo.id));
