@@ -27,6 +27,22 @@
   --font-xl: 24px;
   --icon-size: 16px;
 }
+
+@media (max-height: 1100px) {
+  :root {
+    --space-1: 2px;
+    --space-2: 5px;
+    --space-3: 8px;
+    --space-4: 12px;
+    --space-5: 16px;
+    --font-xs: 11px;
+    --font-sm: 13px;
+    --font-md: 15px;
+    --font-lg: 18px;
+    --font-xl: 22px;
+    --icon-size: 15px;
+  }
+}
 .tab-content {
     width: 100%;
     height: 100vh;
@@ -1167,7 +1183,7 @@ table {
 thead th {
   background: #f8fafc;
   color: #64748b;
-  font-weight: 500;
+  font-weight: 400;
   padding: 9px 12px;
   text-align: left;
   border-bottom: 1px solid #e2e8f0;
@@ -1831,7 +1847,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: none !important;
 }
 
-#importModal .card {
+#importModal .card,
+#importMappingModal .card {
   height: min(calc(100vh - 40px), 820px);
   max-height: calc(100vh - 40px);
   overflow: hidden;
@@ -1841,11 +1858,18 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   font-size: 13px;
 }
 
-#importModal .modal-title-row h2 {
+#importModal .card {
+  height: min(calc(100vh - 40px), 380px);
+  max-height: calc(100vh - 40px);
+}
+
+#importModal .modal-title-row h2,
+#importMappingModal .modal-title-row h2 {
   font-size: 18px;
 }
 
-#importModal .modal-title-row {
+#importModal .modal-title-row,
+#importMappingModal .modal-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1864,39 +1888,76 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   font-size: 11px;
 }
 
-#importModal h3 {
-  font-size: 14px;
+#importModal h3,
+#importMappingModal h3 {
+  font-size: 13px;
 }
 
 #importModal p,
 #importModal ul,
 #importModal li,
-#importModal small {
-  font-size: 12px;
+#importModal small,
+#importMappingModal p,
+#importMappingModal ul,
+#importMappingModal li,
+#importMappingModal small {
+  font-size: 11px;
 }
 
 #importModal .btn,
 #importModal .btn-cancelar,
-#importModal .btn-salvar {
-  font-size: 12px;
-  padding: 6px 12px;
-  height: 34px;
+#importModal .btn-salvar,
+#importMappingModal .btn,
+#importMappingModal .btn-cancelar,
+#importMappingModal .btn-salvar {
+  font-size: 11px;
+  padding: 5px 10px;
+  height: 30px;
 }
 
 #importModal table th,
-#importModal table td {
-  font-size: 12px;
+#importModal table td,
+#importMappingModal table th,
+#importMappingModal table td {
+  font-size: 11px;
 }
 
-#importModal .modal-body-scroll {
+#importModal .modal-body-scroll,
+#importMappingModal .modal-body-scroll {
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 8px 6px 16px 2px;
+  gap: 14px;
+  padding: 6px 4px 12px 2px;
   flex: 1 1 auto;
   min-height: 0;
+}
+
+#importModal .modal-card-fixed,
+#importMappingModal .modal-card-fixed {
+  padding: var(--space-4);
+  overflow: visible;
+}
+
+#importModal .modal-title-actions,
+#importMappingModal .modal-title-actions {
+  position: relative;
+  align-items: center;
+}
+
+#importModal .modal-title-actions .help-tooltip,
+#importMappingModal .modal-title-actions .help-tooltip {
+  left: auto;
+  right: 0;
+  transform: translate(0, 8px);
+}
+
+#importModal .modal-title-actions .help-tooltip::before,
+#importMappingModal .modal-title-actions .help-tooltip::before {
+  left: auto;
+  right: 12px;
+  transform: rotate(45deg);
 }
 
 #importPreviewTable {
@@ -1905,9 +1966,10 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   min-width: 100%;
 }
 
-#importModal #importStepPreview .table-wrap {
-  max-height: clamp(220px, 32vh, 380px);
-  min-height: 200px;
+#importModal #importStepPreview .table-wrap,
+#importMappingModal #importStepPreview .table-wrap {
+  max-height: clamp(260px, 48vh, 520px);
+  min-height: 220px;
   flex: 1 1 auto;
   overflow-x: auto;
   overflow-y: auto;
@@ -1946,10 +2008,11 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   color: var(--text);
 }
 
-#importModal #importStepPreview {
+#importModal #importStepPreview,
+#importMappingModal #importStepPreview {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   min-height: 0;
   padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
@@ -1960,25 +2023,25 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr) auto;
   gap: 12px;
   align-items: end;
-  padding: 12px;
+  padding: 10px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
 
 .import-extra-field label {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .import-extra-field input,
 .import-extra-field select {
   width: 100%;
-  height: 34px;
-  padding: 6px 10px;
+  height: 30px;
+  padding: 5px 8px;
   border-radius: 10px;
   border: 1px solid #d9e2ec;
   background: #fff;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .import-header {
@@ -1987,20 +2050,26 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   gap: 10px;
 }
 
+.import-open-mapping {
+  align-self: flex-start;
+}
+
 .import-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
 .import-controls label {
   flex: 1 1 160px;
+  font-size: 11px;
 }
 
 .import-controls .select {
-  min-width: 220px;
-  flex: 1 1 260px;
+  min-width: 180px;
+  flex: 1 1 220px;
+  height: 30px;
 }
 
 .import-controls .btn {
@@ -3006,6 +3075,11 @@ body.theme-dark .undo-toast {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  z-index: 10020;
+}
+
+.modal-open .action-toast {
+  bottom: 90px;
 }
 
 .action-toast-left {
@@ -3027,6 +3101,105 @@ body.theme-dark .action-toast {
   color: #f4f4f5;
   border-color: #27272a;
   box-shadow: 0 18px 45px rgba(8, 8, 10, 0.55);
+}
+
+.import-warning-notice {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 10030;
+}
+
+.import-warning-notice.hidden {
+  display: none;
+}
+
+.import-warning-card {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid rgba(217, 119, 6, 0.55);
+  border-radius: 16px;
+  padding: 16px 18px;
+  width: min(520px, 92vw);
+  box-shadow: 0 24px 50px rgba(120, 53, 15, 0.25);
+}
+
+.import-warning-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.import-warning-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(217, 119, 6, 0.15);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.import-warning-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: #d97706;
+  fill: none;
+  stroke-width: 2;
+}
+
+.import-warning-text {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #92400e;
+}
+
+.import-warning-close {
+  border: none;
+  background: transparent;
+  color: #92400e;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.import-warning-close:hover {
+  color: #b45309;
+}
+
+body.theme-dark .import-warning-card {
+  background: rgba(120, 53, 15, 0.3);
+  color: #fcd34d;
+  border-color: rgba(251, 191, 36, 0.45);
+  box-shadow: 0 24px 50px rgba(2, 6, 23, 0.55);
+}
+
+body.theme-dark .import-warning-text {
+  color: #fcd34d;
+}
+
+body.theme-dark .import-warning-icon {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+body.theme-dark .import-warning-icon svg {
+  stroke: #fbbf24;
+}
+
+body.theme-dark .import-warning-close {
+  color: #fcd34d;
+}
+
+body.theme-dark .import-warning-close:hover {
+  color: #fbbf24;
 }
 
 .action-toast-icon {
@@ -3334,11 +3507,13 @@ body.theme-dark tbody tr:hover td.actions {
   max-height: none;
 }
 
-body.theme-dark #importModal #importStepPreview {
+body.theme-dark #importModal #importStepPreview,
+body.theme-dark #importMappingModal #importStepPreview {
   border-bottom-color: rgba(148, 163, 184, 0.2);
 }
 
 body.theme-dark #importModal #importStepPreview .table-wrap,
+body.theme-dark #importMappingModal #importStepPreview .table-wrap,
 body.theme-dark .import-extra-field {
   background: rgba(15, 23, 42, 0.6);
   border-color: rgba(148, 163, 184, 0.2);
@@ -3888,33 +4063,33 @@ body.theme-dark .sort-option-item {
 .import-validation {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 6px;
+  padding: 8px 10px;
   border-radius: 12px;
   border: 1px solid rgba(245, 158, 11, 0.35);
   background: linear-gradient(120deg, rgba(251, 191, 36, 0.18), rgba(251, 191, 36, 0.06));
   color: #92400e;
-  font-size: 13px;
-  margin-bottom: 12px;
+  font-size: 11px;
+  margin: 2px 0 10px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .import-guide {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .import-guide h3 {
   margin: 0 0 6px;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .import-guide p {
@@ -3929,19 +4104,19 @@ body.theme-dark .sort-option-item {
 }
 
 .import-guide-summary {
-  min-width: 180px;
+  min-width: 140px;
   display: grid;
-  gap: 6px;
-  font-size: 12px;
+  gap: 3px;
+  font-size: 10px;
   color: #334155;
 }
 
 .import-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .import-controls label {

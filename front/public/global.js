@@ -368,7 +368,8 @@ const sortState = {
 const IMPORT_HISTORY_KEY = 'ti-import-history';
 const paginationState = {
   inventory: { page: 1, pageSize: 20, total: 0, isLoading: false },
-  machines: { page: 1, pageSize: 20, total: 0, isLoading: false }
+  machines: { page: 1, pageSize: 20, total: 0, isLoading: false },
+  modules: { page: 1, pageSize: 20, total: 0, isLoading: false }
 };
 let inventoryFilterTimeout = null;
 let machineFilterTimeout = null;
@@ -446,6 +447,8 @@ let selectedMaqIds = new Set();
 let selectedModuloIds = new Set();
 let actionToastTimeout = null;
 let actionToastLeftTimeout = null;
+let importWarningVisible = false;
+let importWarningDismissed = false;
 let notificationItems = [];
 let notificationsClearedAt = null;
 let notificationsSuppressed = false;
@@ -519,6 +522,27 @@ function showActionToastLeft(message, duration = 3200) {
     () => actionToastLeftTimeout,
     (value) => { actionToastLeftTimeout = value; }
   );
+}
+
+function showImportWarningNotice(message) {
+  const notice = document.getElementById('importWarningNotice');
+  if (!notice) return;
+  const text = notice.querySelector('.import-warning-text');
+  if (text) text.textContent = message;
+  notice.classList.remove('hidden');
+  importWarningVisible = true;
+}
+
+function hideImportWarningNotice() {
+  const notice = document.getElementById('importWarningNotice');
+  if (!notice) return;
+  notice.classList.add('hidden');
+  importWarningVisible = false;
+}
+
+function dismissImportWarningNotice() {
+  importWarningDismissed = true;
+  hideImportWarningNotice();
 }
 
 function toggleNotificationPanel(forceOpen = null) {
@@ -841,6 +865,8 @@ function resetBulkEditForm() {
   safe('bulkMachineLocal', '');
   safe('bulkMachineLocalOutro', '');
   safe('bulkDescricao', '');
+  const moduleFields = document.getElementById('bulkEditModuleFields');
+  if (moduleFields) moduleFields.innerHTML = '';
   const toggleOutro = (selectId, inputId) => {
     const input = document.getElementById(inputId);
     if (input) input.style.display = 'none';
@@ -857,22 +883,23 @@ function openBulkEditModal() {
     showMessage('Selecione itens para editar em massa.');
     return;
   }
-  if (context.type === 'modulo') {
-    showMessage('Edição em massa disponível apenas para Inventário e Máquinas.');
-    return;
-  }
   const modal = document.getElementById('bulkEditModal');
   const subtitle = document.getElementById('bulkEditSubtitle');
   const inventoryFields = document.getElementById('bulkEditInventoryFields');
   const machineFields = document.getElementById('bulkEditMachineFields');
-  if (!modal || !inventoryFields || !machineFields) return;
+  const moduleFields = document.getElementById('bulkEditModuleFields');
+  if (!modal || !inventoryFields || !machineFields || !moduleFields) return;
   resetBulkEditForm();
-  const label = context.type === 'inventario' ? 'Inventário' : 'Máquinas';
+  const label = context.type === 'inventario' ? 'Inventário' : context.type === 'maquinas' ? 'Máquinas' : 'Módulos';
   if (subtitle) {
     subtitle.textContent = `Você está editando ${context.ids.length} item(ns) de ${label}. Preencha apenas os campos que deseja alterar.`;
   }
   inventoryFields.style.display = context.type === 'inventario' ? 'grid' : 'none';
   machineFields.style.display = context.type === 'maquinas' ? 'grid' : 'none';
+  moduleFields.style.display = context.type === 'modulo' ? 'grid' : 'none';
+  if (context.type === 'modulo') {
+    renderBulkModuleFields(moduleFields);
+  }
   showModal(modal);
 }
 
@@ -926,11 +953,61 @@ function getBulkMachineUpdates() {
   return updates;
 }
 
+function renderBulkModuleFields(container) {
+  if (!container) return;
+  if (!Array.isArray(moduloCampos) || !moduloCampos.length) {
+    container.innerHTML = '<p class="small">Nenhum campo disponível para edição em massa.</p>';
+    return;
+  }
+  const moduleOptions = loadModuleFieldOptions(moduloAtual?.id);
+  container.innerHTML = moduloCampos
+    .map((campo, index) => {
+      const key = normalizeModuloSortKey(campo.nome);
+      const options = Array.isArray(moduleOptions[key]) ? moduleOptions[key] : [];
+      const inputId = `bulkModuloField-${index}`;
+      if (campo.tipo === 'select' && options.length) {
+        return `
+          <div>
+            <label>${escapeHtml(campo.nome)}</label>
+            <select id="${inputId}" data-field="${escapeHtml(campo.nome)}">
+              <option value="">Não alterar</option>
+              ${options.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      }
+      return `
+        <div>
+          <label>${escapeHtml(campo.nome)}</label>
+          <input id="${inputId}" type="text" data-field="${escapeHtml(campo.nome)}" placeholder="Não alterar" />
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function getBulkModuleUpdates() {
+  const updates = {};
+  const container = document.getElementById('bulkEditModuleFields');
+  if (!container) return updates;
+  container.querySelectorAll('[data-field]').forEach((input) => {
+    const value = (input.value || '').trim();
+    if (value) {
+      updates[input.dataset.field] = value;
+    }
+  });
+  return updates;
+}
+
 async function applyBulkEdit() {
   const context = getBulkSelectionContext();
   if (!context) return;
   const saveBtn = document.querySelector('#bulkEditModal .btn-salvar');
-  const updates = context.type === 'inventario' ? getBulkInventoryUpdates() : getBulkMachineUpdates();
+  const updates = context.type === 'inventario'
+    ? getBulkInventoryUpdates()
+    : context.type === 'maquinas'
+      ? getBulkMachineUpdates()
+      : getBulkModuleUpdates();
   if (!Object.keys(updates).length) {
     showMessage('Informe ao menos um campo para atualizar.');
     return;
@@ -962,6 +1039,20 @@ async function applyBulkEdit() {
         });
       }).filter(Boolean);
       await fetchMachines();
+    } else if (context.type === 'modulo') {
+      const requests = context.ids.map((id) => {
+        const item = moduloRegistros.find((row) => row.id === id);
+        if (!item) return null;
+        const payload = { ...item, ...updates };
+        return fetch(`${API_MODULOS}/${moduloAtual.id}/registros/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ valores: payload })
+        });
+      }).filter(Boolean);
+      await Promise.all(requests);
+      await carregarRegistrosModulo();
+      renderModuloDinamico();
     }
     closeBulkEditModal();
     showActionToast('Registros atualizados com sucesso.');
@@ -1072,6 +1163,8 @@ function setPage(scope, nextPage) {
     fetchData();
   } else if (scope === 'machines') {
     fetchMachines();
+  } else if (scope === 'modules') {
+    renderModuloDinamico();
   }
 }
 
@@ -1103,6 +1196,15 @@ function initPaginationControls() {
       paginationState.machines.pageSize = event.target.value === 'all' ? 'all' : Number(event.target.value);
       paginationState.machines.page = 1;
       fetchMachines();
+    });
+  }
+
+  const modulesSelect = document.getElementById('modulesPageSize');
+  if (modulesSelect) {
+    modulesSelect.addEventListener('change', (event) => {
+      paginationState.modules.pageSize = event.target.value === 'all' ? 'all' : Number(event.target.value);
+      paginationState.modules.page = 1;
+      renderModuloDinamico();
     });
   }
 }
@@ -3310,13 +3412,7 @@ function toggleSortMenu(tipo) {
 }
 function openImportModal(type) {
   importType = type;
-  importRows = [];
-  importHeaders = [];
-  importFileName = '';
-  importColumnMap = [];
-  importHasHeaderRow = false;
-  importRawRows = [];
-  importHeaderMode = 'auto';
+  resetImportState();
 
   document.getElementById('importTitle').innerText =
     type === 'inventario'
@@ -3331,7 +3427,7 @@ function openImportModal(type) {
   const fileName = document.getElementById('importFileName');
   if (fileName) fileName.textContent = 'Nenhum arquivo selecionado';
   const headerModeEl = document.getElementById('importHeaderMode');
-  if (headerModeEl) headerModeEl.value = 'auto';
+  if (headerModeEl) headerModeEl.value = 'yes';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -3344,6 +3440,7 @@ function openImportModal(type) {
     actionBtn.textContent = 'Confirmar Importação';
     actionBtn.disabled = false;
   }
+  setImportMappingButtonState();
   updateImportSummary();
   openModalById('importModal');
   renderImportHistory();
@@ -3352,14 +3449,50 @@ function openImportModal(type) {
 }
 
 function closeImportModal() {
-  document.getElementById('importModal').classList.remove('show');
-  document.getElementById('importStepPreview')?.classList.add('hidden');
+  closeImportMappingModal();
+  resetImportState();
+  const modal = document.getElementById('importModal');
+  if (modal) modal.classList.remove('show');
   document.getElementById('importStepUpload')?.classList.remove('hidden');
+  setImportMappingButtonState();
+}
+
+function closeImportModalIfClicked(e) {
+  if (e.target.id === 'importModal') closeImportModal();
+}
+
+function openImportUploadModal() {
+  document.getElementById('importStepUpload')?.classList.remove('hidden');
+  setImportMappingButtonState();
+  openModalById('importModal');
+}
+
+function openImportMappingModal() {
+  if (!importHeaders.length) {
+    showImportWarning('Selecione uma planilha antes de abrir o mapeamento.');
+    return;
+  }
+  openModalById('importMappingModal');
+  renderImportPreview();
+}
+
+function closeImportMappingModal() {
+  const modal = document.getElementById('importMappingModal');
+  if (modal) modal.classList.remove('show');
+}
+
+function closeImportMappingModalIfClicked(e) {
+  if (e.target.id === 'importMappingModal') closeImportMappingModal();
+}
+
+function resetImportState() {
+  importRows = [];
+  importHeaders = [];
   importFileName = '';
   importColumnMap = [];
   importHasHeaderRow = false;
   importRawRows = [];
-  importHeaderMode = 'auto';
+  importHeaderMode = 'yes';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -3372,10 +3505,17 @@ function closeImportModal() {
     actionBtn.textContent = 'Confirmar Importação';
     actionBtn.disabled = false;
   }
+  document.getElementById('importStepPreview')?.classList.add('hidden');
+  updateImportSummary();
+  updateImportWarningToast({ issues: [], errorCount: 0 });
+  importWarningDismissed = false;
 }
 
-function closeImportModalIfClicked(e) {
-  if (e.target.id === 'importModal') closeImportModal();
+function setImportMappingButtonState() {
+  const openBtn = document.getElementById('importOpenMappingBtn');
+  if (openBtn) {
+    openBtn.disabled = !importHeaders.length;
+  }
 }
 
 function openImportHistoryModal() {
@@ -3430,10 +3570,51 @@ function getImportFieldOptions() {
 
 function buildImportColumnMap(headers) {
   const options = getImportFieldOptions();
+  const expandedOptions = options.map((opt) => ({
+    ...opt,
+    aliases: Array.from(new Set([opt.key, opt.label, ...opt.aliases].filter(Boolean)))
+  }));
+
   return headers.map((header) => {
     const normalized = normalizeHeader(header);
-    const match = options.find(opt => opt.aliases.some(alias => normalizeHeader(alias) === normalized));
-    return match ? match.key : '';
+    const normalizedKey = normalizeHeaderKey(header);
+    const headerTokens = normalizedKey.match(/[a-z0-9]+/g) || [];
+    let bestMatch = null;
+    let bestScore = 0;
+
+    expandedOptions.forEach((opt) => {
+      opt.aliases.forEach((alias) => {
+        const aliasNormalized = normalizeHeader(alias);
+        const aliasKey = normalizeHeaderKey(alias);
+        const aliasTokens = aliasKey.match(/[a-z0-9]+/g) || [];
+        let score = 0;
+        if (aliasNormalized === normalized || aliasKey === normalizedKey) {
+          score = 3;
+        } else if (
+          normalizedKey.includes(aliasKey) ||
+          aliasKey.includes(normalizedKey)
+        ) {
+          score = 2;
+        } else if (
+          normalized.includes(aliasNormalized) ||
+          aliasNormalized.includes(normalized)
+        ) {
+          score = 1;
+        }
+        if (!score && headerTokens.length && aliasTokens.length) {
+          const overlap = headerTokens.filter(token => aliasTokens.includes(token)).length;
+          if (overlap) {
+            score = Math.min(2, overlap / Math.max(headerTokens.length, aliasTokens.length));
+          }
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = opt;
+        }
+      });
+    });
+
+    return bestMatch ? bestMatch.key : '';
   });
 }
 
@@ -3444,12 +3625,7 @@ function updateImportSummary() {
   if (rowsEl) rowsEl.textContent = importRows.length.toString();
   if (colsEl) colsEl.textContent = importHeaders.length.toString();
   if (headerEl) {
-    const headerLabel =
-      importHeaderMode === 'auto'
-        ? `Auto (${importHasHeaderRow ? 'Sim' : 'Não'})`
-        : importHeaderMode === 'yes'
-          ? 'Sim'
-          : 'Não';
+    const headerLabel = importHeaderMode === 'yes' ? 'Sim' : 'Não';
     headerEl.textContent = headerLabel;
   }
 }
@@ -3563,6 +3739,10 @@ function handleImportFile() {
     const data = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: false });
     importRawRows = data.map(row => (row || []).map(cell => (cell ?? '').toString().trim()));
     processImportData();
+    setImportMappingButtonState();
+    if (importHeaders.length) {
+      openImportMappingModal();
+    }
   };
 
   reader.readAsBinaryString(file);
@@ -3673,7 +3853,6 @@ function renderImportPreview() {
   const tbody = document.querySelector('#importPreviewTable tbody');
   const preview = document.getElementById('importStepPreview');
   const actionBtn = document.getElementById('importActionBtn');
-  const uploadStep = document.getElementById('importStepUpload');
   const validationEl = document.getElementById('importValidation');
   const extraFieldWrapper = document.getElementById('importExtraField');
   const fieldOptions = getImportFieldOptions();
@@ -3754,7 +3933,6 @@ function renderImportPreview() {
   });
 
   preview?.classList.remove('hidden');
-  uploadStep?.classList.add('hidden');
   if (actionBtn) {
     actionBtn.textContent = `Importar ${importRows.length} linha(s)`;
     actionBtn.disabled = false;
@@ -3811,6 +3989,31 @@ function applyImportValidation() {
   updateImportExtraFieldOptions(getImportFieldOptions(), extraFieldWrapper);
 }
 
+function updateImportWarningToast(validation) {
+  const hasIssues = validation.issues.length || validation.errorCount > 0;
+  if (!hasIssues) {
+    if (importWarningVisible) {
+      hideImportWarningNotice();
+    }
+    importWarningDismissed = false;
+    return;
+  }
+
+  const issueCount = validation.issues.length;
+  const errorCount = validation.errorCount;
+  const parts = [];
+  if (issueCount > 0) {
+    parts.push(`${issueCount} campo(s) obrigatório(s) sem mapeamento`);
+  }
+  if (errorCount > 0) {
+    parts.push(`${errorCount} célula(s) obrigatória(s) vazia(s)`);
+  }
+  const message = `Antes de importar, corrija: ${parts.join(' e ')}.`;
+  if (!importWarningDismissed) {
+    showImportWarningNotice(message);
+  }
+}
+
 function updateImportExtraFieldOptions(options = [], wrapper) {
   if (!wrapper) return;
   const select = document.getElementById('importExtraFieldSelect');
@@ -3856,33 +4059,11 @@ function addImportColumn() {
 }
 
 function renderImportValidation(validation, validationEl) {
-  if (!validationEl) return;
-  if (validation.issues.length || validation.errorCount > 0) {
-    const issuesText = validation.issues.length
-      ? `<div class="import-validation-section"><span class="import-validation-label">Campos ausentes serão importados em branco:</span><ul>${validation.issues.map(issue => `<li>${issue}</li>`).join('')}</ul></div>`
-      : '';
-    const rowsText = validation.errorCount > 0
-      ? `<div class="import-validation-section">Existem ${validation.errorCount} célula(s) obrigatória(s) vazia(s). Você pode importar e editar depois.</div>`
-      : '';
-    const title = validation.errorCount > 0
-      ? 'Há campos obrigatórios vazios'
-      : 'Alguns campos não foram mapeados';
-    validationEl.innerHTML = `
-      <div class="import-validation-header">
-        <span class="import-validation-icon" aria-hidden="true">!</span>
-        <div>
-          <strong>${title}</strong>
-          <span class="import-validation-subtitle">Revise os dados antes de importar.</span>
-        </div>
-      </div>
-      ${issuesText}
-      ${rowsText}
-    `;
-    validationEl.classList.remove('hidden');
-  } else {
+  if (validationEl) {
     validationEl.classList.add('hidden');
     validationEl.innerHTML = '';
   }
+  updateImportWarningToast(validation);
 }
 function mapImportRows() {
   const getValue = (row, fieldKey, fallbackIndex) => {
@@ -4063,6 +4244,10 @@ function normalizeHeader(value = '') {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+function normalizeHeaderKey(value = '') {
+  return normalizeHeader(value).replace(/[^a-z0-9]/g, '');
+}
+
 function columnLetter(index) {
   let result = '';
   let n = index + 1;
@@ -4077,10 +4262,9 @@ async function confirmImport() {
   const actionBtn = document.getElementById('importActionBtn');
   const validation = validateImportRows();
   if (validation.issues.length || validation.errorCount > 0) {
-    showImportWarning('Existem campos obrigatórios vazios. Você pode importar e ajustar depois.');
-    if (importType === 'modulo') {
-      return;
-    }
+    importWarningDismissed = false;
+    updateImportWarningToast(validation);
+    return;
   }
   if (importType === 'modulo' && !moduloAtual?.id) {
     showImportWarning('Selecione uma aba personalizada antes de importar.');
@@ -4387,6 +4571,7 @@ async function confirmDeleteModulo() {
 async function abrirModulo(mod) {
   closeTabMenus();
   moduloAtual = mod;
+  paginationState.modules.page = 1;
 
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav a, .nav .tab-dinamica').forEach(a => a.classList.remove('active'));
@@ -4419,20 +4604,30 @@ async function carregarRegistrosModulo() {
 
 function getModuloDisplayConfig() {
   const normalizeFieldKey = (name) => normalizeHeader(name || '').replace(/\s+/g, '');
-  const linkField = moduloCampos.find((campo) => {
-    const key = normalizeFieldKey(campo.nome);
-    return key === 'link' || key === 'linkdeinternet' || key === 'internet';
-  });
   const categoriaField = moduloCampos.find(
     (campo) => normalizeFieldKey(campo.nome) === 'categoria'
   );
-  const shouldMergeCategoria = Boolean(linkField && categoriaField);
+  if (!categoriaField) {
+    return {
+      displayCampos: moduloCampos,
+      categoriaFieldName: '',
+      categoriaAnchorFieldName: '',
+      shouldMergeCategoria: false
+    };
+  }
+  const moduleOptions = loadModuleFieldOptions(moduloAtual?.id);
+  const storedAnchor = moduleOptions.__categoriaAnchor;
+  const anchorField = storedAnchor
+    ? moduloCampos.find((campo) => normalizeFieldKey(campo.nome) === storedAnchor)
+    : moduloCampos.find((campo) => normalizeFieldKey(campo.nome) !== 'categoria');
+  const shouldMergeCategoria = Boolean(anchorField && categoriaField);
   const displayCampos = shouldMergeCategoria
     ? moduloCampos.filter((campo) => campo.nome !== categoriaField.nome)
     : moduloCampos;
   return {
     displayCampos,
     categoriaFieldName: categoriaField?.nome || '',
+    categoriaAnchorFieldName: anchorField?.nome || '',
     shouldMergeCategoria
   };
 }
@@ -4446,7 +4641,7 @@ function renderModuloDinamico() {
   tab.classList.add('active');
 
   const filtered = getModuloFiltrado();
-  const { displayCampos, categoriaFieldName } = getModuloDisplayConfig();
+  const { displayCampos, categoriaFieldName, categoriaAnchorFieldName } = getModuloDisplayConfig();
   const moduleFiltersPanel = document.getElementById('moduleFilters');
   const moduleFiltersButton = document.querySelector('#tabModuloDinamico .filter-btn');
 
@@ -4503,6 +4698,8 @@ function renderModuloDinamico() {
   // BODY
   tbody.innerHTML = '';
 
+  const state = paginationState.modules;
+  state.total = filtered.length;
   let sorted = filtered;
   if (moduloSortState.key) {
     const key = moduloSortState.key;
@@ -4525,10 +4722,17 @@ function renderModuloDinamico() {
     updateBulkUI();
     updateSummaries();
     updateNotifications();
+    updatePaginationUI('modules');
     return;
   }
 
-  sorted.forEach(({ row, idx }) => {
+  let pagedRows = sorted;
+  if (state.pageSize !== 'all') {
+    const start = (state.page - 1) * state.pageSize;
+    pagedRows = sorted.slice(start, start + state.pageSize);
+  }
+
+  pagedRows.forEach(({ row, idx }) => {
     const tr = document.createElement('tr');
     tr.dataset.id = row.id;
 
@@ -4542,7 +4746,7 @@ function renderModuloDinamico() {
         >
       </td>
       ${displayCampos.map(c => `
-        <td>${renderModuloCell(c.nome, row[c.nome], row, categoriaFieldName)}</td>
+        <td>${renderModuloCell(c.nome, row[c.nome], row, categoriaFieldName, categoriaAnchorFieldName)}</td>
       `).join('')}
       <td class="actions">
         <div class="action-group">
@@ -4602,6 +4806,7 @@ function renderModuloDinamico() {
   }
   updateSummaries();
   updateNotifications();
+  updatePaginationUI('modules');
 }
 
 const moduloTbody = document.getElementById('moduloTbody');
@@ -4638,13 +4843,14 @@ if (moduloTbody) {
   });
 }
 
-function renderModuloCell(fieldName, value, row = {}, categoriaFieldName = '') {
+function renderModuloCell(fieldName, value, row = {}, categoriaFieldName = '', categoriaAnchorFieldName = '') {
   const label = (value ?? '').toString();
   const formatted = formatDateForTable(label);
   const normalizedField = normalizeHeader(fieldName).replace(/\s+/g, '');
   if (
     categoriaFieldName &&
-    (normalizedField === 'link' || normalizedField === 'linkdeinternet' || normalizedField === 'internet')
+    categoriaAnchorFieldName &&
+    normalizeHeader(categoriaAnchorFieldName).replace(/\s+/g, '') === normalizedField
   ) {
     const categoriaValue = (row?.[categoriaFieldName] ?? '').toString().trim();
     return `
@@ -4734,12 +4940,14 @@ function clearModuloFilters() {
   document.querySelectorAll('#moduloThead .table-filter-input').forEach((input) => {
     input.value = '';
   });
+  paginationState.modules.page = 1;
   filtrarModulo();
 }
 
 function filtrarModulo() {
   const { modCount } = getActiveFilterCounts();
   moduloFlashAfterFetch = modCount > 0;
+  paginationState.modules.page = 1;
   renderModuloDinamico();
   updateFilterBadges();
 }
@@ -5247,6 +5455,48 @@ function buildFieldOptionsMap(fields) {
   }, {});
 }
 
+function getCategoriaAnchorKey(fields = []) {
+  const candidate = fields.find(field => normalizeHeader(field.nome) !== 'categoria');
+  return candidate ? normalizeModuloSortKey(candidate.nome) : '';
+}
+
+function updateCategoriaAnchorOptions() {
+  const wrapper = document.getElementById('categoriaAnchorWrapper');
+  const select = document.getElementById('categoriaAnchorSelect');
+  if (!wrapper || !select) return;
+
+  const activeFields = newTabFields.filter(field => !field.__deleted && field.nome?.trim());
+  const hasCategoria = activeFields.some(field => normalizeHeader(field.nome) === 'categoria');
+  if (!hasCategoria) {
+    wrapper.classList.add('hidden');
+    select.innerHTML = '';
+    delete newTabFieldOptions.__categoriaAnchor;
+    return;
+  }
+
+  const candidates = activeFields.filter(field => normalizeHeader(field.nome) !== 'categoria');
+  if (!candidates.length) {
+    wrapper.classList.add('hidden');
+    select.innerHTML = '';
+    return;
+  }
+
+  wrapper.classList.remove('hidden');
+  select.innerHTML = candidates
+    .map(field => {
+      const value = normalizeModuloSortKey(field.nome);
+      return `<option value="${value}">${escapeHtml(field.nome)}</option>`;
+    })
+    .join('');
+
+  const selectedKey = newTabFieldOptions.__categoriaAnchor || getCategoriaAnchorKey(candidates);
+  select.value = selectedKey;
+  newTabFieldOptions.__categoriaAnchor = selectedKey;
+  select.onchange = () => {
+    newTabFieldOptions.__categoriaAnchor = select.value;
+  };
+}
+
 function initFieldDragAndDrop() {
   if (fieldDragInitialized) return;
   const container = document.getElementById('fieldsContainer');
@@ -5379,6 +5629,8 @@ function openCreateTabModal() {
   newTabSortOptions = [];
   newTabFieldOptions = {};
   document.getElementById('fieldsContainer').innerHTML = '';
+  const categoriaWrapper = document.getElementById('categoriaAnchorWrapper');
+  if (categoriaWrapper) categoriaWrapper.classList.add('hidden');
   document.getElementById('newTabName').value = '';
   document.getElementById('newTabDescription').value = '';
   const templateSelect = document.getElementById('newTabTemplate');
@@ -5392,6 +5644,7 @@ function openCreateTabModal() {
   if (submitBtn) submitBtn.textContent = 'Criar Aba';
   initFieldDragAndDrop();
   renderSortOptionsPicker();
+  updateCategoriaAnchorOptions();
   openModalById('createTabModal');
 }
 
@@ -5454,6 +5707,7 @@ async function openManageModule(mod) {
   newTabSortOptions = loadModuleSortOptions(mod.id);
   renderSortOptionsPicker(newTabSortOptions);
   initFieldDragAndDrop();
+  updateCategoriaAnchorOptions();
   openModalById('createTabModal');
 }
 
@@ -5531,6 +5785,9 @@ async function saveManagedModule() {
   const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
   saveModuleSortOptions(moduleId, resolvedSortOptions);
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
+  if (newTabFieldOptions.__categoriaAnchor) {
+    fieldOptionsMap.__categoriaAnchor = newTabFieldOptions.__categoriaAnchor;
+  }
   saveModuleFieldOptions(moduleId, fieldOptionsMap);
 
   closeCreateTabModal();
@@ -5781,6 +6038,7 @@ function applyTabTemplate() {
     opcoes: getInheritedFieldOptions(field.nome, field.tipo)
   }));
   renderSortOptionsPicker();
+  updateCategoriaAnchorOptions();
 }
 
 function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id = null, opcoes = [] } = {}) {
@@ -5856,6 +6114,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
   document.getElementById('fieldsContainer').appendChild(row);
   initFieldDragAndDrop();
   renderSortOptionsPicker();
+  updateCategoriaAnchorOptions();
 
   const typeSelect = row.querySelector('.field-type');
   if (typeSelect) {
@@ -5943,6 +6202,7 @@ function removeField(idx) {
     if (Number(r.dataset.idx) === idx) r.remove();
   });
   renderSortOptionsPicker();
+  updateCategoriaAnchorOptions();
 }
 
 function sortFieldsAlphabetically() {
@@ -5954,6 +6214,7 @@ function sortFieldsAlphabetically() {
   if (container) container.innerHTML = '';
   newTabFields.forEach(field => addFieldWithValues(field));
   renderSortOptionsPicker();
+  updateCategoriaAnchorOptions();
 }
 
 
@@ -6103,6 +6364,13 @@ async function salvarNovoModulo() {
   const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
   saveModuleSortOptions(modulo.id, resolvedSortOptions);
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
+  const hasCategoria = camposValidos.some(field => normalizeHeader(field.nome) === 'categoria');
+  if (hasCategoria) {
+    const categoriaAnchor = newTabFieldOptions.__categoriaAnchor || getCategoriaAnchorKey(camposValidos);
+    if (categoriaAnchor) {
+      fieldOptionsMap.__categoriaAnchor = categoriaAnchor;
+    }
+  }
   saveModuleFieldOptions(modulo.id, fieldOptionsMap);
 
 
@@ -6112,6 +6380,7 @@ async function salvarNovoModulo() {
 }
 function closeAllModals() {
   document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));
+  document.body.classList.remove('modal-open');
 }
 
 function closeModalByEsc(modalEl) {
@@ -6128,6 +6397,9 @@ function closeModalByEsc(modalEl) {
       break;
     case 'importModal':
       closeImportModal();
+      break;
+    case 'importMappingModal':
+      closeImportMappingModal();
       break;
     case 'createTabModal':
       closeCreateTabModal();
@@ -6170,6 +6442,7 @@ function openModalById(id) {
     el.classList.remove('hidden');
     el.classList.add('show');
     focusFirstField(el);
+    document.body.classList.add('modal-open');
   }
 }
 
@@ -6320,8 +6593,13 @@ document.addEventListener('keydown', (e) => {
   window.clearImportHistory = clearImportHistory;
   window.reprocessImport = reprocessImport;
   window.openImportModal = openImportModal;
+  window.openImportUploadModal = openImportUploadModal;
+  window.openImportMappingModal = openImportMappingModal;
   window.closeImportModal = closeImportModal;
+  window.closeImportMappingModal = closeImportMappingModal;
   window.closeImportModalIfClicked = closeImportModalIfClicked;
+  window.closeImportMappingModalIfClicked = closeImportMappingModalIfClicked;
+  window.dismissImportWarningNotice = dismissImportWarningNotice;
   window.openImportHistoryModal = openImportHistoryModal;
   window.closeImportHistoryModal = closeImportHistoryModal;
   window.closeImportHistoryModalIfClicked = closeImportHistoryModalIfClicked;

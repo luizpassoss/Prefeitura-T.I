@@ -583,6 +583,30 @@
             <tbody id="moduloTbody"></tbody>
           </table>
         </div>
+        <div class="pagination-footer" data-page-scope="modules">
+          <div class="pagination-group pagination-group-left">
+            <span class="pagination-info" id="modulesRange">Mostrando 0–0 de 0</span>
+            <select id="modulesPageSize" class="pagination-select" aria-label="Itens por página (módulos)">
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="all">Todos</option>
+            </select>
+          </div>
+          <div class="pagination-group pagination-group-right">
+            <button class="btn secondary pagination-arrow" type="button" data-page-action="prev" data-page-scope="modules" aria-label="Página anterior">
+              <svg class="pagination-arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15.75 19.5L8.25 12l7.5-7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <span class="pagination-page" id="modulesPageLabel">Página 1 de 1</span>
+            <button class="btn secondary pagination-arrow" type="button" data-page-action="next" data-page-scope="modules" aria-label="Próxima página">
+              <svg class="pagination-arrow-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8.25 4.5L15.75 12l-7.5 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
       </main>
     </section>
   </div>
@@ -929,6 +953,8 @@
       </div>
     </div>
 
+    <div class="form-grid" id="bulkEditModuleFields"></div>
+
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeBulkEditModal()">Cancelar</button>
       <button class="btn-salvar" onclick="applyBulkEdit()">Salvar alterações</button>
@@ -944,6 +970,22 @@
     <path d="M5 13l4 4 10-10"></path>
   </svg>
   <span class="action-toast-text"></span>
+</div>
+<div id="importWarningNotice" class="import-warning-notice hidden" role="alertdialog" aria-live="assertive">
+  <div class="import-warning-card" role="document">
+    <div class="import-warning-header">
+      <div class="import-warning-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 9v4"></path>
+          <path d="M12 17h.01"></path>
+          <path d="M10.3 3.9 2.5 17.5a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path>
+        </svg>
+      </div>
+      <strong>Mapeamento com pendências</strong>
+      <button type="button" class="import-warning-close" aria-label="Fechar aviso" onclick="dismissImportWarningNotice()">✕</button>
+    </div>
+    <p class="import-warning-text"></p>
+  </div>
 </div>
 <div id="actionToastLeft" class="action-toast action-toast-left hidden" role="status" aria-live="polite">
   <svg class="action-toast-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -1013,10 +1055,35 @@
             <span id="importFileName" class="file-input-name">Nenhum arquivo selecionado</span>
           </div>
           <small>Somente arquivos Excel (.xlsx)</small>
+          <button
+            id="importOpenMappingBtn"
+            type="button"
+            class="btn secondary import-open-mapping"
+            onclick="openImportMappingModal()"
+            disabled
+          >
+            Abrir mapeamento
+          </button>
         </div>
       </div>
+    </div>
 
-      <!-- STEP 2: PREVIEW -->
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeImportModal()">Cancelar</button>
+    </div>
+
+  </div>
+</div>
+<div id="importMappingModal" class="modal" onclick="closeImportMappingModalIfClicked(event)">
+  <div class="card modal-card-fixed import-mapping-card" style="max-width: 1100px" onclick="event.stopPropagation()">
+    <div class="modal-title-row">
+      <h2>Mapeamento da planilha</h2>
+      <div class="modal-title-actions">
+        <button type="button" class="btn secondary" onclick="openImportUploadModal()">Voltar</button>
+      </div>
+    </div>
+
+    <div class="modal-body-scroll">
       <div id="importStepPreview" class="hidden">
         <div class="import-guide">
           <div>
@@ -1037,13 +1104,10 @@
         <div class="import-controls">
           <label for="importHeaderMode">Primeira linha é cabeçalho?</label>
           <select id="importHeaderMode" class="select" onchange="setImportHeaderMode(this.value)">
-            <option value="auto">Detectar automaticamente</option>
             <option value="yes">Sim</option>
             <option value="no">Não</option>
           </select>
-          <button type="button" class="btn secondary" onclick="autoMapImportColumns()">Auto mapear colunas</button>
           <button type="button" class="btn secondary" onclick="clearImportMapping()">Limpar mapeamento</button>
-          <button type="button" class="btn secondary" onclick="addImportColumn()">Adicionar coluna</button>
         </div>
         <div id="importValidation" class="import-validation hidden"></div>
 
@@ -1071,8 +1135,6 @@
 
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeImportModal()">Cancelar</button>
-
-      <!-- BOTÃO MUDA DE FUNÇÃO -->
       <button
         id="importActionBtn"
         class="btn-salvar"
@@ -1081,7 +1143,6 @@
         Confirmar Importação
       </button>
     </div>
-
   </div>
 </div>
 <div id="importHistoryModal" class="modal" onclick="closeImportHistoryModalIfClicked(event)">
@@ -1173,6 +1234,12 @@
       </div>
 
       <div id="fieldsContainer"></div>
+
+      <div id="categoriaAnchorWrapper" class="create-tab-header hidden">
+        <label for="categoriaAnchorSelect">Vincular categoria ao campo</label>
+        <span class="small">A categoria será exibida junto do campo escolhido na tabela.</span>
+        <select id="categoriaAnchorSelect" class="select"></select>
+      </div>
 
       <div class="create-tab-header">
         <label>Opções de ordenação</label>
