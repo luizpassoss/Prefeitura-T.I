@@ -3655,29 +3655,31 @@ function processImportData() {
   let maxCols = dataRows.reduce((max, row) => Math.max(max, row.length), 0);
   let headerRowIndex = null;
   let hasHeaderRow = false;
+  const headerCandidates = cleaned.map((row, index) => {
+    const normalized = row.map(cell => normalizeHeader(cell));
+    const nonEmptyCount = normalized.filter(cell => cell).length;
+    const score = normalized.reduce((acc, cell) => {
+      if (!cell) return acc;
+      const hasMatch = options.some(opt => opt.aliases.some(alias => normalizeHeader(alias) === cell));
+      return hasMatch ? acc + 1 : acc;
+    }, 0);
+    return { index, score, row, normalized, nonEmptyCount };
+  });
+  const bestCandidate = headerCandidates
+    .filter(item => item.score > 0 && item.nonEmptyCount > 0)
+    .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
 
   if (importHeaderMode === 'yes') {
     headerRowIndex = cleaned.findIndex(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
     hasHeaderRow = headerRowIndex !== -1;
+    const firstCandidate = headerRowIndex !== -1 ? headerCandidates[headerRowIndex] : null;
+    if (bestCandidate && firstCandidate && bestCandidate.score > firstCandidate.score) {
+      headerRowIndex = bestCandidate.index;
+    }
   } else if (importHeaderMode === 'no') {
     headerRowIndex = null;
     hasHeaderRow = false;
   } else {
-    const headerCandidates = cleaned.map((row, index) => {
-      const normalized = row.map(cell => normalizeHeader(cell));
-      const nonEmptyCount = normalized.filter(cell => cell).length;
-      const score = normalized.reduce((acc, cell) => {
-        if (!cell) return acc;
-        const hasMatch = options.some(opt => opt.aliases.some(alias => normalizeHeader(alias) === cell));
-        return hasMatch ? acc + 1 : acc;
-      }, 0);
-      return { index, score, row, normalized, nonEmptyCount };
-    });
-
-    const bestCandidate = headerCandidates
-      .filter(item => item.score > 0 && item.nonEmptyCount > 0)
-      .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
-
     if (bestCandidate) {
       headerRowIndex = bestCandidate.index;
       hasHeaderRow = true;
