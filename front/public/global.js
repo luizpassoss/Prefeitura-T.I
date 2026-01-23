@@ -5497,11 +5497,29 @@ function updateCategoriaAnchorOptions() {
   };
 }
 
+function openCategoriaAnchorHelpModal() {
+  const modal = document.getElementById('categoriaAnchorHelpModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('show');
+    focusFirstField(modal);
+  }
+}
+
+function closeCategoriaAnchorHelpModal(e) {
+  if (!e || e.target.id === 'categoriaAnchorHelpModal') {
+    document.getElementById('categoriaAnchorHelpModal')?.classList.remove('show');
+  }
+}
+
 function initFieldDragAndDrop() {
   if (fieldDragInitialized) return;
   const container = document.getElementById('fieldsContainer');
   if (!container) return;
   fieldDragInitialized = true;
+  const scrollContainer = container.closest('.modal-body-scroll') || container;
+  const scrollThreshold = 50;
+  const scrollStep = 18;
 
   container.addEventListener('dragstart', event => {
     const handle = event.target.closest('.field-drag');
@@ -5522,6 +5540,14 @@ function initFieldDragAndDrop() {
     const dragging = container.querySelector('.field-row.dragging');
     if (!row || !dragging || row === dragging) return;
     event.preventDefault();
+    const scrollRect = scrollContainer.getBoundingClientRect();
+    const topDistance = event.clientY - scrollRect.top;
+    const bottomDistance = scrollRect.bottom - event.clientY;
+    if (topDistance < scrollThreshold) {
+      scrollContainer.scrollTop -= scrollStep;
+    } else if (bottomDistance < scrollThreshold) {
+      scrollContainer.scrollTop += scrollStep;
+    }
     const rect = row.getBoundingClientRect();
     const shouldInsertAfter = event.clientY > rect.top + rect.height / 2;
     container.insertBefore(dragging, shouldInsertAfter ? row.nextSibling : row);
@@ -6100,8 +6126,9 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
       type="button"
       class="field-drag"
       title="Arraste para reordenar"
+      aria-label="Arraste para reordenar"
       draggable="true"
-    >↕</button>
+    ><span class="field-drag-icon" aria-hidden="true"></span></button>
 
     <button
       type="button"
@@ -6141,6 +6168,8 @@ function closeFieldTypeHelpModal(e) {
 
 window.openFieldTypeHelpModal = openFieldTypeHelpModal;
 window.closeFieldTypeHelpModal = closeFieldTypeHelpModal;
+window.openCategoriaAnchorHelpModal = openCategoriaAnchorHelpModal;
+window.closeCategoriaAnchorHelpModal = closeCategoriaAnchorHelpModal;
 
 let fieldOptionsModalIndex = null;
 
@@ -6415,6 +6444,9 @@ function closeModalByEsc(modalEl) {
       break;
     case 'fieldTypeHelpModal':
       closeFieldTypeHelpModal();
+      break;
+    case 'categoriaAnchorHelpModal':
+      closeCategoriaAnchorHelpModal();
       break;
     case 'fieldOptionsModal':
       closeFieldOptionsModal();

@@ -1235,8 +1235,11 @@
 
       <div id="fieldsContainer"></div>
 
-      <div id="categoriaAnchorWrapper" class="create-tab-header hidden">
-        <label for="categoriaAnchorSelect">Vincular categoria ao campo</label>
+      <div id="categoriaAnchorWrapper" class="create-tab-header hidden categoria-anchor-setting">
+        <div class="categoria-anchor-header">
+          <label for="categoriaAnchorSelect">Vincular categoria ao campo</label>
+          <button type="button" class="field-type-help" onclick="openCategoriaAnchorHelpModal()" aria-label="Ajuda sobre vínculo de categoria">?</button>
+        </div>
         <span class="small">A categoria será exibida junto do campo escolhido na tabela.</span>
         <select id="categoriaAnchorSelect" class="select"></select>
       </div>
@@ -1419,6 +1422,21 @@
     </div>
     <div class="modal-footer">
       <button class="btn-salvar" onclick="closeFieldTypeHelpModal()">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<div id="categoriaAnchorHelpModal" class="modal" onclick="closeCategoriaAnchorHelpModal(event)">
+  <div class="card" onclick="event.stopPropagation()">
+    <div class="modal-heading">
+      <h2>Vínculo de categoria</h2>
+      <p class="modal-subtitle">
+        Defina em qual coluna a categoria aparecerá junto do valor principal. Essa escolha só aparece quando existir
+        um campo chamado "categoria" e outro campo para associar na tabela.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-salvar" onclick="closeCategoriaAnchorHelpModal()">Entendi</button>
     </div>
   </div>
 </div>

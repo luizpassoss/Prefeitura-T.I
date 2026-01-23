@@ -793,6 +793,8 @@ body.theme-dark .summary-card::before {
   box-shadow: var(--shadow-sm);
   overflow-x: auto;
   position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
   --table-head-row-height: 36px;
   --table-filter-row-height: 34px;
 }
@@ -2382,6 +2384,21 @@ body.theme-dark .file-input-name {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.categoria-anchor-setting {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.35);
+}
+
+.categoria-anchor-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .create-tab-actions {
@@ -4480,11 +4497,39 @@ body.theme-dark #fieldsContainer:empty::before {
   background: #f8fafc;
   cursor: grab;
   color: #64748b;
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .field-row .field-drag:active {
   cursor: grabbing;
+}
+
+.field-row .field-drag-icon {
+  position: relative;
+  width: 14px;
+  height: 20px;
+}
+
+.field-row .field-drag-icon::before,
+.field-row .field-drag-icon::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 6px 0 currentColor, 0 12px 0 currentColor;
+}
+
+.field-row .field-drag-icon::before {
+  left: 2px;
+}
+
+.field-row .field-drag-icon::after {
+  right: 2px;
 }
 
 .field-row.dragging {
