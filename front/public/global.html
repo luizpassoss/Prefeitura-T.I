@@ -1053,25 +1053,12 @@
 
       </div>
 
-      <div class="import-history">
-        <div class="import-history-header">
+      <div class="import-history-trigger">
+        <div>
           <h3>Histórico de importações</h3>
-          <button type="button" class="btn secondary" onclick="clearImportHistory()">Limpar histórico</button>
+          <p>Veja importações recentes e reprocesse quando necessário.</p>
         </div>
-        <div class="table-wrap">
-          <table id="importHistoryTable">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Usuário</th>
-                <th>Arquivo</th>
-                <th>Status</th>
-                <th class="actions-header">Ações</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+        <button type="button" class="btn secondary" onclick="openImportHistoryModal()">Ver histórico</button>
       </div>
     </div>
 
@@ -1088,6 +1075,33 @@
       </button>
     </div>
 
+  </div>
+</div>
+<div id="importHistoryModal" class="modal" onclick="closeImportHistoryModalIfClicked(event)">
+  <div class="card modal-card-fixed import-history-modal-card" onclick="event.stopPropagation()">
+    <div class="modal-title-row">
+      <h2>Histórico de importações</h2>
+      <button type="button" class="btn secondary" onclick="clearImportHistory()">Limpar histórico</button>
+    </div>
+    <div class="import-history-modal-body">
+      <div class="table-wrap">
+        <table id="importHistoryTableModal">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Usuário</th>
+              <th>Arquivo</th>
+              <th>Status</th>
+              <th class="actions-header">Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeImportHistoryModal()">Fechar</button>
+    </div>
   </div>
 </div>
 <div id="createTabModal" class="modal" onclick="closeCreateTabModal(event)">

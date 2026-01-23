@@ -1924,7 +1924,7 @@ function formatHistoryDate(value) {
 }
 
 function renderImportHistory() {
-  const tbody = document.querySelector('#importHistoryTable tbody');
+  const tbody = document.querySelector('#importHistoryTableModal tbody');
   if (!tbody) return;
   const history = loadImportHistory();
   if (!history.length) {
@@ -3376,6 +3376,23 @@ function closeImportModal() {
 
 function closeImportModalIfClicked(e) {
   if (e.target.id === 'importModal') closeImportModal();
+}
+
+function openImportHistoryModal() {
+  renderImportHistory();
+  const modal = document.getElementById('importHistoryModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.classList.add('show');
+}
+
+function closeImportHistoryModal() {
+  const modal = document.getElementById('importHistoryModal');
+  if (modal) modal.classList.remove('show');
+}
+
+function closeImportHistoryModalIfClicked(e) {
+  if (e.target.id === 'importHistoryModal') closeImportHistoryModal();
 }
 
 function getImportFieldOptions() {
@@ -6265,6 +6282,9 @@ document.addEventListener('keydown', (e) => {
   window.openImportModal = openImportModal;
   window.closeImportModal = closeImportModal;
   window.closeImportModalIfClicked = closeImportModalIfClicked;
+  window.openImportHistoryModal = openImportHistoryModal;
+  window.closeImportHistoryModal = closeImportHistoryModal;
+  window.closeImportHistoryModalIfClicked = closeImportHistoryModalIfClicked;
   window.handleImportFile = handleImportFile;
   window.confirmImport = confirmImport;
   window.removeImportRow = removeImportRow;

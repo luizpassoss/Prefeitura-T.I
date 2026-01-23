@@ -1838,6 +1838,35 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: var(--space-4);
+  font-size: 13px;
+}
+
+#importModal .modal-title-row h2 {
+  font-size: 18px;
+}
+
+#importModal h3 {
+  font-size: 14px;
+}
+
+#importModal p,
+#importModal ul,
+#importModal li,
+#importModal small {
+  font-size: 12px;
+}
+
+#importModal .btn,
+#importModal .btn-cancelar,
+#importModal .btn-salvar {
+  font-size: 12px;
+  padding: 6px 12px;
+  height: 34px;
+}
+
+#importModal table th,
+#importModal table td {
+  font-size: 12px;
 }
 
 #importModal .modal-body-scroll {
@@ -3243,6 +3272,41 @@ body.theme-dark tbody tr:hover td.actions {
   z-index: 1;
 }
 
+.import-history-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.import-history-trigger p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+}
+
+#importHistoryModal .import-history-modal-card {
+  max-width: 980px;
+  height: min(84vh, 680px);
+  max-height: min(84vh, 680px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.import-history-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+#importHistoryModal .table-wrap {
+  max-height: none;
+}
+
 #importModal .card {
   height: min(calc(100vh - 40px), 820px);
   max-height: calc(100vh - 40px);
@@ -3299,6 +3363,11 @@ body.theme-dark .import-history {
 
 body.theme-dark #importModal #importStepPreview {
   border-bottom-color: rgba(148, 163, 184, 0.2);
+}
+
+body.theme-dark .import-history-trigger {
+  background: rgba(30, 41, 59, 0.45);
+  border-color: rgba(148, 163, 184, 0.2);
 }
 
 .import-history-header {
