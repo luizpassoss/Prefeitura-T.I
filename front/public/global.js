@@ -3675,6 +3675,7 @@ function renderImportPreview() {
   const actionBtn = document.getElementById('importActionBtn');
   const uploadStep = document.getElementById('importStepUpload');
   const validationEl = document.getElementById('importValidation');
+  const extraFieldWrapper = document.getElementById('importExtraField');
   const fieldOptions = getImportFieldOptions();
 
   if (!importColumnMap.length) {
@@ -3760,6 +3761,7 @@ function renderImportPreview() {
   }
 
   renderImportValidation(validation, validationEl);
+  updateImportExtraFieldOptions(fieldOptions, extraFieldWrapper);
   updateImportSummary();
 }
 
@@ -3794,6 +3796,7 @@ function applyImportValidation() {
   const validation = validateImportRows();
   const validationEl = document.getElementById('importValidation');
   const actionBtn = document.getElementById('importActionBtn');
+  const extraFieldWrapper = document.getElementById('importExtraField');
 
   document.querySelectorAll('#importPreviewTable tbody td[data-row]').forEach(td => {
     const key = `${td.dataset.row}-${td.dataset.col}`;
@@ -3805,6 +3808,43 @@ function applyImportValidation() {
   }
 
   renderImportValidation(validation, validationEl);
+  updateImportExtraFieldOptions(getImportFieldOptions(), extraFieldWrapper);
+}
+
+function updateImportExtraFieldOptions(options = [], wrapper) {
+  if (!wrapper) return;
+  const select = document.getElementById('importExtraFieldSelect');
+  if (!select) return;
+  const available = options.filter((opt) => !importColumnMap.includes(opt.key));
+  if (!available.length) {
+    wrapper.classList.add('hidden');
+    select.innerHTML = '';
+    return;
+  }
+  wrapper.classList.remove('hidden');
+  select.innerHTML = available
+    .map((opt) => `<option value="${opt.key}">${opt.label}</option>`)
+    .join('');
+}
+
+function addMissingImportField() {
+  const select = document.getElementById('importExtraFieldSelect');
+  const valueInput = document.getElementById('importExtraFieldValue');
+  if (!select) return;
+  const fieldKey = select.value;
+  if (!fieldKey) {
+    showImportWarning('Selecione um campo para adicionar.');
+    return;
+  }
+  const fieldOptions = getImportFieldOptions();
+  const field = fieldOptions.find(opt => opt.key === fieldKey);
+  const label = field?.label || fieldKey;
+  const value = valueInput?.value ?? '';
+  importHeaders.push(label);
+  importColumnMap.push(fieldKey);
+  importRows = importRows.map((row) => [...row, value]);
+  if (valueInput) valueInput.value = '';
+  renderImportPreview();
 }
 
 function addImportColumn() {
@@ -6285,6 +6325,7 @@ document.addEventListener('keydown', (e) => {
   window.openImportHistoryModal = openImportHistoryModal;
   window.closeImportHistoryModal = closeImportHistoryModal;
   window.closeImportHistoryModalIfClicked = closeImportHistoryModalIfClicked;
+  window.addMissingImportField = addMissingImportField;
   window.handleImportFile = handleImportFile;
   window.confirmImport = confirmImport;
   window.removeImportRow = removeImportRow;
