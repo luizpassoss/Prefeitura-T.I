@@ -1832,9 +1832,12 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 #importModal .card {
-  height: min(calc(100vh - 56px), 760px);
-  max-height: calc(100vh - 56px);
+  height: min(calc(100vh - 40px), 820px);
+  max-height: calc(100vh - 40px);
   overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--space-4);
 }
 
 #importModal .modal-body-scroll {
@@ -3195,10 +3198,11 @@ body.theme-dark tbody tr:hover td.actions {
 }
 
 #importModal .card {
-  height: min(calc(100vh - 56px), 760px);
-  max-height: calc(100vh - 56px);
-  display: flex;
-  flex-direction: column;
+  height: min(calc(100vh - 40px), 820px);
+  max-height: calc(100vh - 40px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--space-4);
   overflow: hidden;
 }
 
