@@ -1062,13 +1062,10 @@
         <div class="import-controls">
           <label for="importHeaderMode">Primeira linha é cabeçalho?</label>
           <select id="importHeaderMode" class="select" onchange="setImportHeaderMode(this.value)">
-            <option value="auto">Detectar automaticamente</option>
             <option value="yes">Sim</option>
             <option value="no">Não</option>
           </select>
-          <button type="button" class="btn secondary" onclick="autoMapImportColumns()">Auto mapear colunas</button>
           <button type="button" class="btn secondary" onclick="clearImportMapping()">Limpar mapeamento</button>
-          <button type="button" class="btn secondary" onclick="addImportColumn()">Adicionar coluna</button>
         </div>
         <div id="importValidation" class="import-validation hidden"></div>
 

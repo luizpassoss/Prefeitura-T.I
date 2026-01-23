@@ -1842,6 +1842,11 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   font-size: 13px;
 }
 
+#importModal .card {
+  height: min(calc(100vh - 40px), 420px);
+  max-height: calc(100vh - 40px);
+}
+
 #importModal .modal-title-row h2,
 #importMappingModal .modal-title-row h2 {
   font-size: 18px;
@@ -2046,8 +2051,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
 }
 
 .import-controls .select {
-  min-width: 220px;
-  flex: 1 1 260px;
+  min-width: 180px;
+  flex: 1 1 220px;
   height: 30px;
 }
 
@@ -3938,14 +3943,14 @@ body.theme-dark .sort-option-item {
 .import-validation {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 14px 10px;
+  gap: 6px;
+  padding: 8px 10px;
   border-radius: 12px;
   border: 1px solid rgba(245, 158, 11, 0.35);
   background: linear-gradient(120deg, rgba(251, 191, 36, 0.18), rgba(251, 191, 36, 0.06));
   color: #92400e;
-  font-size: 12px;
-  margin: 4px 0 12px;
+  font-size: 11px;
+  margin: 2px 0 10px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
   position: relative;
   overflow: visible;
@@ -3954,17 +3959,17 @@ body.theme-dark .sort-option-item {
 .import-guide {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .import-guide h3 {
   margin: 0 0 6px;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .import-guide p {
@@ -3979,10 +3984,10 @@ body.theme-dark .sort-option-item {
 }
 
 .import-guide-summary {
-  min-width: 160px;
+  min-width: 140px;
   display: grid;
-  gap: 4px;
-  font-size: 11px;
+  gap: 3px;
+  font-size: 10px;
   color: #334155;
 }
 

@@ -3325,7 +3325,7 @@ function openImportModal(type) {
   const fileName = document.getElementById('importFileName');
   if (fileName) fileName.textContent = 'Nenhum arquivo selecionado';
   const headerModeEl = document.getElementById('importHeaderMode');
-  if (headerModeEl) headerModeEl.value = 'auto';
+  if (headerModeEl) headerModeEl.value = 'yes';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -3390,7 +3390,7 @@ function resetImportState() {
   importColumnMap = [];
   importHasHeaderRow = false;
   importRawRows = [];
-  importHeaderMode = 'auto';
+  importHeaderMode = 'yes';
   const validationEl = document.getElementById('importValidation');
   if (validationEl) {
     validationEl.classList.add('hidden');
@@ -3480,12 +3480,7 @@ function updateImportSummary() {
   if (rowsEl) rowsEl.textContent = importRows.length.toString();
   if (colsEl) colsEl.textContent = importHeaders.length.toString();
   if (headerEl) {
-    const headerLabel =
-      importHeaderMode === 'auto'
-        ? `Auto (${importHasHeaderRow ? 'Sim' : 'Não'})`
-        : importHeaderMode === 'yes'
-          ? 'Sim'
-          : 'Não';
+    const headerLabel = importHeaderMode === 'yes' ? 'Sim' : 'Não';
     headerEl.textContent = headerLabel;
   }
 }
