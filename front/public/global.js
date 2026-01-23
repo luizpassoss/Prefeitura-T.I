@@ -3847,6 +3847,14 @@ function addMissingImportField() {
   renderImportPreview();
 }
 
+function addImportColumn() {
+  const nextIndex = importHeaders.length + 1;
+  importHeaders.push(`Nova coluna ${nextIndex}`);
+  importColumnMap.push('');
+  importRows = importRows.map((row) => [...row, '']);
+  renderImportPreview();
+}
+
 function renderImportValidation(validation, validationEl) {
   if (!validationEl) return;
   if (validation.issues.length || validation.errorCount > 0) {

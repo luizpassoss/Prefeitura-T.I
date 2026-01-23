@@ -1931,6 +1931,21 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   color: var(--text);
 }
 
+.import-bulk-row th {
+  padding-top: 6px;
+}
+
+.import-bulk-input {
+  width: 100%;
+  min-width: 120px;
+  padding: 6px 8px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #fff;
+  color: var(--text);
+}
+
 #importModal #importStepPreview {
   display: flex;
   flex-direction: column;
