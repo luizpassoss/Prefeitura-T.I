@@ -3655,29 +3655,31 @@ function processImportData() {
   let maxCols = dataRows.reduce((max, row) => Math.max(max, row.length), 0);
   let headerRowIndex = null;
   let hasHeaderRow = false;
+  const headerCandidates = cleaned.map((row, index) => {
+    const normalized = row.map(cell => normalizeHeader(cell));
+    const nonEmptyCount = normalized.filter(cell => cell).length;
+    const score = normalized.reduce((acc, cell) => {
+      if (!cell) return acc;
+      const hasMatch = options.some(opt => opt.aliases.some(alias => normalizeHeader(alias) === cell));
+      return hasMatch ? acc + 1 : acc;
+    }, 0);
+    return { index, score, row, normalized, nonEmptyCount };
+  });
+  const bestCandidate = headerCandidates
+    .filter(item => item.score > 0 && item.nonEmptyCount > 0)
+    .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
 
   if (importHeaderMode === 'yes') {
     headerRowIndex = cleaned.findIndex(row => row.some(cell => `${cell ?? ''}`.trim() !== ''));
     hasHeaderRow = headerRowIndex !== -1;
+    const firstCandidate = headerRowIndex !== -1 ? headerCandidates[headerRowIndex] : null;
+    if (bestCandidate && firstCandidate && bestCandidate.score > firstCandidate.score) {
+      headerRowIndex = bestCandidate.index;
+    }
   } else if (importHeaderMode === 'no') {
     headerRowIndex = null;
     hasHeaderRow = false;
   } else {
-    const headerCandidates = cleaned.map((row, index) => {
-      const normalized = row.map(cell => normalizeHeader(cell));
-      const nonEmptyCount = normalized.filter(cell => cell).length;
-      const score = normalized.reduce((acc, cell) => {
-        if (!cell) return acc;
-        const hasMatch = options.some(opt => opt.aliases.some(alias => normalizeHeader(alias) === cell));
-        return hasMatch ? acc + 1 : acc;
-      }, 0);
-      return { index, score, row, normalized, nonEmptyCount };
-    });
-
-    const bestCandidate = headerCandidates
-      .filter(item => item.score > 0 && item.nonEmptyCount > 0)
-      .sort((a, b) => (b.score - a.score) || (b.nonEmptyCount - a.nonEmptyCount))[0];
-
     if (bestCandidate) {
       headerRowIndex = bestCandidate.index;
       hasHeaderRow = true;
@@ -4678,7 +4680,7 @@ function renderModuloDinamico() {
     });
   });
 
-  renderModuloFilterControls(displayCampos);
+  renderModuloFilterControls(displayCampos, categoriaFieldName);
 
   if (moduleFiltersPanel && !displayCampos.length) {
     moduleFiltersPanel.classList.add('hidden');
@@ -4688,8 +4690,16 @@ function renderModuloDinamico() {
   const sortMenuOptions = document.getElementById('sortMenuModOptions');
   if (sortMenuOptions) {
     const availableOptions = getModuleSortMenuOptions(displayCampos);
+    const availableLabels = availableOptions.map((campo) => campo.label);
+    if (moduloSortState.key && !availableLabels.includes(moduloSortState.key)) {
+      moduloSortState.key = null;
+    }
     sortMenuOptions.innerHTML = availableOptions
-      .map((campo) => `<button type="button" data-sort-key="${campo.label}">${campo.label}</button>`)
+      .map((campo) => `
+        <button type="button" data-sort-key="${escapeHtml(campo.label)}">
+          ${escapeHtml(campo.label)}
+        </button>
+      `)
       .join('');
     initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
   }
@@ -4697,25 +4707,56 @@ function renderModuloDinamico() {
   renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName);
 }
 
-function renderModuloFilterControls(displayCampos) {
+function renderModuloFilterControls(displayCampos, categoriaFieldName) {
   const panel = document.getElementById('moduleFilters');
   if (!panel) return;
-  const filtersMarkup = displayCampos
-    .map((campo) => `
-      <input
-        class="input"
-        data-field="${escapeHtml(campo.nome)}"
-        placeholder="Filtrar ${escapeHtml(campo.nome)}"
-        value="${escapeHtml(moduloColumnFilters[campo.nome] || '')}"
-      />
-    `)
+  const headerFields = new Set((displayCampos || []).map((campo) => campo.nome));
+  const extraFields = [];
+  if (categoriaFieldName && !headerFields.has(categoriaFieldName)) {
+    extraFields.push({ nome: categoriaFieldName });
+  }
+
+  if (!extraFields.length) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  const filtersMarkup = extraFields
+    .map((campo) => {
+      const options = getSelectOptionsForCampo(campo);
+      if (options.length) {
+        return `
+          <select class="select" data-field="${escapeHtml(campo.nome)}">
+            <option value="">Filtrar ${escapeHtml(campo.nome)}</option>
+            ${options.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('')}
+          </select>
+        `;
+      }
+      return `
+        <input
+          class="input"
+          data-field="${escapeHtml(campo.nome)}"
+          placeholder="Filtrar ${escapeHtml(campo.nome)}"
+          value="${escapeHtml(moduloColumnFilters[campo.nome] || '')}"
+        />
+      `;
+    })
     .join('');
+
   panel.innerHTML = `
     <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar filtros</button>
     ${filtersMarkup}
   `;
-  panel.querySelectorAll('input[data-field]').forEach((input) => {
+
+  panel.querySelectorAll('[data-field]').forEach((input) => {
     const field = input.dataset.field;
+    if (input.tagName === 'SELECT') {
+      input.value = moduloColumnFilters[field] || '';
+      input.addEventListener('change', (event) => {
+        updateModuloColumnFilter(field, event.target.value, 'panel');
+      });
+      return;
+    }
     input.addEventListener('input', (event) => {
       updateModuloColumnFilter(field, event.target.value, 'panel');
     });
@@ -4948,13 +4989,6 @@ function getModuloFiltrado() {
         )
       );
     }
-    if (columnFilters.length) {
-      filtered = filtered.filter(({ row }) =>
-        columnFilters.every(([field, value]) =>
-          (row[field] || '').toString().toLowerCase().includes(value)
-        )
-      );
-    }
     return filtered;
   }
 
@@ -4972,13 +5006,6 @@ function getModuloFiltrado() {
       )
     );
   }
-  if (columnFilters.length) {
-    filtered = filtered.filter(({ row }) =>
-      columnFilters.every(([field, value]) =>
-        (row[field] || '').toString().toLowerCase().includes(value)
-      )
-    );
-  }
   return filtered;
 }
 
@@ -4989,8 +5016,12 @@ function clearModuloFilters() {
   document.querySelectorAll('#moduloThead .table-filter-input').forEach((input) => {
     input.value = '';
   });
-  document.querySelectorAll('#moduleFilters input[data-field]').forEach((input) => {
-    input.value = '';
+  document.querySelectorAll('#moduleFilters [data-field]').forEach((input) => {
+    if (input.tagName === 'SELECT') {
+      input.value = '';
+    } else {
+      input.value = '';
+    }
   });
   paginationState.modules.page = 1;
   filtrarModulo();
@@ -5821,11 +5852,16 @@ async function saveManagedModule() {
     return;
   }
 
-  await fetch(`${API_MODULOS}/${moduleId}`, {
+  const updateRes = await fetch(`${API_MODULOS}/${moduleId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nome, descricao })
   });
+  if (!updateRes.ok) {
+    const error = await updateRes.json().catch(() => ({}));
+    showErrorMessage(error?.error || 'Erro ao atualizar a aba.');
+    return;
+  }
 
   const existingIds = new Set(manageTabContext.campos.map(campo => campo.id));
   const nextIds = new Set(camposValidos.filter(campo => campo.id).map(campo => campo.id));
