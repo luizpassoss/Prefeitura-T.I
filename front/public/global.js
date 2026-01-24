@@ -4680,7 +4680,7 @@ function renderModuloDinamico() {
     });
   });
 
-  renderModuloFilterControls(displayCampos);
+  renderModuloFilterControls(displayCampos, categoriaFieldName);
 
   if (moduleFiltersPanel && !displayCampos.length) {
     moduleFiltersPanel.classList.add('hidden');
@@ -4690,8 +4690,16 @@ function renderModuloDinamico() {
   const sortMenuOptions = document.getElementById('sortMenuModOptions');
   if (sortMenuOptions) {
     const availableOptions = getModuleSortMenuOptions(displayCampos);
+    const availableLabels = availableOptions.map((campo) => campo.label);
+    if (moduloSortState.key && !availableLabels.includes(moduloSortState.key)) {
+      moduloSortState.key = null;
+    }
     sortMenuOptions.innerHTML = availableOptions
-      .map((campo) => `<button type="button" data-sort-key="${campo.label}">${campo.label}</button>`)
+      .map((campo) => `
+        <button type="button" data-sort-key="${escapeHtml(campo.label)}">
+          ${escapeHtml(campo.label)}
+        </button>
+      `)
       .join('');
     initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
   }
@@ -4699,25 +4707,56 @@ function renderModuloDinamico() {
   renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName);
 }
 
-function renderModuloFilterControls(displayCampos) {
+function renderModuloFilterControls(displayCampos, categoriaFieldName) {
   const panel = document.getElementById('moduleFilters');
   if (!panel) return;
-  const filtersMarkup = displayCampos
-    .map((campo) => `
-      <input
-        class="input"
-        data-field="${escapeHtml(campo.nome)}"
-        placeholder="Filtrar ${escapeHtml(campo.nome)}"
-        value="${escapeHtml(moduloColumnFilters[campo.nome] || '')}"
-      />
-    `)
+  const headerFields = new Set((displayCampos || []).map((campo) => campo.nome));
+  const extraFields = [];
+  if (categoriaFieldName && !headerFields.has(categoriaFieldName)) {
+    extraFields.push({ nome: categoriaFieldName });
+  }
+
+  if (!extraFields.length) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  const filtersMarkup = extraFields
+    .map((campo) => {
+      const options = getSelectOptionsForCampo(campo);
+      if (options.length) {
+        return `
+          <select class="select" data-field="${escapeHtml(campo.nome)}">
+            <option value="">Filtrar ${escapeHtml(campo.nome)}</option>
+            ${options.map(option => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('')}
+          </select>
+        `;
+      }
+      return `
+        <input
+          class="input"
+          data-field="${escapeHtml(campo.nome)}"
+          placeholder="Filtrar ${escapeHtml(campo.nome)}"
+          value="${escapeHtml(moduloColumnFilters[campo.nome] || '')}"
+        />
+      `;
+    })
     .join('');
+
   panel.innerHTML = `
     <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar filtros</button>
     ${filtersMarkup}
   `;
-  panel.querySelectorAll('input[data-field]').forEach((input) => {
+
+  panel.querySelectorAll('[data-field]').forEach((input) => {
     const field = input.dataset.field;
+    if (input.tagName === 'SELECT') {
+      input.value = moduloColumnFilters[field] || '';
+      input.addEventListener('change', (event) => {
+        updateModuloColumnFilter(field, event.target.value, 'panel');
+      });
+      return;
+    }
     input.addEventListener('input', (event) => {
       updateModuloColumnFilter(field, event.target.value, 'panel');
     });
@@ -4950,13 +4989,6 @@ function getModuloFiltrado() {
         )
       );
     }
-    if (columnFilters.length) {
-      filtered = filtered.filter(({ row }) =>
-        columnFilters.every(([field, value]) =>
-          (row[field] || '').toString().toLowerCase().includes(value)
-        )
-      );
-    }
     return filtered;
   }
 
@@ -4974,13 +5006,6 @@ function getModuloFiltrado() {
       )
     );
   }
-  if (columnFilters.length) {
-    filtered = filtered.filter(({ row }) =>
-      columnFilters.every(([field, value]) =>
-        (row[field] || '').toString().toLowerCase().includes(value)
-      )
-    );
-  }
   return filtered;
 }
 
@@ -4991,8 +5016,12 @@ function clearModuloFilters() {
   document.querySelectorAll('#moduloThead .table-filter-input').forEach((input) => {
     input.value = '';
   });
-  document.querySelectorAll('#moduleFilters input[data-field]').forEach((input) => {
-    input.value = '';
+  document.querySelectorAll('#moduleFilters [data-field]').forEach((input) => {
+    if (input.tagName === 'SELECT') {
+      input.value = '';
+    } else {
+      input.value = '';
+    }
   });
   paginationState.modules.page = 1;
   filtrarModulo();
