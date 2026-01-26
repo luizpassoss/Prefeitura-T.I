@@ -1575,7 +1575,7 @@ body.theme-dark .field-manager-toolbar {
   box-shadow: 0 12px 24px rgba(8, 8, 10, 0.4);
 }
 
-body.theme-dark .field-manager-fields::-webkit-scrollbar-thumb {
+body.theme-dark .field-manager-body::-webkit-scrollbar-thumb {
   background-color: rgba(100, 116, 139, 0.6);
 }
 
@@ -1887,6 +1887,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  flex: 1;
+  min-height: 0;
 }
 
 .create-tab-body::-webkit-scrollbar {
@@ -2587,6 +2589,15 @@ body.theme-dark .file-input-name {
   background-repeat: no-repeat;
   background-position: 16px center;
   background-size: 16px 16px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.field-search input[type="search"]::-webkit-search-decoration,
+.field-search input[type="search"]::-webkit-search-cancel-button,
+.field-search input[type="search"]::-webkit-search-results-button,
+.field-search input[type="search"]::-webkit-search-results-decoration {
+  display: none;
 }
 
 
@@ -4684,7 +4695,10 @@ body.theme-dark .btn-add-tab:hover {
   flex-direction: column;
   gap: var(--space-3);
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  padding: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
 }
 
 .field-manager-toolbar {
@@ -4704,31 +4718,29 @@ body.theme-dark .btn-add-tab:hover {
 .field-manager-fields {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  padding-right: 6px;
+  overflow: visible;
+  padding-right: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
 }
 
-.field-manager-fields::-webkit-scrollbar {
+.field-manager-body::-webkit-scrollbar {
   width: 8px;
 }
 
-.field-manager-fields::-webkit-scrollbar-track {
+.field-manager-body::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.field-manager-fields::-webkit-scrollbar-thumb {
+.field-manager-body::-webkit-scrollbar-thumb {
   background-color: rgba(148, 163, 184, 0.55);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
-.field-manager-fields::-webkit-scrollbar-thumb:hover {
+.field-manager-body::-webkit-scrollbar-thumb:hover {
   background-color: rgba(100, 116, 139, 0.7);
 }
 
@@ -4968,6 +4980,8 @@ body.theme-dark .field-row .field-drag {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  flex: 1;
+  min-height: 0;
 }
 
 .manual-tab-toolbar {
