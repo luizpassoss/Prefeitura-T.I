@@ -1017,7 +1017,7 @@
   </div>
 </div>
 <div id="importModal" class="modal" onclick="closeImportModalIfClicked(event)">
-  <div class="card modal-card-fixed" style="max-width: 1100px" onclick="event.stopPropagation()">
+  <div class="card modal-card-fixed" onclick="event.stopPropagation()">
 
     <div class="modal-title-row">
       <h2 id="importTitle">Importar Planilha</h2>
@@ -1196,44 +1196,62 @@
     </div>
 
     <div class="create-tab-body modal-body-scroll">
-      <div class="form-grid">
-      <div class="form-full">
-        <label for="newTabName">Nome da Aba</label>
-        <input id="newTabName" placeholder="Ex: Almoxarifado" data-autofocus />
-      </div>
+      <div class="form-grid create-tab-form-grid">
+        <div class="form-full">
+          <label for="newTabName">Nome da Aba</label>
+          <input id="newTabName" placeholder="Ex: Almoxarifado" data-autofocus />
+        </div>
 
-      <div class="form-full">
-        <label for="newTabDescription">Descrição</label>
-        <textarea
-          id="newTabDescription"
-          rows="2"
-          placeholder="Ex: Controle de materiais e reposições"
-        ></textarea>
-      </div>
+        <div class="form-full">
+          <label for="newTabDescription">Descrição</label>
+          <textarea
+            id="newTabDescription"
+            rows="2"
+            placeholder="Ex: Controle de materiais e reposições"
+          ></textarea>
+        </div>
 
-      <div class="form-full">
-        <label for="newTabTemplate">Modelo de Campos</label>
-        <select id="newTabTemplate" class="select" onchange="applyTabTemplate()">
-          <option value="custom">Personalizado</option>
-          <option value="inventario">Inventário (links e conexões)</option>
-          <option value="maquinas">Máquinas (status e patrimônio)</option>
-        </select>
-      </div>
-      </div>
-
-      <div class="create-tab-header">
-        <label>Campos da Tabela</label>
-        <div class="create-tab-actions">
-          <button type="button" class="btn secondary" onclick="sortFieldsAlphabetically()">
-            Ordenar A→Z
-          </button>
-          <button type="button" class="btn secondary" onclick="addField()">
-            + Adicionar Campo
-          </button>
+        <div class="form-full">
+          <label for="newTabTemplate">Modelo de Campos</label>
+          <select id="newTabTemplate" class="select" onchange="applyTabTemplate()">
+            <option value="custom">Personalizado</option>
+            <option value="inventario">Inventário (links e conexões)</option>
+            <option value="maquinas">Máquinas (status e patrimônio)</option>
+          </select>
         </div>
       </div>
 
-      <div id="fieldsContainer"></div>
+      <div class="create-tab-toolbar">
+        <div class="create-tab-toolbar-main">
+          <div class="create-tab-title">
+            <label>Campos da Tabela</label>
+            <span class="small">Crie, organize e personalize cada coluna.</span>
+          </div>
+          <div class="create-tab-actions">
+            <button type="button" class="btn secondary" onclick="sortFieldsAlphabetically()">
+              Ordenar A→Z
+            </button>
+            <button type="button" class="btn secondary" onclick="addField()">
+              + Adicionar Campo
+            </button>
+          </div>
+        </div>
+        <div class="create-tab-toolbar-filters">
+          <div class="field-search">
+            <input
+              id="fieldSearchInput"
+              type="search"
+              placeholder="Buscar campo por nome, tipo ou origem"
+              oninput="filterFieldRows(this.value)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div id="fieldsContainer" class="fields-grid"></div>
+      <div id="fieldsFilterEmpty" class="fields-empty hidden">
+        Nenhum campo corresponde à sua busca.
+      </div>
 
       <div id="categoriaAnchorWrapper" class="create-tab-header hidden categoria-anchor-setting">
         <div class="categoria-anchor-header">
@@ -1259,14 +1277,28 @@
 </div>
 
 <div id="manageManualTabModal" class="modal" onclick="closeManageManualTabModal(event)">
-  <div class="card modal-card-fixed" style="max-width: 560px" onclick="event.stopPropagation()">
+  <div class="card modal-card-fixed" onclick="event.stopPropagation()">
     <div class="modal-heading">
       <h2 id="manageManualTabTitle">Gerenciar Aba</h2>
       <p class="modal-subtitle">Ajuste os nomes dos campos exibidos na tabela.</p>
     </div>
 
     <div class="modal-body-scroll">
-      <div id="manageManualTabFields" class="form-grid"></div>
+      <div class="manual-tab-toolbar">
+        <div class="field-search">
+          <input
+            id="manualTabSearchInput"
+            type="search"
+            placeholder="Buscar campo para editar ou ocultar"
+            oninput="filterManualTabFields(this.value)"
+          />
+        </div>
+      </div>
+
+      <div id="manageManualTabFields" class="form-grid manual-tab-grid"></div>
+      <div id="manualTabFilterEmpty" class="fields-empty hidden">
+        Nenhum campo encontrado para esta busca.
+      </div>
 
       <div class="manual-tab-actions">
         <select id="manualTabFieldSelect" class="select"></select>

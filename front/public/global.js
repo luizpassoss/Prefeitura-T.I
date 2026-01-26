@@ -6019,6 +6019,28 @@ function renderManualTabManager() {
   if (addButton) {
     addButton.disabled = select ? select.disabled : true;
   }
+  filterManualTabFields(document.getElementById('manualTabSearchInput')?.value || '');
+}
+
+function filterManualTabFields(query = '') {
+  const container = document.getElementById('manageManualTabFields');
+  if (!container) return;
+  const normalized = query.trim().toLowerCase();
+  let visibleCount = 0;
+
+  container.querySelectorAll('.form-full').forEach(row => {
+    const label = row.querySelector('label')?.textContent || '';
+    const inputValue = row.querySelector('input')?.value || '';
+    const matches = !normalized || [label, inputValue].some(text => text.toLowerCase().includes(normalized));
+    row.classList.toggle('is-hidden', !matches);
+    if (matches) visibleCount += 1;
+  });
+
+  const emptyState = document.getElementById('manualTabFilterEmpty');
+  if (emptyState) {
+    const shouldShow = normalized && visibleCount === 0;
+    emptyState.classList.toggle('hidden', !shouldShow);
+  }
 }
 
 function addManualTabField() {
@@ -6176,61 +6198,79 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
     .join('');
 
   row.innerHTML = `
-    <select class="field-preset" onchange="applyFieldPreset(${idx}, this.value)">
-      <option value="" disabled selected>Usar campo de outra aba</option>
-      ${presetOptions}
-    </select>
-
-    <input
-      type="text"
-      class="field-name"
-      placeholder="Nome do campo"
-      value="${escapeHtml(nome)}"
-      oninput="window.newTabFields[${idx}].nome = this.value; renderSortOptionsPicker();"
-    />
-
-    <div class="field-type-wrapper">
-      <select class="field-type" onchange="updateFieldType(${idx}, this.value, true)">
-      <option value="texto">Texto</option>
-      <option value="numero">Número</option>
-      <option value="data">Data</option>
-      <option value="email">E-mail</option>
-      <option value="select">Lista</option>
+    <div class="field-cell field-preset-cell">
+      <label>Origem</label>
+      <select class="field-preset" onchange="applyFieldPreset(${idx}, this.value)">
+        <option value="" disabled selected>Usar campo de outra aba</option>
+        ${presetOptions}
       </select>
-      <button type="button" class="field-type-help" onclick="openFieldTypeHelpModal()" aria-label="Explicações sobre tipos de campo">
-        ?
-      </button>
-    </div>
-    <div class="field-type-options ${tipo === 'select' ? 'is-visible' : ''}">
-      <span class="field-options-summary" id="fieldOptionsSummary-${idx}">Nenhuma opção definida.</span>
-      <button type="button" class="btn secondary" onclick="openFieldOptionsModal(${idx})">Definir opções</button>
     </div>
 
-    <label class="field-required-label">
-      <input class="field-required" type="checkbox" ${obrigatorio ? 'checked' : ''} onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
-      Obrigatório
-    </label>
+    <div class="field-cell field-name-cell">
+      <label>Nome do campo</label>
+      <input
+        type="text"
+        class="field-name"
+        placeholder="Nome do campo"
+        value="${escapeHtml(nome)}"
+        oninput="window.newTabFields[${idx}].nome = this.value; renderSortOptionsPicker();"
+      />
+    </div>
 
-    <button
-      type="button"
-      class="field-drag"
-      title="Arraste para reordenar"
-      aria-label="Arraste para reordenar"
-      draggable="true"
-    ><span class="field-drag-icon" aria-hidden="true"></span></button>
+    <div class="field-cell field-type-cell">
+      <label>Tipo</label>
+      <div class="field-type-wrapper">
+        <select class="field-type" onchange="updateFieldType(${idx}, this.value, true)">
+        <option value="texto">Texto</option>
+        <option value="numero">Número</option>
+        <option value="data">Data</option>
+        <option value="email">E-mail</option>
+        <option value="select">Lista</option>
+        </select>
+        <button type="button" class="field-type-help" onclick="openFieldTypeHelpModal()" aria-label="Explicações sobre tipos de campo">
+          ?
+        </button>
+      </div>
+    </div>
 
-    <button
-      type="button"
-      class="field-remove"
-      title="Remover campo"
-      onclick="removeField(${idx})"
-    >✕</button>
+    <div class="field-cell field-options-cell">
+      <label>Opções</label>
+      <div class="field-type-options ${tipo === 'select' ? 'is-visible' : ''}">
+        <span class="field-options-summary" id="fieldOptionsSummary-${idx}">Nenhuma opção definida.</span>
+        <button type="button" class="btn secondary" onclick="openFieldOptionsModal(${idx})">Definir opções</button>
+      </div>
+    </div>
+
+    <div class="field-cell field-required-cell">
+      <label class="field-required-label">
+        <input class="field-required" type="checkbox" ${obrigatorio ? 'checked' : ''} onchange="window.newTabFields[${idx}].obrigatorio = this.checked">
+        Obrigatório
+      </label>
+    </div>
+
+    <div class="field-cell field-actions">
+      <button
+        type="button"
+        class="field-drag"
+        title="Arraste para reordenar"
+        aria-label="Arraste para reordenar"
+        draggable="true"
+      ><span class="field-drag-icon" aria-hidden="true"></span></button>
+
+      <button
+        type="button"
+        class="field-remove"
+        title="Remover campo"
+        onclick="removeField(${idx})"
+      >✕</button>
+    </div>
   `;
 
   document.getElementById('fieldsContainer').appendChild(row);
   initFieldDragAndDrop();
   renderSortOptionsPicker();
   updateCategoriaAnchorOptions();
+  filterFieldRows(getFieldSearchQuery());
 
   const typeSelect = row.querySelector('.field-type');
   if (typeSelect) {
@@ -6238,6 +6278,33 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
   }
   updateFieldType(idx, tipo);
   updateFieldOptionsSummary(idx);
+}
+
+function getFieldSearchQuery() {
+  return document.getElementById('fieldSearchInput')?.value || '';
+}
+
+function filterFieldRows(query = '') {
+  const container = document.getElementById('fieldsContainer');
+  if (!container) return;
+  const normalized = query.trim().toLowerCase();
+  const rows = [...container.querySelectorAll('.field-row')];
+  let visibleCount = 0;
+
+  rows.forEach(row => {
+    const name = row.querySelector('.field-name')?.value || '';
+    const preset = row.querySelector('.field-preset')?.selectedOptions?.[0]?.textContent || '';
+    const type = row.querySelector('.field-type')?.value || '';
+    const matches = !normalized || [name, preset, type].some(text => text.toLowerCase().includes(normalized));
+    row.classList.toggle('is-hidden', !matches);
+    if (matches) visibleCount += 1;
+  });
+
+  const emptyState = document.getElementById('fieldsFilterEmpty');
+  if (emptyState) {
+    const shouldShow = normalized && visibleCount === 0 && rows.length > 0;
+    emptyState.classList.toggle('hidden', !shouldShow);
+  }
 }
 
 function openFieldTypeHelpModal() {
@@ -6321,6 +6388,7 @@ function removeField(idx) {
   });
   renderSortOptionsPicker();
   updateCategoriaAnchorOptions();
+  filterFieldRows(getFieldSearchQuery());
 }
 
 function sortFieldsAlphabetically() {
@@ -6333,6 +6401,7 @@ function sortFieldsAlphabetically() {
   newTabFields.forEach(field => addFieldWithValues(field));
   renderSortOptionsPicker();
   updateCategoriaAnchorOptions();
+  filterFieldRows(getFieldSearchQuery());
 }
 
 
@@ -6749,6 +6818,8 @@ document.addEventListener('keydown', (e) => {
   window.closeCreateTabModal = closeCreateTabModal;
   window.applyTabTemplate = applyTabTemplate;
   window.addField = addField;
+  window.filterFieldRows = filterFieldRows;
+  window.filterManualTabFields = filterManualTabFields;
   window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
 window.removeField = removeField;
