@@ -1221,36 +1221,22 @@
         </div>
       </div>
 
-      <div class="create-tab-toolbar">
-        <div class="create-tab-toolbar-main">
-          <div class="create-tab-title">
+      <div class="create-tab-fields-summary">
+        <div class="create-tab-fields-summary-main">
+          <div>
             <label>Campos da Tabela</label>
             <span class="small">Crie, organize e personalize cada coluna.</span>
           </div>
-          <div class="create-tab-actions">
-            <button type="button" class="btn secondary" onclick="sortFieldsAlphabetically()">
-              Ordenar A→Z
-            </button>
-            <button type="button" class="btn secondary" onclick="addField()">
-              + Adicionar Campo
-            </button>
-          </div>
+          <div class="field-count-pill" id="fieldCountPill">0 campos</div>
         </div>
-        <div class="create-tab-toolbar-filters">
-          <div class="field-search">
-            <input
-              id="fieldSearchInput"
-              type="search"
-              placeholder="Buscar campo por nome, tipo ou origem"
-              oninput="filterFieldRows(this.value)"
-            />
-          </div>
+        <div class="create-tab-fields-summary-actions">
+          <button type="button" class="btn secondary" onclick="openFieldManagerModal()">
+            Gerenciar campos
+          </button>
+          <button type="button" class="btn secondary" onclick="openFieldManagerModal(true)">
+            + Adicionar Campo
+          </button>
         </div>
-      </div>
-
-      <div id="fieldsContainer" class="fields-grid"></div>
-      <div id="fieldsFilterEmpty" class="fields-empty hidden">
-        Nenhum campo corresponde à sua busca.
       </div>
 
       <div id="categoriaAnchorWrapper" class="create-tab-header hidden categoria-anchor-setting">
@@ -1272,6 +1258,52 @@
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeCreateTabModal()">Cancelar</button>
       <button id="createTabSubmitBtn" class="btn-salvar" onclick="submitTabModal()">Criar Aba</button>
+    </div>
+  </div>
+</div>
+
+<div id="fieldManagerModal" class="modal" onclick="closeFieldManagerModal(event)">
+  <div class="card modal-card-fixed field-manager-card" onclick="event.stopPropagation()">
+    <div class="modal-heading field-manager-heading">
+      <div>
+        <h2>Campos da Tabela</h2>
+        <p class="modal-subtitle">Edite, ordene e configure os campos da nova aba.</p>
+      </div>
+      <div class="field-manager-heading-actions">
+        <div class="field-count-pill" id="fieldManagerCountPill">0 campos</div>
+        <button type="button" class="modal-close" onclick="closeFieldManagerModal()">✕</button>
+      </div>
+    </div>
+
+    <div class="modal-body-scroll field-manager-body">
+      <div class="field-manager-toolbar">
+        <div class="create-tab-actions">
+          <button type="button" class="btn secondary" onclick="sortFieldsAlphabetically()">
+            Ordenar A→Z
+          </button>
+          <button type="button" class="btn secondary" onclick="addField()">
+            + Adicionar Campo
+          </button>
+        </div>
+        <div class="field-search">
+          <input
+            id="fieldSearchInput"
+            type="search"
+            placeholder="Buscar campo por nome, tipo ou origem"
+            oninput="filterFieldRows(this.value)"
+          />
+        </div>
+      </div>
+
+      <div id="fieldsContainer" class="fields-grid"></div>
+      <div id="fieldsFilterEmpty" class="fields-empty hidden">
+        Nenhum campo corresponde à sua busca.
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeFieldManagerModal()">Fechar</button>
+      <button class="btn-salvar" onclick="closeFieldManagerModal()">Aplicar alterações</button>
     </div>
   </div>
 </div>

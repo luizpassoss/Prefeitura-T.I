@@ -5709,11 +5709,15 @@ function openCreateTabModal() {
   window.newTabFields = newTabFields;
   newTabSortOptions = [];
   newTabFieldOptions = {};
+  previousModalForFieldManager = null;
   document.getElementById('fieldsContainer').innerHTML = '';
+  updateFieldCountDisplay();
   const categoriaWrapper = document.getElementById('categoriaAnchorWrapper');
   if (categoriaWrapper) categoriaWrapper.classList.add('hidden');
   document.getElementById('newTabName').value = '';
   document.getElementById('newTabDescription').value = '';
+  const searchInput = document.getElementById('fieldSearchInput');
+  if (searchInput) searchInput.value = '';
   const templateSelect = document.getElementById('newTabTemplate');
   if (templateSelect) {
     templateSelect.value = 'custom';
@@ -5733,6 +5737,7 @@ function closeCreateTabModal(e) {
   if (!e || e.target.id === 'createTabModal') {
     document.getElementById('createTabModal').classList.remove('show');
   }
+  closeFieldManagerModal(null, false);
   manageTabContext = null;
 }
 
@@ -5789,6 +5794,7 @@ async function openManageModule(mod) {
   renderSortOptionsPicker(newTabSortOptions);
   initFieldDragAndDrop();
   updateCategoriaAnchorOptions();
+  updateFieldCountDisplay();
   openModalById('createTabModal');
 }
 
@@ -6138,6 +6144,7 @@ function applyTabTemplate() {
   newTabFields = [];
   window.newTabFields = newTabFields;
   container.innerHTML = '';
+  updateFieldCountDisplay();
 
   if (templateKey === 'custom') return;
   const templateFields = tabTemplates[templateKey] || [];
@@ -6145,6 +6152,7 @@ function applyTabTemplate() {
     ...field,
     opcoes: getInheritedFieldOptions(field.nome, field.tipo)
   }));
+  updateFieldCountDisplay();
   renderSortOptionsPicker();
   updateCategoriaAnchorOptions();
 }
@@ -6242,6 +6250,7 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
   renderSortOptionsPicker();
   updateCategoriaAnchorOptions();
   filterFieldRows(getFieldSearchQuery());
+  updateFieldCountDisplay();
 
   const typeSelect = row.querySelector('.field-type');
   if (typeSelect) {
@@ -6249,6 +6258,63 @@ function addFieldWithValues({ nome = '', tipo = 'texto', obrigatorio = false, id
   }
   updateFieldType(idx, tipo);
   updateFieldOptionsSummary(idx);
+}
+
+function getActiveFieldCount() {
+  return newTabFields.filter(field => field && !field.__deleted).length;
+}
+
+function updateFieldCountDisplay() {
+  const count = getActiveFieldCount();
+  const labels = document.querySelectorAll('#fieldCountPill, #fieldManagerCountPill');
+  labels.forEach(label => {
+    if (!label) return;
+    label.textContent = `${count} campo${count === 1 ? '' : 's'}`;
+  });
+}
+
+let previousModalForFieldManager = null;
+
+function openFieldManagerModal(addNewField = false) {
+  const createModal = document.getElementById('createTabModal');
+  if (createModal?.classList.contains('show')) {
+    createModal.classList.remove('show');
+    previousModalForFieldManager = 'createTabModal';
+  }
+
+  const modal = document.getElementById('fieldManagerModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('show');
+    focusFirstField(modal);
+    document.body.classList.add('modal-open');
+  }
+
+  if (addNewField) {
+    addField();
+    const container = document.getElementById('fieldsContainer');
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    }
+  }
+}
+
+function closeFieldManagerModal(e, restorePrevious = true) {
+  if (!e || e.target.id === 'fieldManagerModal') {
+    document.getElementById('fieldManagerModal')?.classList.remove('show');
+  }
+
+  if (restorePrevious && previousModalForFieldManager === 'createTabModal') {
+    const createModal = document.getElementById('createTabModal');
+    if (createModal) {
+      createModal.classList.add('show');
+      focusFirstField(createModal);
+    }
+  } else if (![...document.querySelectorAll('.modal.show')].length) {
+    document.body.classList.remove('modal-open');
+  }
+
+  previousModalForFieldManager = null;
 }
 
 function getFieldSearchQuery() {
@@ -6360,6 +6426,7 @@ function removeField(idx) {
   renderSortOptionsPicker();
   updateCategoriaAnchorOptions();
   filterFieldRows(getFieldSearchQuery());
+  updateFieldCountDisplay();
 }
 
 function sortFieldsAlphabetically() {
@@ -6373,6 +6440,7 @@ function sortFieldsAlphabetically() {
   renderSortOptionsPicker();
   updateCategoriaAnchorOptions();
   filterFieldRows(getFieldSearchQuery());
+  updateFieldCountDisplay();
 }
 
 
@@ -6561,6 +6629,9 @@ function closeModalByEsc(modalEl) {
       break;
     case 'createTabModal':
       closeCreateTabModal();
+      break;
+    case 'fieldManagerModal':
+      closeFieldManagerModal();
       break;
     case 'manageManualTabModal':
       closeManageManualTabModal();
@@ -6789,6 +6860,8 @@ document.addEventListener('keydown', (e) => {
   window.closeCreateTabModal = closeCreateTabModal;
   window.applyTabTemplate = applyTabTemplate;
   window.addField = addField;
+  window.openFieldManagerModal = openFieldManagerModal;
+  window.closeFieldManagerModal = closeFieldManagerModal;
   window.filterFieldRows = filterFieldRows;
   window.filterManualTabFields = filterManualTabFields;
   window.salvarNovoModulo = salvarNovoModulo;
