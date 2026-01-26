@@ -2483,21 +2483,23 @@ body.theme-dark .file-input-name {
 .field-search input {
   width: 100%;
   height: 40px;
-  padding: 0 14px 0 38px;
+  padding: 0 14px 0 44px;
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: #ffffff;
   font-size: 13px;
+  box-sizing: border-box;
 }
 
 .field-search-icon {
   position: absolute;
-  left: 12px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
   color: #64748b;
+  pointer-events: none;
 }
 
 .categoria-anchor-setting {
@@ -4755,6 +4757,8 @@ body.theme-dark .field-row .field-drag {
 }
 
 .manual-tab-grid {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
 }
 
@@ -4775,6 +4779,10 @@ body.theme-dark .field-row .field-drag {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2);
   align-items: center;
+}
+
+.manual-tab-row input {
+  min-width: 0;
 }
 
 .field-required-label .field-required {
