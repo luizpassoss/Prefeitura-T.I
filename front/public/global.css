@@ -1887,6 +1887,8 @@ tbody tr td:first-child .pill[data-cat="Saúde"] { background:#fff4e5; color:#fb
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  flex: 1;
+  min-height: 0;
 }
 
 .create-tab-body::-webkit-scrollbar {
@@ -2587,6 +2589,15 @@ body.theme-dark .file-input-name {
   background-repeat: no-repeat;
   background-position: 16px center;
   background-size: 16px 16px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.field-search input[type="search"]::-webkit-search-decoration,
+.field-search input[type="search"]::-webkit-search-cancel-button,
+.field-search input[type="search"]::-webkit-search-results-button,
+.field-search input[type="search"]::-webkit-search-results-decoration {
+  display: none;
 }
 
 
@@ -4968,6 +4979,8 @@ body.theme-dark .field-row .field-drag {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  flex: 1;
+  min-height: 0;
 }
 
 .manual-tab-toolbar {
