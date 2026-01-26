@@ -2453,15 +2453,14 @@ body.theme-dark .file-input-name {
   border-radius: 12px;
   background: #ffffff;
   border: 1px solid rgba(226, 232, 240, 0.9);
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: var(--space-3);
 }
 
 .create-tab-toolbar-main {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
 }
 
@@ -2474,6 +2473,7 @@ body.theme-dark .file-input-name {
 .create-tab-toolbar-filters {
   display: flex;
   justify-content: flex-end;
+  width: 100%;
 }
 
 .create-tab-header {
@@ -2486,7 +2486,7 @@ body.theme-dark .file-input-name {
 
 .field-search {
   position: relative;
-  width: min(420px, 100%);
+  width: min(480px, 100%);
 }
 
 .field-search input {
@@ -2527,6 +2527,7 @@ body.theme-dark .file-input-name {
 .create-tab-actions {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
@@ -4592,7 +4593,7 @@ body.theme-dark #fieldsContainer:empty::before {
     "preset name type options actions"
     "required required required required actions";
   gap: 14px;
-  align-items: center;
+  align-items: start;
   padding: 12px;
   border-radius: 12px;
   border: 1px solid rgba(226, 232, 240, 0.9);
@@ -4619,6 +4620,7 @@ body.theme-dark #fieldsContainer:empty::before {
   margin: 0;
   font-size: 12px;
   color: var(--text-muted);
+  min-height: 16px;
 }
 
 .field-preset-cell {
@@ -4647,7 +4649,7 @@ body.theme-dark #fieldsContainer:empty::before {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  align-self: stretch;
+  align-self: center;
   justify-content: center;
   min-width: 44px;
 }
@@ -4664,6 +4666,7 @@ body.theme-dark #fieldsContainer:empty::before {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .field-remove {
@@ -4861,7 +4864,7 @@ body.theme-dark .field-required-label {
 
 @media (max-width: 700px) {
   .create-tab-toolbar-main {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     align-items: flex-start;
   }
 
@@ -4871,6 +4874,10 @@ body.theme-dark .field-required-label {
 
   .field-search {
     width: 100%;
+  }
+
+  .create-tab-toolbar-filters {
+    justify-content: flex-start;
   }
 
   .field-row {
