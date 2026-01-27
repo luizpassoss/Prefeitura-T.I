@@ -1877,30 +1877,32 @@ if (chkAll) {
 
 }
 
-tbody.addEventListener('change', (e) => {
-  if (!e.target.classList.contains('chk-inv')) return;
+if (tbody) {
+  tbody.addEventListener('change', (e) => {
+    if (!e.target.classList.contains('chk-inv')) return;
 
-  const id = Number(e.target.dataset.id);
+    const id = Number(e.target.dataset.id);
 
-  if (e.target.checked) {
-    selectedInvIds.add(id);
-  } else {
-    selectedInvIds.delete(id);
+    if (e.target.checked) {
+      selectedInvIds.add(id);
+    } else {
+      selectedInvIds.delete(id);
 
-    // desmarca o "Selecionar todos"
-    const chkAll = document.getElementById('chkAllInv');
-    if (chkAll) chkAll.checked = false;
-  }
+      // desmarca o "Selecionar todos"
+      const chkAll = document.getElementById('chkAllInv');
+      if (chkAll) chkAll.checked = false;
+    }
 
-  updateBulkUI();
-});
+    updateBulkUI();
+  });
 
-tbody.addEventListener('click', (e) => {
-  if (shouldIgnoreRowToggle(e.target)) return;
-  const row = e.target.closest('tr');
-  if (!row) return;
-  toggleRowCheckbox(row, '.chk-inv');
-});
+  tbody.addEventListener('click', (e) => {
+    if (shouldIgnoreRowToggle(e.target)) return;
+    const row = e.target.closest('tr');
+    if (!row) return;
+    toggleRowCheckbox(row, '.chk-inv');
+  });
+}
 
 function normalize(s){
   return (s || "")
