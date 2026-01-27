@@ -4690,7 +4690,8 @@ body.theme-dark .btn-add-tab:hover {
   flex-direction: column;
   gap: var(--space-3);
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 6px;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
@@ -4713,9 +4714,8 @@ body.theme-dark .btn-add-tab:hover {
 .field-manager-fields {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  max-height: 100%;
-  padding-right: 6px;
+  overflow: visible;
+  max-height: none;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
