@@ -104,7 +104,7 @@
         <section class="dashboard-section">
           <div class="dashboard-section-header">
             <div>
-              <h2>Indicadores principais</h2>
+              <h2 class="dashboard-section-title">Indicadores principais</h2>
               <span class="small">Atualizado em <strong id="dashboardUpdatedAt">--</strong></span>
             </div>
           </div>
@@ -130,6 +130,86 @@
               <strong class="summary-value" id="dashboardModuleRecords">0</strong>
               <span class="summary-helper" id="dashboardModuleEmptyCells">0 campos vazios</span>
             </div>
+          </div>
+        </section>
+
+        <section class="dashboard-section">
+          <div class="dashboard-section-header">
+            <div>
+              <h2 class="dashboard-section-title">Tendências</h2>
+              <span class="small">Visão consolidada dos últimos registros e atualizações.</span>
+            </div>
+          </div>
+
+          <div class="dashboard-charts">
+            <article class="dashboard-chart-card">
+              <div class="dashboard-chart-header">
+                <h3 class="dashboard-chart-title">Inventário: novos registros</h3>
+                <span class="dashboard-chart-meta">Últimos 30 dias</span>
+              </div>
+              <div class="dashboard-chart-figure" aria-hidden="true">
+                <svg viewBox="0 0 320 160" role="img">
+                  <g class="dashboard-chart-grid">
+                    <line x1="24" y1="20" x2="296" y2="20" />
+                    <line x1="24" y1="60" x2="296" y2="60" />
+                    <line x1="24" y1="100" x2="296" y2="100" />
+                    <line x1="24" y1="140" x2="296" y2="140" />
+                  </g>
+                  <path class="dashboard-chart-area" d="M24 120 L70 110 L116 88 L162 96 L208 64 L254 58 L296 42 L296 150 L24 150 Z" />
+                  <path class="dashboard-chart-line" d="M24 120 L70 110 L116 88 L162 96 L208 64 L254 58 L296 42" />
+                </svg>
+              </div>
+              <div class="dashboard-chart-legend">
+                <span>Alta recente</span>
+                <span class="dashboard-chart-pill">+18%</span>
+              </div>
+            </article>
+
+            <article class="dashboard-chart-card">
+              <div class="dashboard-chart-header">
+                <h3 class="dashboard-chart-title">Máquinas: status</h3>
+                <span class="dashboard-chart-meta">Distribuição atual</span>
+              </div>
+              <div class="dashboard-chart-figure" aria-hidden="true">
+                <svg viewBox="0 0 320 160" role="img">
+                  <g class="dashboard-chart-grid">
+                    <line x1="24" y1="30" x2="296" y2="30" />
+                    <line x1="24" y1="70" x2="296" y2="70" />
+                    <line x1="24" y1="110" x2="296" y2="110" />
+                    <line x1="24" y1="150" x2="296" y2="150" />
+                  </g>
+                  <path class="dashboard-chart-area" d="M24 110 L90 90 L156 96 L222 70 L296 52 L296 150 L24 150 Z" />
+                  <path class="dashboard-chart-line" d="M24 110 L90 90 L156 96 L222 70 L296 52" />
+                </svg>
+              </div>
+              <div class="dashboard-chart-legend">
+                <span>Maioria ativa</span>
+                <span class="dashboard-chart-pill">82%</span>
+              </div>
+            </article>
+
+            <article class="dashboard-chart-card">
+              <div class="dashboard-chart-header">
+                <h3 class="dashboard-chart-title">Módulos: crescimento</h3>
+                <span class="dashboard-chart-meta">Últimos 6 meses</span>
+              </div>
+              <div class="dashboard-chart-figure" aria-hidden="true">
+                <svg viewBox="0 0 320 160" role="img">
+                  <g class="dashboard-chart-grid">
+                    <line x1="24" y1="20" x2="296" y2="20" />
+                    <line x1="24" y1="60" x2="296" y2="60" />
+                    <line x1="24" y1="100" x2="296" y2="100" />
+                    <line x1="24" y1="140" x2="296" y2="140" />
+                  </g>
+                  <path class="dashboard-chart-area" d="M24 130 L78 118 L132 104 L186 86 L240 72 L296 50 L296 150 L24 150 Z" />
+                  <path class="dashboard-chart-line" d="M24 130 L78 118 L132 104 L186 86 L240 72 L296 50" />
+                </svg>
+              </div>
+              <div class="dashboard-chart-legend">
+                <span>Ritmo constante</span>
+                <span class="dashboard-chart-pill">+12%</span>
+              </div>
+            </article>
           </div>
         </section>
       </main>
