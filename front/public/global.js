@@ -5424,6 +5424,9 @@ const fieldPresetMap = Object.entries(tabTemplates).reduce((acc, [group, fields]
 }, {});
 
 let fieldDragInitialized = false;
+let fieldDragAnimationId = null;
+let fieldDragPointerY = null;
+let fieldDragScrollContainer = null;
 
 function getInheritedFieldOptions(nome, tipo) {
   if (tipo !== 'select') return [];
@@ -5576,8 +5579,58 @@ function initFieldDragAndDrop() {
     container.closest('.field-manager-fields') ||
     container.closest('.modal-body-scroll') ||
     container;
+  fieldDragScrollContainer = scrollContainer;
   const scrollThreshold = 50;
-  const scrollStep = 18;
+  const maxScrollStep = 22;
+  const minScrollStep = 2;
+
+  const stopAutoScroll = () => {
+    if (fieldDragAnimationId) {
+      cancelAnimationFrame(fieldDragAnimationId);
+      fieldDragAnimationId = null;
+    }
+    fieldDragPointerY = null;
+  };
+
+  const calculateSpeed = (distance, threshold) => {
+    if (distance >= threshold) return 0;
+    const ratio = Math.max(0, Math.min(1, 1 - distance / threshold));
+    return minScrollStep + (maxScrollStep - minScrollStep) * ratio;
+  };
+
+  const startAutoScroll = () => {
+    if (fieldDragAnimationId) return;
+    const tick = () => {
+      if (!container.querySelector('.field-row.dragging')) {
+        stopAutoScroll();
+        return;
+      }
+      if (fieldDragPointerY == null) {
+        fieldDragAnimationId = requestAnimationFrame(tick);
+        return;
+      }
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const rect = fieldDragScrollContainer?.getBoundingClientRect();
+      const topDistanceViewport = fieldDragPointerY;
+      const bottomDistanceViewport = viewportHeight - fieldDragPointerY;
+      const topDistanceModal = rect ? fieldDragPointerY - rect.top : topDistanceViewport;
+      const bottomDistanceModal = rect ? rect.bottom - fieldDragPointerY : bottomDistanceViewport;
+
+      const topDistance = Math.min(topDistanceViewport, topDistanceModal);
+      const bottomDistance = Math.min(bottomDistanceViewport, bottomDistanceModal);
+      let delta = 0;
+      if (topDistance < scrollThreshold) {
+        delta = -calculateSpeed(topDistance, scrollThreshold);
+      } else if (bottomDistance < scrollThreshold) {
+        delta = calculateSpeed(bottomDistance, scrollThreshold);
+      }
+      if (delta !== 0 && fieldDragScrollContainer) {
+        fieldDragScrollContainer.scrollTop += delta;
+      }
+      fieldDragAnimationId = requestAnimationFrame(tick);
+    };
+    fieldDragAnimationId = requestAnimationFrame(tick);
+  };
 
   container.addEventListener('dragstart', event => {
     const handle = event.target.closest('.field-drag');
@@ -5586,11 +5639,13 @@ function initFieldDragAndDrop() {
     if (!row) return;
     row.classList.add('dragging');
     event.dataTransfer.effectAllowed = 'move';
+    startAutoScroll();
   });
 
   container.addEventListener('dragend', event => {
     const row = event.target.closest('.field-row');
     if (row) row.classList.remove('dragging');
+    stopAutoScroll();
   });
 
   container.addEventListener('dragover', event => {
@@ -5598,14 +5653,7 @@ function initFieldDragAndDrop() {
     const dragging = container.querySelector('.field-row.dragging');
     if (!row || !dragging || row === dragging) return;
     event.preventDefault();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-    const topDistance = event.clientY;
-    const bottomDistance = viewportHeight - event.clientY;
-    if (topDistance < scrollThreshold) {
-      scrollContainer.scrollTop -= scrollStep;
-    } else if (bottomDistance < scrollThreshold) {
-      scrollContainer.scrollTop += scrollStep;
-    }
+    fieldDragPointerY = event.clientY;
     const rect = row.getBoundingClientRect();
     const shouldInsertAfter = event.clientY > rect.top + rect.height / 2;
     container.insertBefore(dragging, shouldInsertAfter ? row.nextSibling : row);
@@ -5615,6 +5663,7 @@ function initFieldDragAndDrop() {
     if (!container.querySelector('.field-row.dragging')) return;
     event.preventDefault();
     rebuildFieldRowsFromDOM();
+    stopAutoScroll();
   });
 }
 
