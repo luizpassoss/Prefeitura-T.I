@@ -454,6 +454,14 @@ let notificationsClearedAt = null;
 let notificationsSuppressed = false;
 const NOTIFICATION_DISMISSED_KEY = 'ti-notification-dismissed';
 let dismissedNotificationIds = loadDismissedNotifications();
+let guidedExportState = {
+  dataset: 'inventario',
+  scope: 'filtered',
+  format: 'both'
+};
+let guidedExportBound = false;
+const RECENT_ACTIONS_KEY = 'ti-recent-actions';
+let recentActions = loadRecentActions();
 
   updateFilterBadges();
   renderImportHistory();
@@ -471,6 +479,7 @@ let dismissedNotificationIds = loadDismissedNotifications();
   applyManualTabLabels('maquinas');
   initPaginationControls();
   renderNotifications();
+  renderRecentActions();
   const notificationToggle = document.getElementById('notificationToggle');
   if (notificationToggle) {
     notificationToggle.addEventListener('click', () => toggleNotificationPanel());
@@ -504,7 +513,68 @@ function showActionToastWithId(toastId, message, duration, getTimeoutRef, setTim
   setTimeoutRef(nextTimeout);
 }
 
+function loadRecentActions() {
+  const stored = localStorage.getItem(RECENT_ACTIONS_KEY);
+  if (!stored) return [];
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveRecentActions(actions) {
+  localStorage.setItem(RECENT_ACTIONS_KEY, JSON.stringify(actions));
+}
+
+function formatRecentTimestamp(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function renderRecentActions() {
+  const list = document.getElementById('dashboardRecentList');
+  const empty = document.getElementById('dashboardRecentEmpty');
+  if (!list || !empty) return;
+  if (!recentActions.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = recentActions.map((item) => `
+    <li class="dashboard-recent-item">
+      <div class="dashboard-recent-content">
+        <span class="dashboard-recent-title">${escapeHtml(item.message)}</span>
+        <span class="dashboard-recent-meta">${formatRecentTimestamp(item.date)}</span>
+      </div>
+      <span class="dashboard-recent-tag">${escapeHtml(item.tag || 'Ação')}</span>
+    </li>
+  `).join('');
+}
+
+function addRecentAction(message, tag = 'Ação') {
+  if (!message) return;
+  const entry = {
+    message,
+    tag,
+    date: new Date().toISOString()
+  };
+  recentActions.unshift(entry);
+  recentActions = recentActions.slice(0, 6);
+  saveRecentActions(recentActions);
+  renderRecentActions();
+}
+
 function showActionToast(message, duration = 3200) {
+  addRecentAction(message);
   showActionToastWithId(
     'actionToast',
     message,
@@ -515,6 +585,7 @@ function showActionToast(message, duration = 3200) {
 }
 
 function showActionToastLeft(message, duration = 3200) {
+  addRecentAction(message);
   showActionToastWithId(
     'actionToastLeft',
     message,
@@ -810,10 +881,62 @@ function updateModuleSummary() {
   if (filtersEl) filtersEl.textContent = modCount;
 }
 
+function formatDashboardTimestamp(date = new Date()) {
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function updateDashboardSummary() {
+  const inventoryTotal = Number(paginationState.inventory.total || data.length || 0);
+  const machinesTotal = Number(paginationState.machines.total || machineData.length || 0);
+  const inventoryPending = data.filter(item =>
+    !String(item.telefone || '').trim() ||
+    !String(item.endereco || '').trim() ||
+    !String(item.local || '').trim()
+  ).length;
+  const machinesMaintenance = machineData.filter(item =>
+    String(item.status || '').toLowerCase() === 'manutenção'
+  ).length;
+  const machinesInactive = machineData.filter(item =>
+    String(item.status || '').toLowerCase() === 'inativa'
+  ).length;
+  const machinesMissingAsset = machineData.filter(item =>
+    !String(item.patrimonio || '').trim()
+  ).length;
+  const moduleRecords = Array.isArray(moduloRegistros) ? moduloRegistros.length : 0;
+  const moduleEmptyCells = countModuloEmptyCells();
+
+  const invTotalEl = document.getElementById('dashboardInventoryTotal');
+  const invPendingEl = document.getElementById('dashboardInventoryPending');
+  const machinesTotalEl = document.getElementById('dashboardMachinesTotal');
+  const machinesMaintEl = document.getElementById('dashboardMachinesMaintenance');
+  const machinesInactiveEl = document.getElementById('dashboardMachinesInactive');
+  const machinesMissingEl = document.getElementById('dashboardMachinesMissingAsset');
+  const moduleRecordsEl = document.getElementById('dashboardModuleRecords');
+  const moduleEmptyEl = document.getElementById('dashboardModuleEmptyCells');
+  const updatedAtEl = document.getElementById('dashboardUpdatedAt');
+
+  if (invTotalEl) invTotalEl.textContent = inventoryTotal;
+  if (invPendingEl) invPendingEl.textContent = `${inventoryPending} pendência${inventoryPending === 1 ? '' : 's'}`;
+  if (machinesTotalEl) machinesTotalEl.textContent = machinesTotal;
+  if (machinesMaintEl) machinesMaintEl.textContent = `${machinesMaintenance} em manutenção`;
+  if (machinesInactiveEl) machinesInactiveEl.textContent = machinesInactive;
+  if (machinesMissingEl) machinesMissingEl.textContent = `${machinesMissingAsset} sem patrimônio`;
+  if (moduleRecordsEl) moduleRecordsEl.textContent = moduleRecords;
+  if (moduleEmptyEl) moduleEmptyEl.textContent = `${moduleEmptyCells} campos vazios`;
+  if (updatedAtEl) updatedAtEl.textContent = formatDashboardTimestamp();
+}
+
 function updateSummaries() {
   updateInventorySummary();
   updateMachineSummary();
   updateModuleSummary();
+  updateDashboardSummary();
 }
 
 function updateBulkUI() {
@@ -1066,27 +1189,29 @@ async function applyBulkEdit() {
   }
 }
 
-function buildInventoryQueryParams({ page = paginationState.inventory.page, pageSize = paginationState.inventory.pageSize, includePagination = true } = {}) {
+function buildInventoryQueryParams({ page = paginationState.inventory.page, pageSize = paginationState.inventory.pageSize, includePagination = true, includeFilters = true } = {}) {
   const params = new URLSearchParams();
   if (includePagination) {
     const requestPageSize = pageSize === 'all' ? 200 : pageSize;
     params.set('page', page);
     params.set('pageSize', requestPageSize);
   }
-  const q = (document.getElementById('q')?.value || '').trim();
-  if (q) params.set('q', q);
-  const cat = (document.getElementById('filterCategoryInv')?.value || 'All');
-  if (cat && cat !== 'All') params.set('categoria', cat);
-  const invLink = (document.getElementById('invFilterLink')?.value || '').trim();
-  if (invLink) params.set('link', invLink);
-  const invVel = (document.getElementById('invFilterVel')?.value || '').trim();
-  if (invVel) params.set('velocidade', invVel);
-  const invTel = (document.getElementById('invFilterTel')?.value || '').trim();
-  if (invTel) params.set('telefone', invTel);
-  const invLocal = (document.getElementById('invFilterLocal')?.value || '').trim();
-  if (invLocal) params.set('local', invLocal);
-  const invEnd = (document.getElementById('invFilterEndereco')?.value || '').trim();
-  if (invEnd) params.set('endereco', invEnd);
+  if (includeFilters) {
+    const q = (document.getElementById('q')?.value || '').trim();
+    if (q) params.set('q', q);
+    const cat = (document.getElementById('filterCategoryInv')?.value || 'All');
+    if (cat && cat !== 'All') params.set('categoria', cat);
+    const invLink = (document.getElementById('invFilterLink')?.value || '').trim();
+    if (invLink) params.set('link', invLink);
+    const invVel = (document.getElementById('invFilterVel')?.value || '').trim();
+    if (invVel) params.set('velocidade', invVel);
+    const invTel = (document.getElementById('invFilterTel')?.value || '').trim();
+    if (invTel) params.set('telefone', invTel);
+    const invLocal = (document.getElementById('invFilterLocal')?.value || '').trim();
+    if (invLocal) params.set('local', invLocal);
+    const invEnd = (document.getElementById('invFilterEndereco')?.value || '').trim();
+    if (invEnd) params.set('endereco', invEnd);
+  }
   if (sortState.inventory.key) {
     params.set('sortKey', sortState.inventory.key);
     params.set('sortDir', sortState.inventory.dir);
@@ -1094,27 +1219,29 @@ function buildInventoryQueryParams({ page = paginationState.inventory.page, page
   return params;
 }
 
-function buildMachineQueryParams({ page = paginationState.machines.page, pageSize = paginationState.machines.pageSize, includePagination = true } = {}) {
+function buildMachineQueryParams({ page = paginationState.machines.page, pageSize = paginationState.machines.pageSize, includePagination = true, includeFilters = true } = {}) {
   const params = new URLSearchParams();
   if (includePagination) {
     const requestPageSize = pageSize === 'all' ? 200 : pageSize;
     params.set('page', page);
     params.set('pageSize', requestPageSize);
   }
-  const q = (document.getElementById('mq')?.value || '').trim();
-  if (q) params.set('q', q);
-  const status = (document.getElementById('filterMachineStatus')?.value || 'All');
-  if (status && status !== 'All') params.set('status', status);
-  const mqNome = (document.getElementById('mqFilterNome')?.value || '').trim();
-  if (mqNome) params.set('nome_maquina', mqNome);
-  const mqPatrimonio = (document.getElementById('mqFilterPatrimonio')?.value || '').trim();
-  if (mqPatrimonio) params.set('patrimonio', mqPatrimonio);
-  const mqLocal = (document.getElementById('mqFilterLocal')?.value || '').trim();
-  if (mqLocal) params.set('local', mqLocal);
-  const mqStatus = (document.getElementById('mqFilterStatus')?.value || '').trim();
-  if (mqStatus) params.set('status_like', mqStatus);
-  const mqDescricao = (document.getElementById('mqFilterDescricao')?.value || '').trim();
-  if (mqDescricao) params.set('descricao', mqDescricao);
+  if (includeFilters) {
+    const q = (document.getElementById('mq')?.value || '').trim();
+    if (q) params.set('q', q);
+    const status = (document.getElementById('filterMachineStatus')?.value || 'All');
+    if (status && status !== 'All') params.set('status', status);
+    const mqNome = (document.getElementById('mqFilterNome')?.value || '').trim();
+    if (mqNome) params.set('nome_maquina', mqNome);
+    const mqPatrimonio = (document.getElementById('mqFilterPatrimonio')?.value || '').trim();
+    if (mqPatrimonio) params.set('patrimonio', mqPatrimonio);
+    const mqLocal = (document.getElementById('mqFilterLocal')?.value || '').trim();
+    if (mqLocal) params.set('local', mqLocal);
+    const mqStatus = (document.getElementById('mqFilterStatus')?.value || '').trim();
+    if (mqStatus) params.set('status_like', mqStatus);
+    const mqDescricao = (document.getElementById('mqFilterDescricao')?.value || '').trim();
+    if (mqDescricao) params.set('descricao', mqDescricao);
+  }
   if (sortState.machines.key) {
     params.set('sortKey', sortState.machines.key);
     params.set('sortDir', sortState.machines.dir);
@@ -2431,25 +2558,8 @@ async function fetchAllPagedRows(url, paramsBuilder) {
   return rows;
 }
 
-async function getInventarioExportData() {
-  if (selectedInvIds.size > 0) {
-    return data
-      .filter(it => selectedInvIds.has(it.id))
-      .map(it => ({
-        categoria: it.categoria || '',
-        link: it.link || '',
-        velocidade: it.velocidade || '',
-        telefone: it.telefone || '',
-        local: it.local || '',
-        endereco: it.endereco || ''
-      }));
-  }
-
-  const rows = await fetchAllPagedRows(API_URL, ({ page, pageSize }) =>
-    buildInventoryQueryParams({ page, pageSize })
-  );
-  const filtered = applyManualCustomFilters(rows, 'inventario');
-  return filtered.map(it => ({
+function mapInventarioExportRows(rows) {
+  return rows.map(it => ({
     categoria: it.categoria || '',
     link: it.link || '',
     velocidade: it.velocidade || '',
@@ -2459,10 +2569,25 @@ async function getInventarioExportData() {
   }));
 }
 
+async function getInventarioExportData(scope = 'filtered') {
+  if (scope === 'selected') {
+    return mapInventarioExportRows(
+      data.filter(it => selectedInvIds.has(it.id))
+    );
+  }
+
+  const includeFilters = scope !== 'all';
+  const rows = await fetchAllPagedRows(API_URL, ({ page, pageSize }) =>
+    buildInventoryQueryParams({ page, pageSize, includeFilters })
+  );
+  const filtered = applyManualCustomFilters(rows, 'inventario');
+  return mapInventarioExportRows(filtered);
+}
+
 async function exportInventario(type, triggerBtn) {
   setButtonLoading(triggerBtn, true);
   try {
-    const rows = await getInventarioExportData();
+    const rows = await getInventarioExportData(selectedInvIds.size > 0 ? 'selected' : 'filtered');
 
     if (!rows.length) {
       showMessage('Nenhum registro para exportar.');
@@ -2484,7 +2609,7 @@ async function exportInventario(type, triggerBtn) {
 }
 
 async function exportInventarioRelatorio() {
-  const rows = await getInventarioExportData();
+  const rows = await getInventarioExportData(selectedInvIds.size > 0 ? 'selected' : 'filtered');
 
   if (!rows.length) {
     showMessage('Nenhum registro para exportar.');
@@ -3037,24 +3162,8 @@ function drawFooter(doc) {
     pageHeight - 18
   );
 }
-async function getMaquinasExportData() {
-  if (selectedMaqIds.size > 0) {
-    return machineData
-      .filter(m => selectedMaqIds.has(m.id))
-      .map(m => ({
-        nome_maquina: m.nome_maquina || '',
-        patrimonio: m.patrimonio || '',
-        local: m.local || '',
-        status: m.status || 'Ativa',
-        descricao: m.descricao || ''
-      }));
-  }
-
-  const rows = await fetchAllPagedRows(API_MAQUINAS, ({ page, pageSize }) =>
-    buildMachineQueryParams({ page, pageSize })
-  );
-  const filtered = applyManualCustomFilters(rows, 'maquinas');
-  return filtered.map(m => ({
+function mapMaquinasExportRows(rows) {
+  return rows.map(m => ({
     nome_maquina: m.nome_maquina || '',
     patrimonio: m.patrimonio || '',
     local: m.local || '',
@@ -3063,10 +3172,25 @@ async function getMaquinasExportData() {
   }));
 }
 
+async function getMaquinasExportData(scope = 'filtered') {
+  if (scope === 'selected') {
+    return mapMaquinasExportRows(
+      machineData.filter(m => selectedMaqIds.has(m.id))
+    );
+  }
+
+  const includeFilters = scope !== 'all';
+  const rows = await fetchAllPagedRows(API_MAQUINAS, ({ page, pageSize }) =>
+    buildMachineQueryParams({ page, pageSize, includeFilters })
+  );
+  const filtered = applyManualCustomFilters(rows, 'maquinas');
+  return mapMaquinasExportRows(filtered);
+}
+
 async function exportMaquinas(type, triggerBtn) {
   setButtonLoading(triggerBtn, true);
   try {
-    const rows = await getMaquinasExportData();
+    const rows = await getMaquinasExportData(selectedMaqIds.size > 0 ? 'selected' : 'filtered');
 
     if (!rows.length) {
       showMessage('Nenhuma máquina para exportar.');
@@ -3088,7 +3212,7 @@ async function exportMaquinas(type, triggerBtn) {
 }
 
 async function exportMaquinasRelatorio() {
-  const rows = await getMaquinasExportData();
+  const rows = await getMaquinasExportData(selectedMaqIds.size > 0 ? 'selected' : 'filtered');
 
   if (!rows.length) {
     showMessage('Nenhuma máquina para exportar.');
@@ -3097,6 +3221,195 @@ async function exportMaquinasRelatorio() {
 
   exportMaquinasPDF(rows);
   exportMaquinasExcel(rows);
+}
+
+function getGuidedExportSelectionCount(dataset) {
+  if (dataset === 'inventario') return selectedInvIds.size;
+  if (dataset === 'maquinas') return selectedMaqIds.size;
+  if (dataset === 'modulo') return selectedModuloIds.size;
+  return 0;
+}
+
+function getGuidedExportFilteredCount(dataset) {
+  if (dataset === 'inventario') return paginationState.inventory.total || data.length || 0;
+  if (dataset === 'maquinas') return paginationState.machines.total || machineData.length || 0;
+  if (dataset === 'modulo') return getModuloFiltrado().length;
+  return 0;
+}
+
+function getGuidedExportDatasetLabel(dataset) {
+  if (dataset === 'inventario') return 'Inventário';
+  if (dataset === 'maquinas') return 'Máquinas';
+  if (dataset === 'modulo') return moduloAtual?.nome ? `Módulo: ${moduloAtual.nome}` : 'Módulo atual';
+  return 'Inventário';
+}
+
+function getGuidedExportScopeLabel(scope) {
+  if (scope === 'all') return 'Todos os registros';
+  if (scope === 'selected') return 'Somente selecionados';
+  return 'Filtros atuais';
+}
+
+function getGuidedExportFormatLabel(format) {
+  if (format === 'pdf') return 'PDF';
+  if (format === 'excel') return 'Excel';
+  return 'PDF + Excel';
+}
+
+function syncGuidedExportModal() {
+  const moduleOption = document.getElementById('guidedExportModuleOption');
+  const moduleAvailable = Boolean(moduloAtual?.id);
+  if (moduleOption) {
+    moduleOption.classList.toggle('is-disabled', !moduleAvailable);
+    const input = moduleOption.querySelector('input');
+    if (input) input.disabled = !moduleAvailable;
+  }
+
+  if (!moduleAvailable && guidedExportState.dataset === 'modulo') {
+    guidedExportState.dataset = 'inventario';
+  }
+
+  document.querySelectorAll('input[name="guidedExportDataset"]').forEach((input) => {
+    input.checked = input.value === guidedExportState.dataset;
+  });
+  document.querySelectorAll('input[name="guidedExportScope"]').forEach((input) => {
+    input.checked = input.value === guidedExportState.scope;
+  });
+  document.querySelectorAll('input[name="guidedExportFormat"]').forEach((input) => {
+    input.checked = input.value === guidedExportState.format;
+  });
+
+  const invMeta = document.getElementById('guidedExportInventoryMeta');
+  const mqMeta = document.getElementById('guidedExportMachinesMeta');
+  const modMeta = document.getElementById('guidedExportModuleMeta');
+  if (invMeta) invMeta.textContent = `${paginationState.inventory.total || data.length || 0} registros`;
+  if (mqMeta) mqMeta.textContent = `${paginationState.machines.total || machineData.length || 0} registros`;
+  if (modMeta) modMeta.textContent = moduleAvailable
+    ? `${moduloRegistros.length} registros`
+    : 'Selecione uma aba personalizada';
+
+  const selectedCount = getGuidedExportSelectionCount(guidedExportState.dataset);
+  const selectedOption = document.getElementById('guidedExportSelectedOption');
+  const selectedMeta = document.getElementById('guidedExportSelectedMeta');
+  const selectedInput = selectedOption?.querySelector('input');
+  if (selectedMeta) selectedMeta.textContent = `${selectedCount} selecionado${selectedCount === 1 ? '' : 's'}`;
+  if (selectedOption && selectedInput) {
+    const shouldDisable = selectedCount === 0;
+    selectedOption.classList.toggle('is-disabled', shouldDisable);
+    selectedInput.disabled = shouldDisable;
+    if (shouldDisable && guidedExportState.scope === 'selected') {
+      guidedExportState.scope = 'filtered';
+      document.querySelectorAll('input[name="guidedExportScope"]').forEach((input) => {
+        input.checked = input.value === guidedExportState.scope;
+      });
+    }
+  }
+
+  const filteredMeta = document.getElementById('guidedExportFilteredMeta');
+  const filteredCount = getGuidedExportFilteredCount(guidedExportState.dataset);
+  if (filteredMeta) {
+    filteredMeta.textContent = filteredCount
+      ? `${filteredCount} registros considerando filtros`
+      : 'Considera busca e filtros ativos';
+  }
+
+  const summaryDataset = document.getElementById('guidedExportSummaryDataset');
+  const summaryScope = document.getElementById('guidedExportSummaryScope');
+  const summaryFormat = document.getElementById('guidedExportSummaryFormat');
+  if (summaryDataset) summaryDataset.textContent = getGuidedExportDatasetLabel(guidedExportState.dataset);
+  if (summaryScope) summaryScope.textContent = getGuidedExportScopeLabel(guidedExportState.scope);
+  if (summaryFormat) summaryFormat.textContent = getGuidedExportFormatLabel(guidedExportState.format);
+}
+
+function bindGuidedExportInputs() {
+  if (guidedExportBound) return;
+  document.querySelectorAll('input[name="guidedExportDataset"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      guidedExportState.dataset = input.value;
+      syncGuidedExportModal();
+    });
+  });
+  document.querySelectorAll('input[name="guidedExportScope"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      guidedExportState.scope = input.value;
+      syncGuidedExportModal();
+    });
+  });
+  document.querySelectorAll('input[name="guidedExportFormat"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      guidedExportState.format = input.value;
+      syncGuidedExportModal();
+    });
+  });
+  guidedExportBound = true;
+}
+
+function openGuidedExport(dataset = 'inventario') {
+  guidedExportState.dataset = dataset;
+  guidedExportState.scope = 'filtered';
+  guidedExportState.format = 'both';
+  bindGuidedExportInputs();
+  syncGuidedExportModal();
+  document.querySelectorAll('.export-menu').forEach(menu => menu.classList.add('hidden'));
+  openModalById('guidedExportModal');
+}
+
+function closeGuidedExportModal(event) {
+  if (!event || event.target.id === 'guidedExportModal') {
+    const modalEl = document.getElementById('guidedExportModal');
+    if (modalEl) hideModal(modalEl);
+  }
+}
+
+function getModuloExportRows(scope) {
+  if (scope === 'selected') {
+    return moduloRegistros.filter(row => selectedModuloIds.has(row.id));
+  }
+  if (scope === 'filtered') {
+    return getModuloFiltrado().map(({ row }) => row);
+  }
+  return moduloRegistros;
+}
+
+async function confirmGuidedExport() {
+  const confirmBtn = document.getElementById('guidedExportConfirmBtn');
+  setButtonLoading(confirmBtn, true);
+  try {
+    const { dataset, scope, format } = guidedExportState;
+    if (dataset === 'inventario') {
+      const rows = await getInventarioExportData(scope);
+      if (!rows.length) {
+        showMessage('Nenhum registro de inventário para exportar.');
+        return;
+      }
+      if (format === 'pdf' || format === 'both') exportInventarioPDF(rows);
+      if (format === 'excel' || format === 'both') exportInventarioExcel(rows);
+    } else if (dataset === 'maquinas') {
+      const rows = await getMaquinasExportData(scope);
+      if (!rows.length) {
+        showMessage('Nenhuma máquina para exportar.');
+        return;
+      }
+      if (format === 'pdf' || format === 'both') exportMaquinasPDF(rows);
+      if (format === 'excel' || format === 'both') exportMaquinasExcel(rows);
+    } else if (dataset === 'modulo') {
+      if (!moduloAtual?.id) {
+        showMessage('Selecione uma aba personalizada para exportar.');
+        return;
+      }
+      const rows = getModuloExportRows(scope);
+      if (!rows.length) {
+        showMessage('Nenhum registro do módulo para exportar.');
+        return;
+      }
+      if (format === 'pdf' || format === 'both') exportModuloPDF(rows);
+      if (format === 'excel' || format === 'both') exportModuloExcel(rows);
+    }
+    showActionToast('Exportação concluída com sucesso.');
+    closeGuidedExportModal();
+  } finally {
+    setButtonLoading(confirmBtn, false);
+  }
 }
 
 function exportMaquinasPDF(data) {
@@ -3192,15 +3505,24 @@ function exportMaquinasExcel(rows) {
     document.getElementById('inventoryPageIndicator')?.classList.add('hidden');
     document.getElementById('machinesPageIndicator')?.classList.add('hidden');
 
+    if (tabName === 'dashboard') {
+      document.getElementById('tabDashboard')?.classList.add('active');
+      document.querySelector('.tab-dinamica-wrapper[data-tab-id="dashboard"] > a')?.classList.add('active');
+      updateDashboardSummary();
+      return;
+    }
+
     if (tabName === 'inventario') {
       document.getElementById('tabInventario').classList.add('active');
       document.querySelector('.tab-dinamica-wrapper[data-tab-id="inventario"] > a')?.classList.add('active');
       updatePaginationUI('inventory');
-    } else {
+    } else if (tabName === 'maquinas') {
       document.getElementById('tabMaquinas').classList.add('active');
       document.querySelector('.tab-dinamica-wrapper[data-tab-id="maquinas"] > a')?.classList.add('active');
       fetchMachines();
       updatePaginationUI('machines');
+    } else if (tabName === 'modulo') {
+      document.getElementById('tabModuloDinamico')?.classList.add('active');
     }
   }
   
@@ -4441,8 +4763,9 @@ async function importarRegistrosModulo() {
   renderModuloDinamico();
 }
 
-function exportModulo(tipo, triggerBtn) {
-  if (!moduloCampos.length || !moduloRegistros.length) {
+function exportModulo(tipo, triggerBtn, rowsOverride = null) {
+  const rowsToExport = Array.isArray(rowsOverride) ? rowsOverride : moduloRegistros;
+  if (!moduloCampos.length || !rowsToExport.length) {
     showMessage('Nenhum registro para exportar.');
     return;
   }
@@ -4450,12 +4773,12 @@ function exportModulo(tipo, triggerBtn) {
   setButtonLoading(triggerBtn, true);
   try {
     if (tipo === 'excel') {
-      exportModuloExcel();
+      exportModuloExcel(rowsToExport);
     } else if (tipo === 'pdf') {
-      exportModuloPDF();
+      exportModuloPDF(rowsToExport);
     } else if (tipo === 'both') {
-      exportModuloPDF();
-      exportModuloExcel();
+      exportModuloPDF(rowsToExport);
+      exportModuloExcel(rowsToExport);
     }
     showActionToast('Exportação concluída com sucesso.');
   } finally {
@@ -4463,9 +4786,10 @@ function exportModulo(tipo, triggerBtn) {
   }
 }
 
-function exportModuloExcel() {
+function exportModuloExcel(rowsOverride = null) {
+  const rowsToExport = Array.isArray(rowsOverride) ? rowsOverride : moduloRegistros;
   const headers = moduloCampos.map(c => c.nome);
-  const rows = moduloRegistros.map(row => (
+  const rows = rowsToExport.map(row => (
     headers.map(h => row[h] || '')
   ));
 
@@ -4484,11 +4808,12 @@ function exportModuloExcel() {
   );
 }
 
-function exportModuloPDF() {
+function exportModuloPDF(rowsOverride = null) {
+  const rowsToExport = Array.isArray(rowsOverride) ? rowsOverride : moduloRegistros;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('landscape');
   const headers = moduloCampos.map(c => c.nome);
-  const data = moduloRegistros.map(row =>
+  const data = rowsToExport.map(row =>
     headers.map(h => row[h] || '')
   );
 
@@ -7137,6 +7462,9 @@ window.clearNotifications = clearNotifications;
 window.refreshNotifications = refreshNotifications;
 window.dismissNotification = dismissNotification;
 window.handleNotificationAction = handleNotificationAction;
+window.openGuidedExport = openGuidedExport;
+window.closeGuidedExportModal = closeGuidedExportModal;
+window.confirmGuidedExport = confirmGuidedExport;
 
 
   /* ===========================
