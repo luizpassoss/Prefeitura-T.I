@@ -1344,6 +1344,7 @@ function initPaginationControls() {
      FETCH / INIT
      =========================== */
   async function fetchData(){
+    if (!document.getElementById('tabInventario')) return;
     const state = paginationState.inventory;
     const isReset = state.page === 1;
     try{
@@ -1398,6 +1399,7 @@ function initPaginationControls() {
   }
 
   async function fetchMachines(){
+    if (!document.getElementById('tabMaquinas')) return;
     const state = paginationState.machines;
     const isReset = state.page === 1;
     try{
@@ -4992,7 +4994,7 @@ async function confirmDeleteModulo() {
     await carregarModulos();
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    switchTab('inventario');
+    switchTab('dashboard');
     showActionToastLeft(`Aba "${moduloDeleteTarget.nome}" excluída.`);
   } catch (e) {
     console.error('Erro ao excluir módulo:', e);
@@ -5854,6 +5856,32 @@ const tabTemplates = {
   ]
 };
 
+const manualMigrationBlueprints = {
+  inventario: {
+    nome: 'Inventário',
+    descricao: 'Dados migrados da aba Inventário.',
+    fields: [
+      { nome: 'Categoria', tipo: 'select', obrigatorio: false, sourceKey: 'categoria' },
+      { nome: 'Link de Internet', tipo: 'select', obrigatorio: true, sourceKey: 'link' },
+      { nome: 'Velocidade (DL/UL)', tipo: 'select', obrigatorio: false, sourceKey: 'velocidade' },
+      { nome: 'Telefone', tipo: 'texto', obrigatorio: false, sourceKey: 'telefone' },
+      { nome: 'Local', tipo: 'select', obrigatorio: true, sourceKey: 'local' },
+      { nome: 'Endereço', tipo: 'texto', obrigatorio: false, sourceKey: 'endereco' }
+    ]
+  },
+  maquinas: {
+    nome: 'Máquinas',
+    descricao: 'Dados migrados da aba Máquinas.',
+    fields: [
+      { nome: 'Nome Máquina', tipo: 'texto', obrigatorio: true, sourceKey: 'nome_maquina' },
+      { nome: 'Patrimônio', tipo: 'texto', obrigatorio: false, sourceKey: 'patrimonio' },
+      { nome: 'Local', tipo: 'select', obrigatorio: false, sourceKey: 'local' },
+      { nome: 'Status', tipo: 'select', obrigatorio: false, sourceKey: 'status' },
+      { nome: 'Descrição', tipo: 'texto', obrigatorio: false, sourceKey: 'descricao' }
+    ]
+  }
+};
+
 const fieldPresetMap = Object.entries(tabTemplates).reduce((acc, [group, fields]) => {
   fields.forEach(field => {
     const key = `${group}:${field.nome}`;
@@ -6233,6 +6261,11 @@ function openCreateTabModal() {
     templateSelect.value = 'custom';
     templateSelect.disabled = false;
   }
+  const inheritanceSelect = document.getElementById('newTabInheritance');
+  if (inheritanceSelect) {
+    inheritanceSelect.value = '';
+  }
+  populateTabInheritanceOptions();
   const titleEl = document.querySelector('#createTabModal h2');
   if (titleEl) titleEl.textContent = 'Criar nova aba';
   const submitBtn = document.getElementById('createTabSubmitBtn');
@@ -6263,6 +6296,259 @@ function submitTabModal() {
     return;
   }
   salvarNovoModulo();
+}
+
+async function populateTabInheritanceOptions() {
+  const select = document.getElementById('newTabInheritance');
+  if (!select) return;
+  let modulesList = modulos;
+  if (!Array.isArray(modulesList) || !modulesList.length) {
+    try {
+      const res = await fetch(API_MODULOS);
+      modulesList = await res.json();
+    } catch (err) {
+      modulesList = [];
+    }
+  }
+  const manualOptions = [
+    { value: 'template:inventario', label: 'Inventário (manual)' },
+    { value: 'template:maquinas', label: 'Máquinas (manual)' }
+  ];
+  const moduleOptions = (modulesList || []).map((modulo) => ({
+    value: `module:${modulo.id}`,
+    label: `Módulo: ${modulo.nome}`
+  }));
+  select.innerHTML = [
+    '<option value="">Nenhuma</option>',
+    ...manualOptions.map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`),
+    ...moduleOptions.map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`)
+  ].join('');
+}
+
+async function applyTabInheritance() {
+  const select = document.getElementById('newTabInheritance');
+  if (!select) return;
+  const value = select.value;
+  if (!value) return;
+
+  if (value.startsWith('template:')) {
+    const templateKey = value.replace('template:', '');
+    const templateSelect = document.getElementById('newTabTemplate');
+    if (templateSelect) {
+      templateSelect.value = templateKey;
+    }
+    applyTabTemplate();
+    return;
+  }
+
+  if (value.startsWith('module:')) {
+    const moduleId = value.replace('module:', '');
+    const res = await fetch(`${API_MODULOS}/${moduleId}/campos`);
+    const campos = await res.json();
+    const optionsMap = loadModuleFieldOptions(moduleId);
+
+    newTabFields = [];
+    window.newTabFields = newTabFields;
+    newTabFieldOptions = { ...optionsMap };
+    const container = document.getElementById('fieldsContainer');
+    if (container) container.innerHTML = '';
+    campos.forEach((campo) => {
+      addFieldWithValues({
+        nome: campo.nome,
+        tipo: campo.tipo || 'texto',
+        obrigatorio: !!campo.obrigatorio,
+        opcoes: optionsMap[normalizeModuloSortKey(campo.nome)] || []
+      });
+    });
+    newTabSortOptions = loadModuleSortOptions(moduleId);
+    renderSortOptionsPicker(newTabSortOptions);
+    updateCategoriaAnchorOptions();
+    updateFieldCountDisplay();
+  }
+}
+
+function openManualMigrationModal() {
+  const status = document.getElementById('manualMigrationStatus');
+  if (status) status.textContent = 'Pronto para iniciar.';
+  openModalById('manualMigrationModal');
+}
+
+function closeManualMigrationModal(e) {
+  const modal = document.getElementById('manualMigrationModal');
+  if (e && e.target.id === 'manualMigrationModal') {
+    requestCloseModal(modal);
+    return;
+  }
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
+  }
+}
+
+function normalizeModuloName(name = '') {
+  return normalizeHeader(name).replace(/\s+/g, '');
+}
+
+async function ensureModuloExists(blueprint, modulesList) {
+  const normalizedTarget = normalizeModuloName(blueprint.nome);
+  const existing = (modulesList || []).find((modulo) => {
+    const normalizedName = normalizeModuloName(modulo.nome || '');
+    return normalizedName === normalizedTarget;
+  });
+  if (existing) return existing;
+  const res = await fetch(API_MODULOS, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nome: blueprint.nome, descricao: blueprint.descricao })
+  });
+  const modulo = await res.json();
+  modulesList.push(modulo);
+  return modulo;
+}
+
+async function ensureModuloFields(moduleId, fields) {
+  const existing = await fetch(`${API_MODULOS}/${moduleId}/campos`).then(r => r.json());
+  const existingMap = new Map(
+    (existing || []).map((campo) => [normalizeHeader(campo.nome), campo])
+  );
+  let ordem = existing.length;
+  for (const field of fields) {
+    if (existingMap.has(normalizeHeader(field.nome))) continue;
+    await fetch(`${API_MODULOS}/${moduleId}/campos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: field.nome,
+        tipo: field.tipo,
+        obrigatorio: field.obrigatorio,
+        ordem
+      })
+    });
+    ordem += 1;
+  }
+}
+
+function buildMigrationFieldOptions(fields) {
+  return fields.reduce((acc, field) => {
+    if (field.tipo !== 'select') return acc;
+    const options = getSelectOptionsForCampo({ nome: field.nome });
+    if (!options.length) return acc;
+    const key = normalizeModuloSortKey(field.nome);
+    if (!acc[key]) {
+      acc[key] = options;
+    }
+    return acc;
+  }, {});
+}
+
+function buildMigrationValues(fields, row, customValues, customFields) {
+  const valores = {};
+  fields.forEach((field) => {
+    valores[field.nome] = row[field.sourceKey] ?? '';
+  });
+  const rowCustom = customValues?.[row.id] || {};
+  (customFields || []).forEach((field) => {
+    valores[field.label] = rowCustom[field.key] ?? '';
+  });
+  return valores;
+}
+
+async function migrateManualTab(tabType, statusUpdate, modulesList) {
+  const blueprint = manualMigrationBlueprints[tabType];
+  if (!blueprint) return { moduleId: null, created: false, skipped: true };
+  const customFields = getManualCustomFields(tabType);
+  const customValues = getManualCustomValues(tabType);
+  const module = await ensureModuloExists(blueprint, modulesList);
+  const fields = [
+    ...blueprint.fields,
+    ...customFields.map(field => ({
+      nome: field.label,
+      tipo: 'texto',
+      obrigatorio: false,
+      sourceKey: field.key
+    }))
+  ];
+  statusUpdate(`Configurando campos do módulo ${blueprint.nome}...`);
+  await ensureModuloFields(module.id, fields);
+
+  const existingOptions = loadModuleFieldOptions(module.id);
+  const nextOptions = {
+    ...existingOptions,
+    ...buildMigrationFieldOptions(fields)
+  };
+  const categoriaField = fields.find((field) => normalizeHeader(field.nome) === 'categoria');
+  if (categoriaField) {
+    const anchor = fields.find((field) => normalizeHeader(field.nome) !== 'categoria');
+    if (anchor) {
+      nextOptions.__categoriaAnchor = normalizeModuloSortKey(anchor.nome);
+    }
+  }
+  saveModuleFieldOptions(module.id, nextOptions);
+
+  const sortOptions = loadModuleSortOptions(module.id);
+  if (!sortOptions.length) {
+    saveModuleSortOptions(
+      module.id,
+      fields.map(field => normalizeModuloSortKey(field.nome))
+    );
+  }
+
+  const registrosExistentes = await fetch(`${API_MODULOS}/${module.id}/registros`).then(r => r.json());
+  if (Array.isArray(registrosExistentes) && registrosExistentes.length) {
+    statusUpdate(`Módulo ${blueprint.nome} já possui registros, migração de dados ignorada.`);
+    return { moduleId: module.id, created: true, skipped: true };
+  }
+
+  const rows = tabType === 'inventario'
+    ? await fetchAllPagedRows(API_URL, ({ page, pageSize }) =>
+      buildInventoryQueryParams({ page, pageSize, includeFilters: false })
+    )
+    : await fetchAllPagedRows(API_MAQUINAS, ({ page, pageSize }) =>
+      buildMachineQueryParams({ page, pageSize, includeFilters: false })
+    );
+
+  let successCount = 0;
+  let errorCount = 0;
+  for (const row of rows) {
+    try {
+      const valores = buildMigrationValues(blueprint.fields, row, customValues, customFields);
+      await fetch(`${API_MODULOS}/${module.id}/registros`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valores })
+      });
+      successCount += 1;
+    } catch (err) {
+      console.error('Erro ao migrar registro', err);
+      errorCount += 1;
+    }
+  }
+
+  statusUpdate(`Migração ${blueprint.nome}: ${successCount} registro(s) migrados${errorCount ? `, ${errorCount} erro(s).` : '.'}`);
+  return { moduleId: module.id, created: true, skipped: false };
+}
+
+async function runManualMigration() {
+  const statusEl = document.getElementById('manualMigrationStatus');
+  const runBtn = document.getElementById('manualMigrationRunBtn');
+  const updateStatus = (message) => {
+    if (statusEl) statusEl.textContent = message;
+  };
+  if (runBtn) runBtn.disabled = true;
+  updateStatus('Iniciando migração...');
+  try {
+    const res = await fetch(API_MODULOS);
+    const modulesList = await res.json();
+    await migrateManualTab('inventario', updateStatus, modulesList);
+    await migrateManualTab('maquinas', updateStatus, modulesList);
+    await carregarModulos();
+    updateStatus('Migração concluída. Verifique as novas abas de módulo.');
+  } catch (err) {
+    console.error('Erro na migração', err);
+    updateStatus('Erro durante a migração. Verifique o console para detalhes.');
+  } finally {
+    if (runBtn) runBtn.disabled = false;
+  }
 }
 
 async function openManageModule(mod) {
@@ -7466,11 +7752,15 @@ document.addEventListener('keydown', (e) => {
   window.updateFieldType = updateFieldType;
   window.closeCreateTabModal = closeCreateTabModal;
   window.applyTabTemplate = applyTabTemplate;
+  window.applyTabInheritance = applyTabInheritance;
   window.addField = addField;
   window.openFieldManagerModal = openFieldManagerModal;
   window.closeFieldManagerModal = closeFieldManagerModal;
   window.filterFieldRows = filterFieldRows;
   window.filterManualTabFields = filterManualTabFields;
+  window.openManualMigrationModal = openManualMigrationModal;
+  window.closeManualMigrationModal = closeManualMigrationModal;
+  window.runManualMigration = runManualMigration;
   window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
 window.setModalLoading = setModalLoading;
