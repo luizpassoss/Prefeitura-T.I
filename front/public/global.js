@@ -460,6 +460,8 @@ let guidedExportState = {
   format: 'both'
 };
 let guidedExportBound = false;
+const RECENT_ACTIONS_KEY = 'ti-recent-actions';
+let recentActions = loadRecentActions();
 
   updateFilterBadges();
   renderImportHistory();
@@ -477,6 +479,7 @@ let guidedExportBound = false;
   applyManualTabLabels('maquinas');
   initPaginationControls();
   renderNotifications();
+  renderRecentActions();
   const notificationToggle = document.getElementById('notificationToggle');
   if (notificationToggle) {
     notificationToggle.addEventListener('click', () => toggleNotificationPanel());
@@ -510,7 +513,68 @@ function showActionToastWithId(toastId, message, duration, getTimeoutRef, setTim
   setTimeoutRef(nextTimeout);
 }
 
+function loadRecentActions() {
+  const stored = localStorage.getItem(RECENT_ACTIONS_KEY);
+  if (!stored) return [];
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveRecentActions(actions) {
+  localStorage.setItem(RECENT_ACTIONS_KEY, JSON.stringify(actions));
+}
+
+function formatRecentTimestamp(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function renderRecentActions() {
+  const list = document.getElementById('dashboardRecentList');
+  const empty = document.getElementById('dashboardRecentEmpty');
+  if (!list || !empty) return;
+  if (!recentActions.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = recentActions.map((item) => `
+    <li class="dashboard-recent-item">
+      <div class="dashboard-recent-content">
+        <span class="dashboard-recent-title">${escapeHtml(item.message)}</span>
+        <span class="dashboard-recent-meta">${formatRecentTimestamp(item.date)}</span>
+      </div>
+      <span class="dashboard-recent-tag">${escapeHtml(item.tag || 'Ação')}</span>
+    </li>
+  `).join('');
+}
+
+function addRecentAction(message, tag = 'Ação') {
+  if (!message) return;
+  const entry = {
+    message,
+    tag,
+    date: new Date().toISOString()
+  };
+  recentActions.unshift(entry);
+  recentActions = recentActions.slice(0, 6);
+  saveRecentActions(recentActions);
+  renderRecentActions();
+}
+
 function showActionToast(message, duration = 3200) {
+  addRecentAction(message);
   showActionToastWithId(
     'actionToast',
     message,
@@ -521,6 +585,7 @@ function showActionToast(message, duration = 3200) {
 }
 
 function showActionToastLeft(message, duration = 3200) {
+  addRecentAction(message);
   showActionToastWithId(
     'actionToastLeft',
     message,
