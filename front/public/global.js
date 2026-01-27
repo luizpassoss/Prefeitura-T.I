@@ -1344,6 +1344,7 @@ function initPaginationControls() {
      FETCH / INIT
      =========================== */
   async function fetchData(){
+    if (!document.getElementById('tabInventario')) return;
     const state = paginationState.inventory;
     const isReset = state.page === 1;
     try{
@@ -1398,6 +1399,7 @@ function initPaginationControls() {
   }
 
   async function fetchMachines(){
+    if (!document.getElementById('tabMaquinas')) return;
     const state = paginationState.machines;
     const isReset = state.page === 1;
     try{
@@ -4992,7 +4994,7 @@ async function confirmDeleteModulo() {
     await carregarModulos();
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    switchTab('inventario');
+    switchTab('dashboard');
     showActionToastLeft(`Aba "${moduloDeleteTarget.nome}" excluída.`);
   } catch (e) {
     console.error('Erro ao excluir módulo:', e);
