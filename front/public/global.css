@@ -734,6 +734,12 @@ body.theme-dark .brand-icon img {
   transform: translateX(0);
 }
 
+.nav a.active::before,
+.nav .tab-dinamica.active::before {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
 
 /* Main Content */
 .main {
