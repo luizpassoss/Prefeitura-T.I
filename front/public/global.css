@@ -615,7 +615,7 @@ body.theme-dark .brand-icon img {
 
 .nav a,
 .nav .tab-dinamica {
-  padding: 10px 16px 10px 28px;
+  padding: 10px 16px;
   margin: 4px 0;
   font-size: var(--font-sm);
   color: var(--text-muted);
@@ -629,21 +629,6 @@ body.theme-dark .brand-icon img {
   position: relative;
   border: 1px solid transparent;
   overflow: hidden;
-}
-
-.nav a::before,
-.nav .tab-dinamica::before {
-  content: "";
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--accent);
-  opacity: 0;
-  transform: translateY(-50%) scale(0.2);
-  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
 .tab-dinamica-wrapper {
@@ -730,21 +715,22 @@ body.theme-dark .brand-icon img {
 /* Hover suave */
 .nav a:hover,
 .nav .tab-dinamica:hover {
-  background: rgba(148, 163, 184, 0.16);
+  background: rgba(148, 163, 184, 0.12);
   color: var(--text);
-  transform: translateX(3px);
+  transform: translateX(1px);
   font-weight: 500;
   border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
 }
 
 /* Aba ativa */
 .nav a.active,
 .nav .tab-dinamica.active {
-  background: var(--accent-soft);
+  background: rgba(37, 99, 235, 0.1);
   color: var(--text);
   font-weight: 600;
-  border-color: rgba(37, 99, 235, 0.25);
-  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.2);
+  box-shadow: inset 2px 0 0 rgba(37, 99, 235, 0.5);
   transform: translateX(0);
 }
 
@@ -1873,14 +1859,15 @@ body.theme-dark .nav .tab-dinamica:hover {
   background: rgba(148, 163, 184, 0.12);
   color: #f8fafc;
   border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 6px 12px rgba(8, 8, 10, 0.35);
 }
 
 body.theme-dark .nav a.active,
 body.theme-dark .nav .tab-dinamica.active {
-  background: rgba(37, 99, 235, 0.2);
+  background: rgba(37, 99, 235, 0.16);
   color: #f8fafc;
-  border-color: rgba(59, 130, 246, 0.35);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35);
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: inset 2px 0 0 rgba(59, 130, 246, 0.55);
 }
 
 body.theme-dark .btn {
