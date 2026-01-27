@@ -52,6 +52,22 @@
   --modal-loading-text: #1f2937;
   --modal-loading-spinner: var(--accent);
   --modal-loading-spinner-track: rgba(15, 23, 42, 0.2);
+  --context-success-soft: rgba(22, 163, 74, 0.12);
+  --context-success-border: rgba(22, 163, 74, 0.35);
+  --context-success-text: #166534;
+  --context-success-icon: #16a34a;
+  --context-info-soft: rgba(59, 130, 246, 0.12);
+  --context-info-border: rgba(59, 130, 246, 0.35);
+  --context-info-text: #1d4ed8;
+  --context-info-icon: #2563eb;
+  --context-warning-soft: rgba(217, 119, 6, 0.15);
+  --context-warning-border: rgba(217, 119, 6, 0.4);
+  --context-warning-text: #92400e;
+  --context-warning-icon: #d97706;
+  --context-danger-soft: rgba(220, 38, 38, 0.12);
+  --context-danger-border: rgba(220, 38, 38, 0.35);
+  --context-danger-text: #991b1b;
+  --context-danger-icon: #dc2626;
   --space-1: 3px;
   --space-2: 6px;
   --space-3: 10px;
@@ -769,6 +785,22 @@ body.theme-dark {
   --modal-loading-text: #e5e7eb;
   --modal-loading-spinner: #93c5fd;
   --modal-loading-spinner-track: rgba(148, 163, 184, 0.35);
+  --context-success-soft: rgba(34, 197, 94, 0.18);
+  --context-success-border: rgba(34, 197, 94, 0.4);
+  --context-success-text: #86efac;
+  --context-success-icon: #22c55e;
+  --context-info-soft: rgba(59, 130, 246, 0.18);
+  --context-info-border: rgba(59, 130, 246, 0.4);
+  --context-info-text: #93c5fd;
+  --context-info-icon: #60a5fa;
+  --context-warning-soft: rgba(251, 146, 60, 0.2);
+  --context-warning-border: rgba(251, 146, 60, 0.45);
+  --context-warning-text: #fdba74;
+  --context-warning-icon: #fb923c;
+  --context-danger-soft: rgba(248, 113, 113, 0.18);
+  --context-danger-border: rgba(248, 113, 113, 0.4);
+  --context-danger-text: #fca5a5;
+  --context-danger-icon: #f87171;
 }
 
 
@@ -2552,14 +2584,14 @@ body.theme-dark .file-input-name {
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(34, 197, 94, 0.15);
+  background: var(--context-success-soft);
 }
 
 .system-message-icon svg {
   width: 18px;
   height: 18px;
   fill: none;
-  stroke: #16a34a;
+  stroke: var(--context-success-icon);
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -2568,11 +2600,11 @@ body.theme-dark .file-input-name {
 }
 
 .system-message-icon-error {
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--context-danger-soft);
 }
 
 .system-message-icon-error svg {
-  stroke: #dc2626;
+  stroke: var(--context-danger-icon);
 }
 
 #systemMessageModal.system-message-error .system-message-icon {
@@ -2581,11 +2613,11 @@ body.theme-dark .file-input-name {
 
 #systemMessageModal.system-message-error .system-message-icon-error {
   display: inline-flex;
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--context-danger-soft);
 }
 
 #systemMessageModal.system-message-error .system-message-icon-error svg {
-  stroke: #dc2626;
+  stroke: var(--context-danger-icon);
   stroke-dasharray: 40;
   stroke-dashoffset: 40;
   animation: drawCross 0.55s ease forwards;
@@ -2601,6 +2633,30 @@ body.theme-dark .file-input-name {
 
 #systemMessageModal.system-message-success .system-message-icon svg {
   animation: drawCheck 0.55s ease forwards;
+}
+
+.context-success {
+  background: var(--context-success-soft);
+  border: 1px solid var(--context-success-border);
+  color: var(--context-success-text);
+}
+
+.context-info {
+  background: var(--context-info-soft);
+  border: 1px solid var(--context-info-border);
+  color: var(--context-info-text);
+}
+
+.context-warning {
+  background: var(--context-warning-soft);
+  border: 1px solid var(--context-warning-border);
+  color: var(--context-warning-text);
+}
+
+.context-danger {
+  background: var(--context-danger-soft);
+  border: 1px solid var(--context-danger-border);
+  color: var(--context-danger-text);
 }
 
 .modal-subtitle {
