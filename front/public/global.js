@@ -365,7 +365,6 @@ const sortState = {
   machines: { key: null, dir: 'asc' }
 };
 
-const IMPORT_HISTORY_KEY = 'ti-import-history';
 const paginationState = {
   inventory: { page: 1, pageSize: 20, total: 0, isLoading: false },
   machines: { page: 1, pageSize: 20, total: 0, isLoading: false },
@@ -460,8 +459,7 @@ let guidedExportState = {
   format: 'both'
 };
 let guidedExportBound = false;
-const RECENT_ACTIONS_KEY = 'ti-recent-actions';
-let recentActions = loadRecentActions();
+let recentActions = [];
 
   updateFilterBadges();
   renderImportHistory();
@@ -513,19 +511,16 @@ function showActionToastWithId(toastId, message, duration, getTimeoutRef, setTim
   setTimeoutRef(nextTimeout);
 }
 
-function loadRecentActions() {
-  const stored = localStorage.getItem(RECENT_ACTIONS_KEY);
-  if (!stored) return [];
+async function fetchRecentActions(limit = 6) {
   try {
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
+    const res = await fetch(`${API_BASE}/activity?limit=${limit}`);
+    if (!res.ok) throw new Error('Falha ao carregar ações recentes.');
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.warn('Erro ao buscar ações recentes:', err);
     return [];
   }
-}
-
-function saveRecentActions(actions) {
-  localStorage.setItem(RECENT_ACTIONS_KEY, JSON.stringify(actions));
 }
 
 function formatRecentTimestamp(value) {
@@ -539,10 +534,11 @@ function formatRecentTimestamp(value) {
   });
 }
 
-function renderRecentActions() {
+async function renderRecentActions() {
   const list = document.getElementById('dashboardRecentList');
   const empty = document.getElementById('dashboardRecentEmpty');
   if (!list || !empty) return;
+  recentActions = await fetchRecentActions();
   if (!recentActions.length) {
     list.innerHTML = '';
     empty.style.display = 'block';
@@ -553,28 +549,34 @@ function renderRecentActions() {
     <li class="dashboard-recent-item">
       <div class="dashboard-recent-content">
         <span class="dashboard-recent-title">${escapeHtml(item.message)}</span>
-        <span class="dashboard-recent-meta">${formatRecentTimestamp(item.date)}</span>
-      </div>
-      <span class="dashboard-recent-tag">${escapeHtml(item.tag || 'Ação')}</span>
-    </li>
+      <span class="dashboard-recent-meta">${formatRecentTimestamp(item.created_at || item.date)}</span>
+    </div>
+    <span class="dashboard-recent-tag">${escapeHtml(item.tag || 'Ação')}</span>
+  </li>
   `).join('');
 }
 
-function addRecentAction(message, tag = 'Ação') {
+async function addRecentAction(message, tag = 'Ação') {
   if (!message) return;
-  const entry = {
-    message,
-    tag,
-    date: new Date().toISOString()
-  };
-  recentActions.unshift(entry);
-  recentActions = recentActions.slice(0, 6);
-  saveRecentActions(recentActions);
-  renderRecentActions();
+  try {
+    await fetch(`${API_BASE}/activity`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        tag,
+        user: getCurrentUserName()
+      })
+    });
+  } catch (err) {
+    console.warn('Erro ao registrar ação recente:', err);
+  } finally {
+    renderRecentActions();
+  }
 }
 
 function showActionToast(message, duration = 3200) {
-  addRecentAction(message);
+  void addRecentAction(message);
   showActionToastWithId(
     'actionToast',
     message,
@@ -585,7 +587,7 @@ function showActionToast(message, duration = 3200) {
 }
 
 function showActionToastLeft(message, duration = 3200) {
-  addRecentAction(message);
+  void addRecentAction(message);
   showActionToastWithId(
     'actionToastLeft',
     message,
@@ -2180,23 +2182,41 @@ function getCurrentUserName() {
   return localStorage.getItem('ti-user') || 'Usuário atual';
 }
 
-function loadImportHistory() {
+async function fetchImportHistory(limit = 10) {
   try {
-    return JSON.parse(localStorage.getItem(IMPORT_HISTORY_KEY)) || [];
+    const res = await fetch(`${API_BASE}/import/history?limit=${limit}`);
+    if (!res.ok) throw new Error('Falha ao carregar histórico.');
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
   } catch (err) {
+    console.warn('Erro ao buscar histórico de importações:', err);
     return [];
   }
 }
 
-function saveImportHistory(items) {
-  localStorage.setItem(IMPORT_HISTORY_KEY, JSON.stringify(items));
+async function fetchImportHistoryById(id) {
+  try {
+    const res = await fetch(`${API_BASE}/import/history/${id}`);
+    if (!res.ok) throw new Error('Falha ao carregar importação.');
+    return await res.json();
+  } catch (err) {
+    console.warn('Erro ao buscar importação:', err);
+    return null;
+  }
 }
 
-function recordImportHistory(entry) {
-  const history = loadImportHistory();
-  history.unshift(entry);
-  saveImportHistory(history.slice(0, 10));
-  renderImportHistory();
+async function recordImportHistory(entry) {
+  try {
+    await fetch(`${API_BASE}/import/history`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    });
+  } catch (err) {
+    console.warn('Erro ao salvar histórico de importações:', err);
+  } finally {
+    renderImportHistory();
+  }
 }
 
 function formatHistoryDate(value) {
@@ -2205,17 +2225,17 @@ function formatHistoryDate(value) {
   return date.toLocaleString('pt-BR');
 }
 
-function renderImportHistory() {
+async function renderImportHistory() {
   const tbody = document.querySelector('#importHistoryTableModal tbody');
   if (!tbody) return;
-  const history = loadImportHistory();
+  const history = await fetchImportHistory();
   if (!history.length) {
     tbody.innerHTML = '<tr><td colspan="5" style="padding:12px;color:#94a3b8">Nenhuma importação registrada.</td></tr>';
     return;
   }
   tbody.innerHTML = history.map((item) => `
     <tr>
-      <td>${formatHistoryDate(item.date)}</td>
+      <td>${formatHistoryDate(item.created_at || item.date)}</td>
       <td>${escapeHtml(item.user)}</td>
       <td>${escapeHtml(item.file)}</td>
       <td><span class="import-status ${item.status}">${item.statusLabel}</span></td>
@@ -2226,9 +2246,14 @@ function renderImportHistory() {
   `).join('');
 }
 
-function clearImportHistory() {
-  saveImportHistory([]);
-  renderImportHistory();
+async function clearImportHistory() {
+  try {
+    await fetch(`${API_BASE}/import/history`, { method: 'DELETE' });
+  } catch (err) {
+    console.warn('Erro ao limpar histórico:', err);
+  } finally {
+    renderImportHistory();
+  }
 }
 
 
@@ -4583,8 +4608,7 @@ async function executeImport({ type, rows, moduleId }) {
 }
 
 async function reprocessImport(id) {
-  const history = loadImportHistory();
-  const entry = history.find(item => item.id === id);
+  const entry = await fetchImportHistoryById(id);
   if (!entry) {
     showErrorMessage('Importação não encontrada no histórico.');
     return;
@@ -4593,20 +4617,22 @@ async function reprocessImport(id) {
   try {
     const result = await executeImport({
       type: entry.type,
-      rows: entry.rows || [],
-      moduleId: entry.moduleId
+      rows: entry.payload?.rows || [],
+      moduleId: entry.payload?.moduleId || entry.moduleId
     });
 
-    recordImportHistory({
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      date: new Date().toISOString(),
+    await recordImportHistory({
       user: getCurrentUserName(),
       file: `Reprocessado: ${entry.file}`,
       status: result.status,
       statusLabel: result.statusLabel,
       type: entry.type,
-      rows: entry.rows || [],
-      moduleId: entry.moduleId || null
+      errorCount: result.errorCount || 0,
+      successCount: result.successCount || 0,
+      payload: {
+        rows: entry.payload?.rows || [],
+        moduleId: entry.payload?.moduleId || entry.moduleId || null
+      }
     });
 
     if (entry.type === 'modulo') {
@@ -4621,16 +4647,18 @@ async function reprocessImport(id) {
   } catch (err) {
     console.error(err);
     showErrorMessage('Erro ao reprocessar importação.');
-    recordImportHistory({
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      date: new Date().toISOString(),
+    await recordImportHistory({
       user: getCurrentUserName(),
       file: `Reprocessado: ${entry.file}`,
       status: 'error',
       statusLabel: 'Falhou',
       type: entry.type,
-      rows: entry.rows || [],
-      moduleId: entry.moduleId || null
+      errorCount: 1,
+      successCount: 0,
+      payload: {
+        rows: entry.payload?.rows || [],
+        moduleId: entry.payload?.moduleId || entry.moduleId || null
+      }
     });
   }
 }
@@ -4693,16 +4721,18 @@ async function confirmImport() {
       showSuccessMessage('Importação realizada com sucesso!', 'Importação concluída');
     }
 
-    recordImportHistory({
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      date: new Date().toISOString(),
+    await recordImportHistory({
       user: getCurrentUserName(),
       file: fileName,
       status: result.status,
       statusLabel: result.statusLabel,
       type: importType,
-      rows,
-      moduleId: importType === 'modulo' ? moduloAtual?.id : null
+      errorCount: result.errorCount || result.errors?.length || 0,
+      successCount: result.successCount || result.inserted || 0,
+      payload: {
+        rows,
+        moduleId: importType === 'modulo' ? moduloAtual?.id : null
+      }
     });
 
     closeImportModal();
@@ -4717,16 +4747,18 @@ async function confirmImport() {
   } catch (err) {
     console.error(err);
     showErrorMessage('Erro ao importar dados.');
-    recordImportHistory({
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      date: new Date().toISOString(),
+    await recordImportHistory({
       user: getCurrentUserName(),
       file: fileName,
       status: 'error',
       statusLabel: 'Falhou',
       type: importType,
-      rows,
-      moduleId: importType === 'modulo' ? moduloAtual?.id : null
+      errorCount: 1,
+      successCount: 0,
+      payload: {
+        rows,
+        moduleId: importType === 'modulo' ? moduloAtual?.id : null
+      }
     });
   } finally {
     setButtonLoading(actionBtn, false);
