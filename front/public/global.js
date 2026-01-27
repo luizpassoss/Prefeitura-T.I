@@ -20,7 +20,7 @@ let camposModuloAtual = [];
 /* ===========================
    MÓDULOS DINÂMICOS
    =========================== */
-  const API_BASE = 'https://pertinently-unpublished-soila.ngrok-free.dev/api';
+  const API_BASE = `${window.location.origin}/api`;
 const API_MODULOS = `${API_BASE}/modulos`;
 
 let modulos = [];
@@ -376,8 +376,8 @@ let machineFilterTimeout = null;
   /* ===========================
      CONFIG
      =========================== */
-  const API_URL = 'https://pertinently-unpublished-soila.ngrok-free.dev/api/links';
-  const API_MAQUINAS = 'https://pertinently-unpublished-soila.ngrok-free.dev/api/maquinas';
+  const API_URL = `${API_BASE}/links`;
+  const API_MAQUINAS = `${API_BASE}/maquinas`;
 
   /* ===========================
      ELEMENTOS GLOBAIS
