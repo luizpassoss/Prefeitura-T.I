@@ -5572,7 +5572,10 @@ function initFieldDragAndDrop() {
   const container = document.getElementById('fieldsContainer');
   if (!container) return;
   fieldDragInitialized = true;
-  const scrollContainer = container.closest('.modal-body-scroll') || container;
+  const scrollContainer =
+    container.closest('.field-manager-fields') ||
+    container.closest('.modal-body-scroll') ||
+    container;
   const scrollThreshold = 50;
   const scrollStep = 18;
 
