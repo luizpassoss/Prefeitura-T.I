@@ -105,7 +105,10 @@
           <div class="dashboard-section-header">
             <div>
               <h2 class="dashboard-section-title">Indicadores principais</h2>
-              <span class="small">Atualizado em <strong id="dashboardUpdatedAt">--</strong></span>
+              <span class="update-chip">
+                <span class="update-chip-dot" aria-hidden="true"></span>
+                Atualizado em <strong id="dashboardUpdatedAt">--</strong>
+              </span>
             </div>
           </div>
 
@@ -113,22 +116,42 @@
             <div class="summary-card">
               <span class="summary-label">Inventário (total)</span>
               <strong class="summary-value" id="dashboardInventoryTotal">0</strong>
+              <div class="summary-meta">
+                <span class="summary-trend">+0%</span>
+                <span class="summary-status status-ok">Ok</span>
+              </div>
               <span class="summary-helper" id="dashboardInventoryPending">0 pendências</span>
+              <button class="summary-action" type="button" onclick="switchTab('inventario')">Ver pendências</button>
             </div>
             <div class="summary-card">
               <span class="summary-label">Máquinas (total)</span>
               <strong class="summary-value" id="dashboardMachinesTotal">0</strong>
+              <div class="summary-meta">
+                <span class="summary-trend">+0%</span>
+                <span class="summary-status status-info">Monitorar</span>
+              </div>
               <span class="summary-helper" id="dashboardMachinesMaintenance">0 em manutenção</span>
+              <button class="summary-action" type="button" onclick="switchTab('maquinas')">Ver manutenção</button>
             </div>
             <div class="summary-card">
               <span class="summary-label">Máquinas inativas</span>
               <strong class="summary-value" id="dashboardMachinesInactive">0</strong>
+              <div class="summary-meta">
+                <span class="summary-trend">-0%</span>
+                <span class="summary-status status-warning">Atenção</span>
+              </div>
               <span class="summary-helper" id="dashboardMachinesMissingAsset">0 sem patrimônio</span>
+              <button class="summary-action" type="button" onclick="switchTab('maquinas')">Revisar status</button>
             </div>
             <div class="summary-card">
               <span class="summary-label">Módulos personalizados</span>
               <strong class="summary-value" id="dashboardModuleRecords">0</strong>
+              <div class="summary-meta">
+                <span class="summary-trend">+0%</span>
+                <span class="summary-status status-neutral">Estável</span>
+              </div>
               <span class="summary-helper" id="dashboardModuleEmptyCells">0 campos vazios</span>
+              <button class="summary-action" type="button" onclick="switchTab('modulo')">Ver módulos</button>
             </div>
           </div>
         </section>
@@ -163,6 +186,10 @@
                 <span>Alta recente</span>
                 <span class="dashboard-chart-pill">+18%</span>
               </div>
+              <div class="dashboard-chart-legend-list" role="list">
+                <span class="legend-item" role="listitem"><span class="legend-dot accent"></span>Novos registros</span>
+                <span class="legend-item" role="listitem"><span class="legend-dot muted"></span>Meta</span>
+              </div>
             </article>
 
             <article class="dashboard-chart-card">
@@ -186,6 +213,10 @@
                 <span>Maioria ativa</span>
                 <span class="dashboard-chart-pill">82%</span>
               </div>
+              <div class="dashboard-chart-legend-list" role="list">
+                <span class="legend-item" role="listitem"><span class="legend-dot accent"></span>Ativas</span>
+                <span class="legend-item" role="listitem"><span class="legend-dot muted"></span>Inativas</span>
+              </div>
             </article>
 
             <article class="dashboard-chart-card">
@@ -208,6 +239,10 @@
               <div class="dashboard-chart-legend">
                 <span>Ritmo constante</span>
                 <span class="dashboard-chart-pill">+12%</span>
+              </div>
+              <div class="dashboard-chart-legend-list" role="list">
+                <span class="legend-item" role="listitem"><span class="legend-dot accent"></span>Novos módulos</span>
+                <span class="legend-item" role="listitem"><span class="legend-dot muted"></span>Base atual</span>
               </div>
             </article>
           </div>
