@@ -127,7 +127,8 @@
     cursor: pointer;
 }
 
-.nav a.active {
+.nav a.active,
+.nav .tab-dinamica.active {
     background: transparent;
     color: inherit;
     border-radius: 10px;
@@ -612,7 +613,8 @@ body.theme-dark .brand-icon img {
   flex: 1;
 }
 
-.nav a {
+.nav a,
+.nav .tab-dinamica {
   padding: 10px 16px 10px 28px;
   margin: 4px 0;
   font-size: var(--font-sm);
@@ -629,7 +631,8 @@ body.theme-dark .brand-icon img {
   overflow: hidden;
 }
 
-.nav a::before {
+.nav a::before,
+.nav .tab-dinamica::before {
   content: "";
   position: absolute;
   left: 12px;
@@ -725,7 +728,8 @@ body.theme-dark .brand-icon img {
 }
 
 /* Hover suave */
-.nav a:hover {
+.nav a:hover,
+.nav .tab-dinamica:hover {
   background: rgba(148, 163, 184, 0.16);
   color: var(--text);
   transform: translateX(3px);
@@ -734,7 +738,8 @@ body.theme-dark .brand-icon img {
 }
 
 /* Aba ativa */
-.nav a.active {
+.nav a.active,
+.nav .tab-dinamica.active {
   background: var(--accent-soft);
   color: var(--text);
   font-weight: 600;
@@ -743,7 +748,8 @@ body.theme-dark .brand-icon img {
   transform: translateX(0);
 }
 
-.nav a.active::before {
+.nav a.active::before,
+.nav .tab-dinamica.active::before {
   opacity: 1;
   transform: translateY(-50%) scale(1);
 }
@@ -1856,18 +1862,21 @@ body.theme-dark .brand::after {
   filter: brightness(1);
 }
 
-body.theme-dark .nav a {
+body.theme-dark .nav a,
+body.theme-dark .nav .tab-dinamica {
   color: #e4e4e7;
   border-color: transparent;
 }
 
-body.theme-dark .nav a:hover {
+body.theme-dark .nav a:hover,
+body.theme-dark .nav .tab-dinamica:hover {
   background: rgba(148, 163, 184, 0.12);
   color: #f8fafc;
   border-color: rgba(148, 163, 184, 0.2);
 }
 
-body.theme-dark .nav a.active {
+body.theme-dark .nav a.active,
+body.theme-dark .nav .tab-dinamica.active {
   background: rgba(37, 99, 235, 0.2);
   color: #f8fafc;
   border-color: rgba(59, 130, 246, 0.35);
