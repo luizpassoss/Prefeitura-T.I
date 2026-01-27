@@ -365,7 +365,6 @@ const sortState = {
   machines: { key: null, dir: 'asc' }
 };
 
-const IMPORT_HISTORY_KEY = 'ti-import-history';
 const paginationState = {
   inventory: { page: 1, pageSize: 20, total: 0, isLoading: false },
   machines: { page: 1, pageSize: 20, total: 0, isLoading: false },
@@ -454,6 +453,13 @@ let notificationsClearedAt = null;
 let notificationsSuppressed = false;
 const NOTIFICATION_DISMISSED_KEY = 'ti-notification-dismissed';
 let dismissedNotificationIds = loadDismissedNotifications();
+let guidedExportState = {
+  dataset: 'inventario',
+  scope: 'filtered',
+  format: 'both'
+};
+let guidedExportBound = false;
+let recentActions = [];
 
   updateFilterBadges();
   renderImportHistory();
@@ -471,6 +477,7 @@ let dismissedNotificationIds = loadDismissedNotifications();
   applyManualTabLabels('maquinas');
   initPaginationControls();
   renderNotifications();
+  renderRecentActions();
   const notificationToggle = document.getElementById('notificationToggle');
   if (notificationToggle) {
     notificationToggle.addEventListener('click', () => toggleNotificationPanel());
@@ -504,7 +511,72 @@ function showActionToastWithId(toastId, message, duration, getTimeoutRef, setTim
   setTimeoutRef(nextTimeout);
 }
 
+async function fetchRecentActions(limit = 6) {
+  try {
+    const res = await fetch(`${API_BASE}/activity?limit=${limit}`);
+    if (!res.ok) throw new Error('Falha ao carregar ações recentes.');
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.warn('Erro ao buscar ações recentes:', err);
+    return [];
+  }
+}
+
+function formatRecentTimestamp(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+async function renderRecentActions() {
+  const list = document.getElementById('dashboardRecentList');
+  const empty = document.getElementById('dashboardRecentEmpty');
+  if (!list || !empty) return;
+  recentActions = await fetchRecentActions();
+  if (!recentActions.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = recentActions.map((item) => `
+    <li class="dashboard-recent-item">
+      <div class="dashboard-recent-content">
+        <span class="dashboard-recent-title">${escapeHtml(item.message)}</span>
+      <span class="dashboard-recent-meta">${formatRecentTimestamp(item.created_at || item.date)}</span>
+    </div>
+    <span class="dashboard-recent-tag">${escapeHtml(item.tag || 'Ação')}</span>
+  </li>
+  `).join('');
+}
+
+async function addRecentAction(message, tag = 'Ação') {
+  if (!message) return;
+  try {
+    await fetch(`${API_BASE}/activity`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        tag,
+        user: getCurrentUserName()
+      })
+    });
+  } catch (err) {
+    console.warn('Erro ao registrar ação recente:', err);
+  } finally {
+    renderRecentActions();
+  }
+}
+
 function showActionToast(message, duration = 3200) {
+  void addRecentAction(message);
   showActionToastWithId(
     'actionToast',
     message,
@@ -515,6 +587,7 @@ function showActionToast(message, duration = 3200) {
 }
 
 function showActionToastLeft(message, duration = 3200) {
+  void addRecentAction(message);
   showActionToastWithId(
     'actionToastLeft',
     message,
@@ -810,10 +883,62 @@ function updateModuleSummary() {
   if (filtersEl) filtersEl.textContent = modCount;
 }
 
+function formatDashboardTimestamp(date = new Date()) {
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function updateDashboardSummary() {
+  const inventoryTotal = Number(paginationState.inventory.total || data.length || 0);
+  const machinesTotal = Number(paginationState.machines.total || machineData.length || 0);
+  const inventoryPending = data.filter(item =>
+    !String(item.telefone || '').trim() ||
+    !String(item.endereco || '').trim() ||
+    !String(item.local || '').trim()
+  ).length;
+  const machinesMaintenance = machineData.filter(item =>
+    String(item.status || '').toLowerCase() === 'manutenção'
+  ).length;
+  const machinesInactive = machineData.filter(item =>
+    String(item.status || '').toLowerCase() === 'inativa'
+  ).length;
+  const machinesMissingAsset = machineData.filter(item =>
+    !String(item.patrimonio || '').trim()
+  ).length;
+  const moduleRecords = Array.isArray(moduloRegistros) ? moduloRegistros.length : 0;
+  const moduleEmptyCells = countModuloEmptyCells();
+
+  const invTotalEl = document.getElementById('dashboardInventoryTotal');
+  const invPendingEl = document.getElementById('dashboardInventoryPending');
+  const machinesTotalEl = document.getElementById('dashboardMachinesTotal');
+  const machinesMaintEl = document.getElementById('dashboardMachinesMaintenance');
+  const machinesInactiveEl = document.getElementById('dashboardMachinesInactive');
+  const machinesMissingEl = document.getElementById('dashboardMachinesMissingAsset');
+  const moduleRecordsEl = document.getElementById('dashboardModuleRecords');
+  const moduleEmptyEl = document.getElementById('dashboardModuleEmptyCells');
+  const updatedAtEl = document.getElementById('dashboardUpdatedAt');
+
+  if (invTotalEl) invTotalEl.textContent = inventoryTotal;
+  if (invPendingEl) invPendingEl.textContent = `${inventoryPending} pendência${inventoryPending === 1 ? '' : 's'}`;
+  if (machinesTotalEl) machinesTotalEl.textContent = machinesTotal;
+  if (machinesMaintEl) machinesMaintEl.textContent = `${machinesMaintenance} em manutenção`;
+  if (machinesInactiveEl) machinesInactiveEl.textContent = machinesInactive;
+  if (machinesMissingEl) machinesMissingEl.textContent = `${machinesMissingAsset} sem patrimônio`;
+  if (moduleRecordsEl) moduleRecordsEl.textContent = moduleRecords;
+  if (moduleEmptyEl) moduleEmptyEl.textContent = `${moduleEmptyCells} campos vazios`;
+  if (updatedAtEl) updatedAtEl.textContent = formatDashboardTimestamp();
+}
+
 function updateSummaries() {
   updateInventorySummary();
   updateMachineSummary();
   updateModuleSummary();
+  updateDashboardSummary();
 }
 
 function updateBulkUI() {
@@ -1066,27 +1191,29 @@ async function applyBulkEdit() {
   }
 }
 
-function buildInventoryQueryParams({ page = paginationState.inventory.page, pageSize = paginationState.inventory.pageSize, includePagination = true } = {}) {
+function buildInventoryQueryParams({ page = paginationState.inventory.page, pageSize = paginationState.inventory.pageSize, includePagination = true, includeFilters = true } = {}) {
   const params = new URLSearchParams();
   if (includePagination) {
     const requestPageSize = pageSize === 'all' ? 200 : pageSize;
     params.set('page', page);
     params.set('pageSize', requestPageSize);
   }
-  const q = (document.getElementById('q')?.value || '').trim();
-  if (q) params.set('q', q);
-  const cat = (document.getElementById('filterCategoryInv')?.value || 'All');
-  if (cat && cat !== 'All') params.set('categoria', cat);
-  const invLink = (document.getElementById('invFilterLink')?.value || '').trim();
-  if (invLink) params.set('link', invLink);
-  const invVel = (document.getElementById('invFilterVel')?.value || '').trim();
-  if (invVel) params.set('velocidade', invVel);
-  const invTel = (document.getElementById('invFilterTel')?.value || '').trim();
-  if (invTel) params.set('telefone', invTel);
-  const invLocal = (document.getElementById('invFilterLocal')?.value || '').trim();
-  if (invLocal) params.set('local', invLocal);
-  const invEnd = (document.getElementById('invFilterEndereco')?.value || '').trim();
-  if (invEnd) params.set('endereco', invEnd);
+  if (includeFilters) {
+    const q = (document.getElementById('q')?.value || '').trim();
+    if (q) params.set('q', q);
+    const cat = (document.getElementById('filterCategoryInv')?.value || 'All');
+    if (cat && cat !== 'All') params.set('categoria', cat);
+    const invLink = (document.getElementById('invFilterLink')?.value || '').trim();
+    if (invLink) params.set('link', invLink);
+    const invVel = (document.getElementById('invFilterVel')?.value || '').trim();
+    if (invVel) params.set('velocidade', invVel);
+    const invTel = (document.getElementById('invFilterTel')?.value || '').trim();
+    if (invTel) params.set('telefone', invTel);
+    const invLocal = (document.getElementById('invFilterLocal')?.value || '').trim();
+    if (invLocal) params.set('local', invLocal);
+    const invEnd = (document.getElementById('invFilterEndereco')?.value || '').trim();
+    if (invEnd) params.set('endereco', invEnd);
+  }
   if (sortState.inventory.key) {
     params.set('sortKey', sortState.inventory.key);
     params.set('sortDir', sortState.inventory.dir);
@@ -1094,27 +1221,29 @@ function buildInventoryQueryParams({ page = paginationState.inventory.page, page
   return params;
 }
 
-function buildMachineQueryParams({ page = paginationState.machines.page, pageSize = paginationState.machines.pageSize, includePagination = true } = {}) {
+function buildMachineQueryParams({ page = paginationState.machines.page, pageSize = paginationState.machines.pageSize, includePagination = true, includeFilters = true } = {}) {
   const params = new URLSearchParams();
   if (includePagination) {
     const requestPageSize = pageSize === 'all' ? 200 : pageSize;
     params.set('page', page);
     params.set('pageSize', requestPageSize);
   }
-  const q = (document.getElementById('mq')?.value || '').trim();
-  if (q) params.set('q', q);
-  const status = (document.getElementById('filterMachineStatus')?.value || 'All');
-  if (status && status !== 'All') params.set('status', status);
-  const mqNome = (document.getElementById('mqFilterNome')?.value || '').trim();
-  if (mqNome) params.set('nome_maquina', mqNome);
-  const mqPatrimonio = (document.getElementById('mqFilterPatrimonio')?.value || '').trim();
-  if (mqPatrimonio) params.set('patrimonio', mqPatrimonio);
-  const mqLocal = (document.getElementById('mqFilterLocal')?.value || '').trim();
-  if (mqLocal) params.set('local', mqLocal);
-  const mqStatus = (document.getElementById('mqFilterStatus')?.value || '').trim();
-  if (mqStatus) params.set('status_like', mqStatus);
-  const mqDescricao = (document.getElementById('mqFilterDescricao')?.value || '').trim();
-  if (mqDescricao) params.set('descricao', mqDescricao);
+  if (includeFilters) {
+    const q = (document.getElementById('mq')?.value || '').trim();
+    if (q) params.set('q', q);
+    const status = (document.getElementById('filterMachineStatus')?.value || 'All');
+    if (status && status !== 'All') params.set('status', status);
+    const mqNome = (document.getElementById('mqFilterNome')?.value || '').trim();
+    if (mqNome) params.set('nome_maquina', mqNome);
+    const mqPatrimonio = (document.getElementById('mqFilterPatrimonio')?.value || '').trim();
+    if (mqPatrimonio) params.set('patrimonio', mqPatrimonio);
+    const mqLocal = (document.getElementById('mqFilterLocal')?.value || '').trim();
+    if (mqLocal) params.set('local', mqLocal);
+    const mqStatus = (document.getElementById('mqFilterStatus')?.value || '').trim();
+    if (mqStatus) params.set('status_like', mqStatus);
+    const mqDescricao = (document.getElementById('mqFilterDescricao')?.value || '').trim();
+    if (mqDescricao) params.set('descricao', mqDescricao);
+  }
   if (sortState.machines.key) {
     params.set('sortKey', sortState.machines.key);
     params.set('sortDir', sortState.machines.dir);
@@ -2053,23 +2182,41 @@ function getCurrentUserName() {
   return localStorage.getItem('ti-user') || 'Usuário atual';
 }
 
-function loadImportHistory() {
+async function fetchImportHistory(limit = 10) {
   try {
-    return JSON.parse(localStorage.getItem(IMPORT_HISTORY_KEY)) || [];
+    const res = await fetch(`${API_BASE}/import/history?limit=${limit}`);
+    if (!res.ok) throw new Error('Falha ao carregar histórico.');
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
   } catch (err) {
+    console.warn('Erro ao buscar histórico de importações:', err);
     return [];
   }
 }
 
-function saveImportHistory(items) {
-  localStorage.setItem(IMPORT_HISTORY_KEY, JSON.stringify(items));
+async function fetchImportHistoryById(id) {
+  try {
+    const res = await fetch(`${API_BASE}/import/history/${id}`);
+    if (!res.ok) throw new Error('Falha ao carregar importação.');
+    return await res.json();
+  } catch (err) {
+    console.warn('Erro ao buscar importação:', err);
+    return null;
+  }
 }
 
-function recordImportHistory(entry) {
-  const history = loadImportHistory();
-  history.unshift(entry);
-  saveImportHistory(history.slice(0, 10));
-  renderImportHistory();
+async function recordImportHistory(entry) {
+  try {
+    await fetch(`${API_BASE}/import/history`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    });
+  } catch (err) {
+    console.warn('Erro ao salvar histórico de importações:', err);
+  } finally {
+    renderImportHistory();
+  }
 }
 
 function formatHistoryDate(value) {
@@ -2078,17 +2225,17 @@ function formatHistoryDate(value) {
   return date.toLocaleString('pt-BR');
 }
 
-function renderImportHistory() {
+async function renderImportHistory() {
   const tbody = document.querySelector('#importHistoryTableModal tbody');
   if (!tbody) return;
-  const history = loadImportHistory();
+  const history = await fetchImportHistory();
   if (!history.length) {
     tbody.innerHTML = '<tr><td colspan="5" style="padding:12px;color:#94a3b8">Nenhuma importação registrada.</td></tr>';
     return;
   }
   tbody.innerHTML = history.map((item) => `
     <tr>
-      <td>${formatHistoryDate(item.date)}</td>
+      <td>${formatHistoryDate(item.created_at || item.date)}</td>
       <td>${escapeHtml(item.user)}</td>
       <td>${escapeHtml(item.file)}</td>
       <td><span class="import-status ${item.status}">${item.statusLabel}</span></td>
@@ -2099,9 +2246,14 @@ function renderImportHistory() {
   `).join('');
 }
 
-function clearImportHistory() {
-  saveImportHistory([]);
-  renderImportHistory();
+async function clearImportHistory() {
+  try {
+    await fetch(`${API_BASE}/import/history`, { method: 'DELETE' });
+  } catch (err) {
+    console.warn('Erro ao limpar histórico:', err);
+  } finally {
+    renderImportHistory();
+  }
 }
 
 
@@ -2431,25 +2583,8 @@ async function fetchAllPagedRows(url, paramsBuilder) {
   return rows;
 }
 
-async function getInventarioExportData() {
-  if (selectedInvIds.size > 0) {
-    return data
-      .filter(it => selectedInvIds.has(it.id))
-      .map(it => ({
-        categoria: it.categoria || '',
-        link: it.link || '',
-        velocidade: it.velocidade || '',
-        telefone: it.telefone || '',
-        local: it.local || '',
-        endereco: it.endereco || ''
-      }));
-  }
-
-  const rows = await fetchAllPagedRows(API_URL, ({ page, pageSize }) =>
-    buildInventoryQueryParams({ page, pageSize })
-  );
-  const filtered = applyManualCustomFilters(rows, 'inventario');
-  return filtered.map(it => ({
+function mapInventarioExportRows(rows) {
+  return rows.map(it => ({
     categoria: it.categoria || '',
     link: it.link || '',
     velocidade: it.velocidade || '',
@@ -2459,10 +2594,25 @@ async function getInventarioExportData() {
   }));
 }
 
+async function getInventarioExportData(scope = 'filtered') {
+  if (scope === 'selected') {
+    return mapInventarioExportRows(
+      data.filter(it => selectedInvIds.has(it.id))
+    );
+  }
+
+  const includeFilters = scope !== 'all';
+  const rows = await fetchAllPagedRows(API_URL, ({ page, pageSize }) =>
+    buildInventoryQueryParams({ page, pageSize, includeFilters })
+  );
+  const filtered = applyManualCustomFilters(rows, 'inventario');
+  return mapInventarioExportRows(filtered);
+}
+
 async function exportInventario(type, triggerBtn) {
   setButtonLoading(triggerBtn, true);
   try {
-    const rows = await getInventarioExportData();
+    const rows = await getInventarioExportData(selectedInvIds.size > 0 ? 'selected' : 'filtered');
 
     if (!rows.length) {
       showMessage('Nenhum registro para exportar.');
@@ -2484,7 +2634,7 @@ async function exportInventario(type, triggerBtn) {
 }
 
 async function exportInventarioRelatorio() {
-  const rows = await getInventarioExportData();
+  const rows = await getInventarioExportData(selectedInvIds.size > 0 ? 'selected' : 'filtered');
 
   if (!rows.length) {
     showMessage('Nenhum registro para exportar.');
@@ -3037,24 +3187,8 @@ function drawFooter(doc) {
     pageHeight - 18
   );
 }
-async function getMaquinasExportData() {
-  if (selectedMaqIds.size > 0) {
-    return machineData
-      .filter(m => selectedMaqIds.has(m.id))
-      .map(m => ({
-        nome_maquina: m.nome_maquina || '',
-        patrimonio: m.patrimonio || '',
-        local: m.local || '',
-        status: m.status || 'Ativa',
-        descricao: m.descricao || ''
-      }));
-  }
-
-  const rows = await fetchAllPagedRows(API_MAQUINAS, ({ page, pageSize }) =>
-    buildMachineQueryParams({ page, pageSize })
-  );
-  const filtered = applyManualCustomFilters(rows, 'maquinas');
-  return filtered.map(m => ({
+function mapMaquinasExportRows(rows) {
+  return rows.map(m => ({
     nome_maquina: m.nome_maquina || '',
     patrimonio: m.patrimonio || '',
     local: m.local || '',
@@ -3063,10 +3197,25 @@ async function getMaquinasExportData() {
   }));
 }
 
+async function getMaquinasExportData(scope = 'filtered') {
+  if (scope === 'selected') {
+    return mapMaquinasExportRows(
+      machineData.filter(m => selectedMaqIds.has(m.id))
+    );
+  }
+
+  const includeFilters = scope !== 'all';
+  const rows = await fetchAllPagedRows(API_MAQUINAS, ({ page, pageSize }) =>
+    buildMachineQueryParams({ page, pageSize, includeFilters })
+  );
+  const filtered = applyManualCustomFilters(rows, 'maquinas');
+  return mapMaquinasExportRows(filtered);
+}
+
 async function exportMaquinas(type, triggerBtn) {
   setButtonLoading(triggerBtn, true);
   try {
-    const rows = await getMaquinasExportData();
+    const rows = await getMaquinasExportData(selectedMaqIds.size > 0 ? 'selected' : 'filtered');
 
     if (!rows.length) {
       showMessage('Nenhuma máquina para exportar.');
@@ -3088,7 +3237,7 @@ async function exportMaquinas(type, triggerBtn) {
 }
 
 async function exportMaquinasRelatorio() {
-  const rows = await getMaquinasExportData();
+  const rows = await getMaquinasExportData(selectedMaqIds.size > 0 ? 'selected' : 'filtered');
 
   if (!rows.length) {
     showMessage('Nenhuma máquina para exportar.');
@@ -3097,6 +3246,195 @@ async function exportMaquinasRelatorio() {
 
   exportMaquinasPDF(rows);
   exportMaquinasExcel(rows);
+}
+
+function getGuidedExportSelectionCount(dataset) {
+  if (dataset === 'inventario') return selectedInvIds.size;
+  if (dataset === 'maquinas') return selectedMaqIds.size;
+  if (dataset === 'modulo') return selectedModuloIds.size;
+  return 0;
+}
+
+function getGuidedExportFilteredCount(dataset) {
+  if (dataset === 'inventario') return paginationState.inventory.total || data.length || 0;
+  if (dataset === 'maquinas') return paginationState.machines.total || machineData.length || 0;
+  if (dataset === 'modulo') return getModuloFiltrado().length;
+  return 0;
+}
+
+function getGuidedExportDatasetLabel(dataset) {
+  if (dataset === 'inventario') return 'Inventário';
+  if (dataset === 'maquinas') return 'Máquinas';
+  if (dataset === 'modulo') return moduloAtual?.nome ? `Módulo: ${moduloAtual.nome}` : 'Módulo atual';
+  return 'Inventário';
+}
+
+function getGuidedExportScopeLabel(scope) {
+  if (scope === 'all') return 'Todos os registros';
+  if (scope === 'selected') return 'Somente selecionados';
+  return 'Filtros atuais';
+}
+
+function getGuidedExportFormatLabel(format) {
+  if (format === 'pdf') return 'PDF';
+  if (format === 'excel') return 'Excel';
+  return 'PDF + Excel';
+}
+
+function syncGuidedExportModal() {
+  const moduleOption = document.getElementById('guidedExportModuleOption');
+  const moduleAvailable = Boolean(moduloAtual?.id);
+  if (moduleOption) {
+    moduleOption.classList.toggle('is-disabled', !moduleAvailable);
+    const input = moduleOption.querySelector('input');
+    if (input) input.disabled = !moduleAvailable;
+  }
+
+  if (!moduleAvailable && guidedExportState.dataset === 'modulo') {
+    guidedExportState.dataset = 'inventario';
+  }
+
+  document.querySelectorAll('input[name="guidedExportDataset"]').forEach((input) => {
+    input.checked = input.value === guidedExportState.dataset;
+  });
+  document.querySelectorAll('input[name="guidedExportScope"]').forEach((input) => {
+    input.checked = input.value === guidedExportState.scope;
+  });
+  document.querySelectorAll('input[name="guidedExportFormat"]').forEach((input) => {
+    input.checked = input.value === guidedExportState.format;
+  });
+
+  const invMeta = document.getElementById('guidedExportInventoryMeta');
+  const mqMeta = document.getElementById('guidedExportMachinesMeta');
+  const modMeta = document.getElementById('guidedExportModuleMeta');
+  if (invMeta) invMeta.textContent = `${paginationState.inventory.total || data.length || 0} registros`;
+  if (mqMeta) mqMeta.textContent = `${paginationState.machines.total || machineData.length || 0} registros`;
+  if (modMeta) modMeta.textContent = moduleAvailable
+    ? `${moduloRegistros.length} registros`
+    : 'Selecione uma aba personalizada';
+
+  const selectedCount = getGuidedExportSelectionCount(guidedExportState.dataset);
+  const selectedOption = document.getElementById('guidedExportSelectedOption');
+  const selectedMeta = document.getElementById('guidedExportSelectedMeta');
+  const selectedInput = selectedOption?.querySelector('input');
+  if (selectedMeta) selectedMeta.textContent = `${selectedCount} selecionado${selectedCount === 1 ? '' : 's'}`;
+  if (selectedOption && selectedInput) {
+    const shouldDisable = selectedCount === 0;
+    selectedOption.classList.toggle('is-disabled', shouldDisable);
+    selectedInput.disabled = shouldDisable;
+    if (shouldDisable && guidedExportState.scope === 'selected') {
+      guidedExportState.scope = 'filtered';
+      document.querySelectorAll('input[name="guidedExportScope"]').forEach((input) => {
+        input.checked = input.value === guidedExportState.scope;
+      });
+    }
+  }
+
+  const filteredMeta = document.getElementById('guidedExportFilteredMeta');
+  const filteredCount = getGuidedExportFilteredCount(guidedExportState.dataset);
+  if (filteredMeta) {
+    filteredMeta.textContent = filteredCount
+      ? `${filteredCount} registros considerando filtros`
+      : 'Considera busca e filtros ativos';
+  }
+
+  const summaryDataset = document.getElementById('guidedExportSummaryDataset');
+  const summaryScope = document.getElementById('guidedExportSummaryScope');
+  const summaryFormat = document.getElementById('guidedExportSummaryFormat');
+  if (summaryDataset) summaryDataset.textContent = getGuidedExportDatasetLabel(guidedExportState.dataset);
+  if (summaryScope) summaryScope.textContent = getGuidedExportScopeLabel(guidedExportState.scope);
+  if (summaryFormat) summaryFormat.textContent = getGuidedExportFormatLabel(guidedExportState.format);
+}
+
+function bindGuidedExportInputs() {
+  if (guidedExportBound) return;
+  document.querySelectorAll('input[name="guidedExportDataset"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      guidedExportState.dataset = input.value;
+      syncGuidedExportModal();
+    });
+  });
+  document.querySelectorAll('input[name="guidedExportScope"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      guidedExportState.scope = input.value;
+      syncGuidedExportModal();
+    });
+  });
+  document.querySelectorAll('input[name="guidedExportFormat"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      guidedExportState.format = input.value;
+      syncGuidedExportModal();
+    });
+  });
+  guidedExportBound = true;
+}
+
+function openGuidedExport(dataset = 'inventario') {
+  guidedExportState.dataset = dataset;
+  guidedExportState.scope = 'filtered';
+  guidedExportState.format = 'both';
+  bindGuidedExportInputs();
+  syncGuidedExportModal();
+  document.querySelectorAll('.export-menu').forEach(menu => menu.classList.add('hidden'));
+  openModalById('guidedExportModal');
+}
+
+function closeGuidedExportModal(event) {
+  if (!event || event.target.id === 'guidedExportModal') {
+    const modalEl = document.getElementById('guidedExportModal');
+    if (modalEl) hideModal(modalEl);
+  }
+}
+
+function getModuloExportRows(scope) {
+  if (scope === 'selected') {
+    return moduloRegistros.filter(row => selectedModuloIds.has(row.id));
+  }
+  if (scope === 'filtered') {
+    return getModuloFiltrado().map(({ row }) => row);
+  }
+  return moduloRegistros;
+}
+
+async function confirmGuidedExport() {
+  const confirmBtn = document.getElementById('guidedExportConfirmBtn');
+  setButtonLoading(confirmBtn, true);
+  try {
+    const { dataset, scope, format } = guidedExportState;
+    if (dataset === 'inventario') {
+      const rows = await getInventarioExportData(scope);
+      if (!rows.length) {
+        showMessage('Nenhum registro de inventário para exportar.');
+        return;
+      }
+      if (format === 'pdf' || format === 'both') exportInventarioPDF(rows);
+      if (format === 'excel' || format === 'both') exportInventarioExcel(rows);
+    } else if (dataset === 'maquinas') {
+      const rows = await getMaquinasExportData(scope);
+      if (!rows.length) {
+        showMessage('Nenhuma máquina para exportar.');
+        return;
+      }
+      if (format === 'pdf' || format === 'both') exportMaquinasPDF(rows);
+      if (format === 'excel' || format === 'both') exportMaquinasExcel(rows);
+    } else if (dataset === 'modulo') {
+      if (!moduloAtual?.id) {
+        showMessage('Selecione uma aba personalizada para exportar.');
+        return;
+      }
+      const rows = getModuloExportRows(scope);
+      if (!rows.length) {
+        showMessage('Nenhum registro do módulo para exportar.');
+        return;
+      }
+      if (format === 'pdf' || format === 'both') exportModuloPDF(rows);
+      if (format === 'excel' || format === 'both') exportModuloExcel(rows);
+    }
+    showActionToast('Exportação concluída com sucesso.');
+    closeGuidedExportModal();
+  } finally {
+    setButtonLoading(confirmBtn, false);
+  }
 }
 
 function exportMaquinasPDF(data) {
@@ -3192,15 +3530,24 @@ function exportMaquinasExcel(rows) {
     document.getElementById('inventoryPageIndicator')?.classList.add('hidden');
     document.getElementById('machinesPageIndicator')?.classList.add('hidden');
 
+    if (tabName === 'dashboard') {
+      document.getElementById('tabDashboard')?.classList.add('active');
+      document.querySelector('.tab-dinamica-wrapper[data-tab-id="dashboard"] > a')?.classList.add('active');
+      updateDashboardSummary();
+      return;
+    }
+
     if (tabName === 'inventario') {
       document.getElementById('tabInventario').classList.add('active');
       document.querySelector('.tab-dinamica-wrapper[data-tab-id="inventario"] > a')?.classList.add('active');
       updatePaginationUI('inventory');
-    } else {
+    } else if (tabName === 'maquinas') {
       document.getElementById('tabMaquinas').classList.add('active');
       document.querySelector('.tab-dinamica-wrapper[data-tab-id="maquinas"] > a')?.classList.add('active');
       fetchMachines();
       updatePaginationUI('machines');
+    } else if (tabName === 'modulo') {
+      document.getElementById('tabModuloDinamico')?.classList.add('active');
     }
   }
   
@@ -4261,8 +4608,7 @@ async function executeImport({ type, rows, moduleId }) {
 }
 
 async function reprocessImport(id) {
-  const history = loadImportHistory();
-  const entry = history.find(item => item.id === id);
+  const entry = await fetchImportHistoryById(id);
   if (!entry) {
     showErrorMessage('Importação não encontrada no histórico.');
     return;
@@ -4271,20 +4617,22 @@ async function reprocessImport(id) {
   try {
     const result = await executeImport({
       type: entry.type,
-      rows: entry.rows || [],
-      moduleId: entry.moduleId
+      rows: entry.payload?.rows || [],
+      moduleId: entry.payload?.moduleId || entry.moduleId
     });
 
-    recordImportHistory({
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      date: new Date().toISOString(),
+    await recordImportHistory({
       user: getCurrentUserName(),
       file: `Reprocessado: ${entry.file}`,
       status: result.status,
       statusLabel: result.statusLabel,
       type: entry.type,
-      rows: entry.rows || [],
-      moduleId: entry.moduleId || null
+      errorCount: result.errorCount || 0,
+      successCount: result.successCount || 0,
+      payload: {
+        rows: entry.payload?.rows || [],
+        moduleId: entry.payload?.moduleId || entry.moduleId || null
+      }
     });
 
     if (entry.type === 'modulo') {
@@ -4299,16 +4647,18 @@ async function reprocessImport(id) {
   } catch (err) {
     console.error(err);
     showErrorMessage('Erro ao reprocessar importação.');
-    recordImportHistory({
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      date: new Date().toISOString(),
+    await recordImportHistory({
       user: getCurrentUserName(),
       file: `Reprocessado: ${entry.file}`,
       status: 'error',
       statusLabel: 'Falhou',
       type: entry.type,
-      rows: entry.rows || [],
-      moduleId: entry.moduleId || null
+      errorCount: 1,
+      successCount: 0,
+      payload: {
+        rows: entry.payload?.rows || [],
+        moduleId: entry.payload?.moduleId || entry.moduleId || null
+      }
     });
   }
 }
@@ -4371,16 +4721,18 @@ async function confirmImport() {
       showSuccessMessage('Importação realizada com sucesso!', 'Importação concluída');
     }
 
-    recordImportHistory({
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      date: new Date().toISOString(),
+    await recordImportHistory({
       user: getCurrentUserName(),
       file: fileName,
       status: result.status,
       statusLabel: result.statusLabel,
       type: importType,
-      rows,
-      moduleId: importType === 'modulo' ? moduloAtual?.id : null
+      errorCount: result.errorCount || result.errors?.length || 0,
+      successCount: result.successCount || result.inserted || 0,
+      payload: {
+        rows,
+        moduleId: importType === 'modulo' ? moduloAtual?.id : null
+      }
     });
 
     closeImportModal();
@@ -4395,16 +4747,18 @@ async function confirmImport() {
   } catch (err) {
     console.error(err);
     showErrorMessage('Erro ao importar dados.');
-    recordImportHistory({
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      date: new Date().toISOString(),
+    await recordImportHistory({
       user: getCurrentUserName(),
       file: fileName,
       status: 'error',
       statusLabel: 'Falhou',
       type: importType,
-      rows,
-      moduleId: importType === 'modulo' ? moduloAtual?.id : null
+      errorCount: 1,
+      successCount: 0,
+      payload: {
+        rows,
+        moduleId: importType === 'modulo' ? moduloAtual?.id : null
+      }
     });
   } finally {
     setButtonLoading(actionBtn, false);
@@ -4441,8 +4795,9 @@ async function importarRegistrosModulo() {
   renderModuloDinamico();
 }
 
-function exportModulo(tipo, triggerBtn) {
-  if (!moduloCampos.length || !moduloRegistros.length) {
+function exportModulo(tipo, triggerBtn, rowsOverride = null) {
+  const rowsToExport = Array.isArray(rowsOverride) ? rowsOverride : moduloRegistros;
+  if (!moduloCampos.length || !rowsToExport.length) {
     showMessage('Nenhum registro para exportar.');
     return;
   }
@@ -4450,12 +4805,12 @@ function exportModulo(tipo, triggerBtn) {
   setButtonLoading(triggerBtn, true);
   try {
     if (tipo === 'excel') {
-      exportModuloExcel();
+      exportModuloExcel(rowsToExport);
     } else if (tipo === 'pdf') {
-      exportModuloPDF();
+      exportModuloPDF(rowsToExport);
     } else if (tipo === 'both') {
-      exportModuloPDF();
-      exportModuloExcel();
+      exportModuloPDF(rowsToExport);
+      exportModuloExcel(rowsToExport);
     }
     showActionToast('Exportação concluída com sucesso.');
   } finally {
@@ -4463,9 +4818,10 @@ function exportModulo(tipo, triggerBtn) {
   }
 }
 
-function exportModuloExcel() {
+function exportModuloExcel(rowsOverride = null) {
+  const rowsToExport = Array.isArray(rowsOverride) ? rowsOverride : moduloRegistros;
   const headers = moduloCampos.map(c => c.nome);
-  const rows = moduloRegistros.map(row => (
+  const rows = rowsToExport.map(row => (
     headers.map(h => row[h] || '')
   ));
 
@@ -4484,11 +4840,12 @@ function exportModuloExcel() {
   );
 }
 
-function exportModuloPDF() {
+function exportModuloPDF(rowsOverride = null) {
+  const rowsToExport = Array.isArray(rowsOverride) ? rowsOverride : moduloRegistros;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF('landscape');
   const headers = moduloCampos.map(c => c.nome);
-  const data = moduloRegistros.map(row =>
+  const data = rowsToExport.map(row =>
     headers.map(h => row[h] || '')
   );
 
@@ -7137,6 +7494,9 @@ window.clearNotifications = clearNotifications;
 window.refreshNotifications = refreshNotifications;
 window.dismissNotification = dismissNotification;
 window.handleNotificationAction = handleNotificationAction;
+window.openGuidedExport = openGuidedExport;
+window.closeGuidedExportModal = closeGuidedExportModal;
+window.confirmGuidedExport = confirmGuidedExport;
 
 
   /* ===========================
