@@ -909,7 +909,9 @@ function closeBulkEditModal() {
 }
 
 function closeBulkEditModalIfClicked(e) {
-  if (e?.target?.id === 'bulkEditModal') closeBulkEditModal();
+  if (e?.target?.id === 'bulkEditModal') {
+    requestCloseModal(document.getElementById('bulkEditModal'));
+  }
 }
 
 function getBulkInventoryUpdates() {
@@ -1324,8 +1326,57 @@ function initPaginationControls() {
      UTIL
      =========================== */
   function escapeHtml(s){ return (s||'').toString().replaceAll('<','&lt;').replaceAll('>','&gt;'); }
-  function showModal(el){ el.classList.add('show'); }
-  function hideModal(el){ el.classList.remove('show'); }
+
+  const modalScrollState = new WeakMap();
+
+  function getModalScrollTargets(modalEl) {
+    if (!modalEl) return [];
+    const targets = [
+      ...modalEl.querySelectorAll('.modal-body-scroll, .create-tab-body, .field-manager-body')
+    ];
+    if (targets.length) return targets;
+    const card = modalEl.querySelector('.card');
+    return card ? [card] : [];
+  }
+
+  function captureModalScrollState(modalEl) {
+    if (!modalEl) return;
+    const targets = getModalScrollTargets(modalEl);
+    const entries = targets.map((el, index) => {
+      const key = el.dataset.scrollKey || el.id || `scroll-${index}`;
+      el.dataset.scrollKey = key;
+      return { key, top: el.scrollTop };
+    });
+    if (entries.length) {
+      modalScrollState.set(modalEl, entries);
+    }
+  }
+
+  function restoreModalScrollState(modalEl) {
+    if (!modalEl) return;
+    const entries = modalScrollState.get(modalEl);
+    if (!entries) return;
+    const targets = getModalScrollTargets(modalEl);
+    const map = new Map(entries.map(entry => [entry.key, entry.top]));
+    targets.forEach((el, index) => {
+      const key = el.dataset.scrollKey || el.id || `scroll-${index}`;
+      if (map.has(key)) {
+        el.scrollTop = map.get(key);
+      }
+    });
+  }
+
+  function showModal(el){
+    if (!el) return;
+    el.classList.add('show');
+    restoreModalScrollState(el);
+  }
+
+  function hideModal(el){
+    if (!el) return;
+    captureModalScrollState(el);
+    el.classList.remove('show');
+  }
   let confirmCallback = null;
   const XLSX_BORDER = {
     top: { style: 'thin', color: { rgb: 'FF000000' } },
@@ -1509,11 +1560,12 @@ function showErrorMessage(message, title = 'Erro') {
     const modalEl = document.getElementById('systemMessageModal');
     if (!modalEl) return;
     if (!e || e.target.id === 'systemMessageModal') {
+      captureModalScrollState(modalEl);
       modalEl.classList.remove('show');
     }
   }
 
-  function showConfirm(message, onConfirm, title = 'Confirmar ação') {
+  function showConfirm(message, onConfirm, title = 'Confirmar ação', options = {}) {
     confirmCallback = onConfirm;
     const titleEl = document.getElementById('systemConfirmTitle');
     const textEl = document.getElementById('systemConfirmText');
@@ -1521,7 +1573,7 @@ function showErrorMessage(message, title = 'Erro') {
     if (titleEl) titleEl.textContent = title;
     if (textEl) textEl.textContent = message;
     if (modalEl) {
-      openModalById('systemConfirmModal');
+      openModalById('systemConfirmModal', options);
     } else {
       console.warn('[UI] Modal systemConfirmModal não encontrado.');
     }
@@ -1531,6 +1583,7 @@ function showErrorMessage(message, title = 'Erro') {
     const modalEl = document.getElementById('systemConfirmModal');
     if (!modalEl) return;
     if (!e || e.target.id === 'systemConfirmModal') {
+      captureModalScrollState(modalEl);
       modalEl.classList.remove('show');
     }
   }
@@ -2184,7 +2237,9 @@ async function carregarLogoPrefeitura() {
     focusFirstField(modal);
   }
   function closeModal(){ hideModal(modal); }
-  function closeModalIfClicked(e){ if(e.target === modal) closeModal(); }
+  function closeModalIfClicked(e){
+    if(e.target === modal) requestCloseModal(modal);
+  }
 
   function resetModal(){
     const safe = (id, v='') => { const el = document.getElementById(id); if(!el) return; el.value = v; }
@@ -2766,7 +2821,7 @@ const filterCategoryInv = document.getElementById('filterCategoryInv');
   function closeMachineModal(){ hideModal(machineModal); }
   function closeMachineModalIfClicked(e) {
   if (e.target === machineModal) {
-    closeMachineModal();
+    requestCloseModal(machineModal);
   }
 }
 
@@ -3334,12 +3389,18 @@ function openDescModal(el) {
   const content = document.getElementById('descModalContent');
 
   content.textContent = el.dataset.full || 'Sem descrição';
-  modal.classList.add('show');
+  showModal(modal);
 }
 
 function closeDescModal(e) {
-  if (!e || e.target.id === 'descModal') {
-    document.getElementById('descModal').classList.remove('show');
+  const modal = document.getElementById('descModal');
+  if (e && e.target.id === 'descModal') {
+    requestCloseModal(modal);
+    return;
+  }
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
   }
 }
 
@@ -3452,13 +3513,18 @@ function closeImportModal() {
   closeImportMappingModal();
   resetImportState();
   const modal = document.getElementById('importModal');
-  if (modal) modal.classList.remove('show');
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
+  }
   document.getElementById('importStepUpload')?.classList.remove('hidden');
   setImportMappingButtonState();
 }
 
 function closeImportModalIfClicked(e) {
-  if (e.target.id === 'importModal') closeImportModal();
+  if (e.target.id === 'importModal') {
+    requestCloseModal(document.getElementById('importModal'));
+  }
 }
 
 function openImportUploadModal() {
@@ -3478,11 +3544,16 @@ function openImportMappingModal() {
 
 function closeImportMappingModal() {
   const modal = document.getElementById('importMappingModal');
-  if (modal) modal.classList.remove('show');
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
+  }
 }
 
 function closeImportMappingModalIfClicked(e) {
-  if (e.target.id === 'importMappingModal') closeImportMappingModal();
+  if (e.target.id === 'importMappingModal') {
+    requestCloseModal(document.getElementById('importMappingModal'));
+  }
 }
 
 function resetImportState() {
@@ -3523,16 +3594,21 @@ function openImportHistoryModal() {
   const modal = document.getElementById('importHistoryModal');
   if (!modal) return;
   modal.classList.remove('hidden');
-  modal.classList.add('show');
+  showModal(modal);
 }
 
 function closeImportHistoryModal() {
   const modal = document.getElementById('importHistoryModal');
-  if (modal) modal.classList.remove('show');
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
+  }
 }
 
 function closeImportHistoryModalIfClicked(e) {
-  if (e.target.id === 'importHistoryModal') closeImportHistoryModal();
+  if (e.target.id === 'importHistoryModal') {
+    requestCloseModal(document.getElementById('importHistoryModal'));
+  }
 }
 
 function getImportFieldOptions() {
@@ -5049,8 +5125,14 @@ function editarRegistroModulo(idx) {
 }
 
 function closeModuloRegistroModal(e) {
-  if (!e || e.target.id === 'moduloRegistroModal') {
-    document.getElementById('moduloRegistroModal').classList.remove('show');
+  const modal = document.getElementById('moduloRegistroModal');
+  if (e && e.target.id === 'moduloRegistroModal') {
+    requestCloseModal(modal);
+    return;
+  }
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
   }
 }
 
@@ -5560,14 +5642,20 @@ function openCategoriaAnchorHelpModal() {
   const modal = document.getElementById('categoriaAnchorHelpModal');
   if (modal) {
     modal.classList.remove('hidden');
-    modal.classList.add('show');
+    showModal(modal);
     focusFirstField(modal);
   }
 }
 
 function closeCategoriaAnchorHelpModal(e) {
-  if (!e || e.target.id === 'categoriaAnchorHelpModal') {
-    document.getElementById('categoriaAnchorHelpModal')?.classList.remove('show');
+  const modal = document.getElementById('categoriaAnchorHelpModal');
+  if (e && e.target.id === 'categoriaAnchorHelpModal') {
+    requestCloseModal(modal);
+    return;
+  }
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
   }
 }
 
@@ -5577,8 +5665,8 @@ function initFieldDragAndDrop() {
   if (!container) return;
   fieldDragInitialized = true;
   const scrollContainer =
-    container.closest('.field-manager-fields') ||
     container.closest('.modal-body-scroll') ||
+    container.closest('.field-manager-body') ||
     container;
   fieldDragScrollContainer = scrollContainer;
   const scrollThreshold = 50;
@@ -5799,8 +5887,14 @@ function openCreateTabModal() {
 }
 
 function closeCreateTabModal(e) {
-  if (!e || e.target.id === 'createTabModal') {
-    document.getElementById('createTabModal').classList.remove('show');
+  const modal = document.getElementById('createTabModal');
+  if (e && e.target.id === 'createTabModal') {
+    requestCloseModal(modal);
+    return;
+  }
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
   }
   closeFieldManagerModal(null, false);
   manageTabContext = null;
@@ -6193,8 +6287,14 @@ function resetManualTabFields() {
 }
 
 function closeManageManualTabModal(e) {
-  if (!e || e.target.id === 'manageManualTabModal') {
-    document.getElementById('manageManualTabModal').classList.remove('show');
+  const modal = document.getElementById('manageManualTabModal');
+  if (e && e.target.id === 'manageManualTabModal') {
+    requestCloseModal(modal);
+    return;
+  }
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
   }
   manualTabContext = null;
 }
@@ -6350,7 +6450,7 @@ function openFieldManagerModal(addNewField = false) {
   const modal = document.getElementById('fieldManagerModal');
   if (modal) {
     modal.classList.remove('hidden');
-    modal.classList.add('show');
+    showModal(modal);
     focusFirstField(modal);
     document.body.classList.add('modal-open');
   }
@@ -6365,14 +6465,20 @@ function openFieldManagerModal(addNewField = false) {
 }
 
 function closeFieldManagerModal(e, restorePrevious = true) {
-  if (!e || e.target.id === 'fieldManagerModal') {
-    document.getElementById('fieldManagerModal')?.classList.remove('show');
+  const modal = document.getElementById('fieldManagerModal');
+  if (e && e.target.id === 'fieldManagerModal') {
+    requestCloseModal(modal);
+    return;
+  }
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
   }
 
   if (restorePrevious && previousModalForFieldManager === 'createTabModal') {
     const createModal = document.getElementById('createTabModal');
     if (createModal) {
-      createModal.classList.add('show');
+      showModal(createModal);
       focusFirstField(createModal);
     }
   } else if (![...document.querySelectorAll('.modal.show')].length) {
@@ -6413,14 +6519,20 @@ function openFieldTypeHelpModal() {
   const el = document.getElementById('fieldTypeHelpModal');
   if (el) {
     el.classList.remove('hidden');
-    el.classList.add('show');
+    showModal(el);
     focusFirstField(el);
   }
 }
 
 function closeFieldTypeHelpModal(e) {
-  if (!e || e.target.id === 'fieldTypeHelpModal') {
-    document.getElementById('fieldTypeHelpModal')?.classList.remove('show');
+  const modal = document.getElementById('fieldTypeHelpModal');
+  if (e && e.target.id === 'fieldTypeHelpModal') {
+    requestCloseModal(modal);
+    return;
+  }
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
   }
 }
 
@@ -6450,14 +6562,20 @@ function openFieldOptionsModal(idx) {
   const modal = document.getElementById('fieldOptionsModal');
   if (modal) {
     modal.classList.remove('hidden');
-    modal.classList.add('show');
+    showModal(modal);
     focusFirstField(modal);
   }
 }
 
 function closeFieldOptionsModal(e) {
-  if (!e || e.target.id === 'fieldOptionsModal') {
-    document.getElementById('fieldOptionsModal')?.classList.remove('show');
+  const modal = document.getElementById('fieldOptionsModal');
+  if (e && e.target.id === 'fieldOptionsModal') {
+    requestCloseModal(modal);
+    return;
+  }
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
   }
   fieldOptionsModalIndex = null;
 }
@@ -6670,11 +6788,26 @@ async function salvarNovoModulo() {
   showActionToast(`Aba "${nome}" criada com sucesso.`);
 }
 function closeAllModals() {
-  document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show'));
+  document.querySelectorAll('.modal.show').forEach(m => {
+    captureModalScrollState(m);
+    m.classList.remove('show');
+  });
   document.body.classList.remove('modal-open');
 }
 
-function closeModalByEsc(modalEl) {
+function getModalCloseConfirmation(modalEl) {
+  if (!modalEl) return null;
+  const shouldConfirm = modalEl.dataset.confirmClose === 'true';
+  if (!shouldConfirm) return null;
+  return {
+    title: modalEl.dataset.confirmTitle || 'Confirmar fechamento',
+    message:
+      modalEl.dataset.confirmMessage ||
+      'Deseja fechar este modal? Alterações não salvas podem ser perdidas.'
+  };
+}
+
+function forceCloseModal(modalEl) {
   if (!modalEl) return;
   switch (modalEl.id) {
     case 'modal':
@@ -6728,16 +6861,68 @@ function closeModalByEsc(modalEl) {
   }
 }
 
+function requestCloseModal(modalEl) {
+  const confirmData = getModalCloseConfirmation(modalEl);
+  if (confirmData) {
+    showConfirm(confirmData.message, () => forceCloseModal(modalEl), confirmData.title, { keepOpen: true });
+    return;
+  }
+  forceCloseModal(modalEl);
+}
+
+function closeModalByEsc(modalEl) {
+  requestCloseModal(modalEl);
+}
+
+function handleModalBackdropClick(event, modalId) {
+  if (!event) return;
+  const modalEl = modalId ? document.getElementById(modalId) : event.target;
+  if (!modalEl) return;
+  if (event.target === modalEl) {
+    requestCloseModal(modalEl);
+  }
+}
+
+function setModalLoading(modalEl, isLoading, message = 'Carregando...') {
+  if (!modalEl) return;
+  const card = modalEl.querySelector('.card');
+  if (!card) return;
+  if (isLoading) {
+    let overlay = card.querySelector('.modal-loading');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'modal-loading';
+      overlay.innerHTML = `
+        <div class="modal-loading-spinner" aria-hidden="true"></div>
+        <div class="modal-loading-text"></div>
+      `;
+      card.appendChild(overlay);
+    }
+    const textEl = overlay.querySelector('.modal-loading-text');
+    if (textEl) {
+      textEl.textContent = message;
+    }
+    modalEl.setAttribute('aria-busy', 'true');
+  } else {
+    card.querySelector('.modal-loading')?.remove();
+    modalEl.removeAttribute('aria-busy');
+  }
+}
+
 /**
  * Abre um modal por ID (sem conflitar com openModal do inventário).
  * Ex: openModalById('createTabModal')
  */
-function openModalById(id) {
-  closeAllModals();
+function openModalById(id, options = {}) {
+  const { keepOpen = false } = options || {};
+  if (!keepOpen) {
+    closeAllModals();
+  }
   const el = document.getElementById(id);
   if (el) {
     el.classList.remove('hidden');
     el.classList.add('show');
+    restoreModalScrollState(el);
     focusFirstField(el);
     document.body.classList.add('modal-open');
   }
@@ -6931,6 +7116,7 @@ document.addEventListener('keydown', (e) => {
   window.filterManualTabFields = filterManualTabFields;
   window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
+window.setModalLoading = setModalLoading;
 window.removeField = removeField;
 window.openNovoRegistroModulo = openNovoRegistroModulo;
 window.editarRegistroModulo = editarRegistroModulo;
