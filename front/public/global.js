@@ -5475,7 +5475,7 @@ function getFieldRowsData() {
 function rebuildFieldRowsFromDOM() {
   const container = document.getElementById('fieldsContainer');
   if (!container) return;
-  const rowsData = getFieldRowsData().filter(row => row.nome);
+  const rowsData = getFieldRowsData();
   newTabFields = [];
   window.newTabFields = newTabFields;
   container.innerHTML = '';
@@ -5661,11 +5661,12 @@ function initFieldDragAndDrop() {
   });
 
   container.addEventListener('dragover', event => {
-    const row = event.target.closest('.field-row');
     const dragging = container.querySelector('.field-row.dragging');
-    if (!row || !dragging || row === dragging) return;
+    if (!dragging) return;
     event.preventDefault();
     fieldDragPointerY = event.clientY;
+    const row = event.target.closest('.field-row');
+    if (!row || row === dragging) return;
     const rect = row.getBoundingClientRect();
     const shouldInsertAfter = event.clientY > rect.top + rect.height / 2;
     container.insertBefore(dragging, shouldInsertAfter ? row.nextSibling : row);
