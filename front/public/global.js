@@ -5598,9 +5598,9 @@ function initFieldDragAndDrop() {
     const dragging = container.querySelector('.field-row.dragging');
     if (!row || !dragging || row === dragging) return;
     event.preventDefault();
-    const scrollRect = scrollContainer.getBoundingClientRect();
-    const topDistance = event.clientY - scrollRect.top;
-    const bottomDistance = scrollRect.bottom - event.clientY;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const topDistance = event.clientY;
+    const bottomDistance = viewportHeight - event.clientY;
     if (topDistance < scrollThreshold) {
       scrollContainer.scrollTop -= scrollStep;
     } else if (bottomDistance < scrollThreshold) {
