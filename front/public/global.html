@@ -1413,6 +1413,14 @@
             <option value="maquinas">Máquinas (status e patrimônio)</option>
           </select>
         </div>
+
+        <div class="form-full">
+          <label for="newTabInheritance">Herdar campos de outra aba</label>
+          <select id="newTabInheritance" class="select" onchange="applyTabInheritance()">
+            <option value="">Nenhuma</option>
+          </select>
+          <span class="small">Copie todos os campos de módulos existentes ou das abas manuais.</span>
+        </div>
       </div>
 
       <div class="create-tab-fields-summary">
@@ -1431,6 +1439,14 @@
             + Adicionar Campo
           </button>
         </div>
+      </div>
+
+      <div class="migration-callout">
+        <div>
+          <strong>Migrar abas manuais</strong>
+          <span class="small">Converta Inventário e Máquinas em módulos sem perder dados.</span>
+        </div>
+        <button type="button" class="btn secondary" onclick="openManualMigrationModal()">Migrar agora</button>
       </div>
 
       <div id="categoriaAnchorWrapper" class="create-tab-header hidden categoria-anchor-setting">
@@ -1452,6 +1468,27 @@
     <div class="modal-footer">
       <button class="btn-cancelar" onclick="closeCreateTabModal()">Cancelar</button>
       <button id="createTabSubmitBtn" class="btn-salvar" onclick="submitTabModal()">Criar Aba</button>
+    </div>
+  </div>
+</div>
+
+<div id="manualMigrationModal" class="modal" onclick="closeManualMigrationModal(event)">
+  <div class="card modal-card-fixed migration-card" onclick="event.stopPropagation()">
+    <div class="modal-title-row">
+      <h2>Migrar abas manuais</h2>
+      <button type="button" class="modal-close" onclick="closeManualMigrationModal()">✕</button>
+    </div>
+    <p class="modal-subtitle">
+      Este processo cria módulos equivalentes e copia todos os registros e campos personalizados.
+    </p>
+    <ul class="migration-list">
+      <li>Inventário ➜ módulo “Inventário”</li>
+      <li>Máquinas ➜ módulo “Máquinas”</li>
+    </ul>
+    <div id="manualMigrationStatus" class="migration-status">Pronto para iniciar.</div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeManualMigrationModal()">Cancelar</button>
+      <button id="manualMigrationRunBtn" class="btn-salvar" onclick="runManualMigration()">Executar migração</button>
     </div>
   </div>
 </div>
