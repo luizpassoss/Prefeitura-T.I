@@ -32,8 +32,11 @@
 
 
     <nav class="nav">
+      <div class="tab-dinamica-wrapper" data-tab-type="static" data-tab-id="dashboard">
+        <a class="active" onclick="switchTab('dashboard')">Dashboard</a>
+      </div>
       <div class="tab-dinamica-wrapper" data-tab-type="manual" data-tab-id="inventario">
-        <a class="active" onclick="switchTab('inventario')">Inventário</a>
+        <a onclick="switchTab('inventario')">Inventário</a>
         <button class="tab-menu-btn" type="button" aria-label="Opções da aba Inventário" aria-haspopup="menu" aria-expanded="false" aria-controls="tabMenuInventario" onclick="toggleTabMenu(this, event)">
           <span aria-hidden="true">⋯</span>
         </button>
@@ -84,7 +87,55 @@
   <div class="tab-content">
 
     <!-- INVENTÁRIO -->
-    <section id="tabInventario" class="tab active">
+    <section id="tabDashboard" class="tab active">
+      <main class="main">
+        <div class="header">
+          <div>
+            <h1>Painel geral</h1>
+            <div class="small">Acompanhe os principais indicadores do sistema em um só lugar.</div>
+          </div>
+          <div class="controls dashboard-actions">
+            <button class="btn secondary" type="button" onclick="switchTab('inventario')">Abrir Inventário</button>
+            <button class="btn secondary" type="button" onclick="switchTab('maquinas')">Abrir Máquinas</button>
+            <button class="btn" type="button" onclick="openGuidedExport('inventario')">Exportação guiada</button>
+          </div>
+        </div>
+
+        <section class="dashboard-section">
+          <div class="dashboard-section-header">
+            <div>
+              <h2>Indicadores principais</h2>
+              <span class="small">Atualizado em <strong id="dashboardUpdatedAt">--</strong></span>
+            </div>
+          </div>
+
+          <div class="summary-grid dashboard-summary-grid">
+            <div class="summary-card">
+              <span class="summary-label">Inventário (total)</span>
+              <strong class="summary-value" id="dashboardInventoryTotal">0</strong>
+              <span class="summary-helper" id="dashboardInventoryPending">0 pendências</span>
+            </div>
+            <div class="summary-card">
+              <span class="summary-label">Máquinas (total)</span>
+              <strong class="summary-value" id="dashboardMachinesTotal">0</strong>
+              <span class="summary-helper" id="dashboardMachinesMaintenance">0 em manutenção</span>
+            </div>
+            <div class="summary-card">
+              <span class="summary-label">Máquinas inativas</span>
+              <strong class="summary-value" id="dashboardMachinesInactive">0</strong>
+              <span class="summary-helper" id="dashboardMachinesMissingAsset">0 sem patrimônio</span>
+            </div>
+            <div class="summary-card">
+              <span class="summary-label">Módulos personalizados</span>
+              <strong class="summary-value" id="dashboardModuleRecords">0</strong>
+              <span class="summary-helper" id="dashboardModuleEmptyCells">0 campos vazios</span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </section>
+
+    <section id="tabInventario" class="tab">
       <main class="main">
         <div class="header">
           <div>
@@ -154,6 +205,11 @@
               </button>
 
               <div id="exportMenuInv" class="export-menu hidden">
+                <button onclick="openGuidedExport('inventario')">
+                  <span class="icon" aria-hidden="true">✨</span>
+                  Exportação guiada
+                </button>
+
                 <button onclick="exportInventario('pdf', this)">
                   <span class="icon pdf-icon"></span>
                   PDF
@@ -345,6 +401,11 @@
               </button>
 
               <div id="exportMenuMq" class="export-menu hidden">
+                <button onclick="openGuidedExport('maquinas')">
+                  <span class="icon" aria-hidden="true">✨</span>
+                  Exportação guiada
+                </button>
+
                 <button onclick="exportMaquinas('pdf', this)">
                   <span class="icon pdf-icon"></span>
                   PDF
@@ -534,6 +595,11 @@
               </button>
 
               <div id="exportMenuMod" class="export-menu hidden">
+              <button onclick="openGuidedExport('modulo')">
+                <span class="icon" aria-hidden="true">✨</span>
+                Exportação guiada
+              </button>
+
               <button onclick="exportModulo('pdf', this)">
                 <span class="icon pdf-icon"></span>
                 PDF
@@ -1348,6 +1414,91 @@
       <button class="btn cancel" type="button" onclick="resetManualTabFields()">Restaurar padrão</button>
       <button class="btn-cancelar" onclick="closeManageManualTabModal()">Cancelar</button>
       <button class="btn-salvar" onclick="saveManualTabFields()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="guidedExportModal" class="modal" onclick="closeGuidedExportModal(event)">
+  <div class="card modal-card-fixed guided-export-card" onclick="event.stopPropagation()">
+    <div class="modal-heading">
+      <h2>Exportação guiada</h2>
+      <p class="modal-subtitle">Escolha origem, escopo e formato antes de exportar.</p>
+    </div>
+
+    <div class="modal-body-scroll">
+      <div class="guided-export-step">
+        <span class="guided-export-step-label">1. O que deseja exportar?</span>
+        <div class="guided-export-options" id="guidedExportDatasetOptions">
+          <label class="guided-export-option">
+            <input type="radio" name="guidedExportDataset" value="inventario" />
+            <span class="option-title">Inventário</span>
+            <span class="option-meta" id="guidedExportInventoryMeta">0 registros</span>
+          </label>
+          <label class="guided-export-option">
+            <input type="radio" name="guidedExportDataset" value="maquinas" />
+            <span class="option-title">Máquinas</span>
+            <span class="option-meta" id="guidedExportMachinesMeta">0 registros</span>
+          </label>
+          <label class="guided-export-option" id="guidedExportModuleOption">
+            <input type="radio" name="guidedExportDataset" value="modulo" />
+            <span class="option-title">Módulo atual</span>
+            <span class="option-meta" id="guidedExportModuleMeta">Selecione uma aba personalizada</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="guided-export-step">
+        <span class="guided-export-step-label">2. Qual escopo usar?</span>
+        <div class="guided-export-options" id="guidedExportScopeOptions">
+          <label class="guided-export-option">
+            <input type="radio" name="guidedExportScope" value="filtered" />
+            <span class="option-title">Usar filtros atuais</span>
+            <span class="option-meta" id="guidedExportFilteredMeta">Considera busca e filtros ativos</span>
+          </label>
+          <label class="guided-export-option">
+            <input type="radio" name="guidedExportScope" value="all" />
+            <span class="option-title">Todos os registros</span>
+            <span class="option-meta">Ignora filtros atuais</span>
+          </label>
+          <label class="guided-export-option" id="guidedExportSelectedOption">
+            <input type="radio" name="guidedExportScope" value="selected" />
+            <span class="option-title">Somente selecionados</span>
+            <span class="option-meta" id="guidedExportSelectedMeta">0 selecionados</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="guided-export-step">
+        <span class="guided-export-step-label">3. Formato</span>
+        <div class="guided-export-options">
+          <label class="guided-export-option">
+            <input type="radio" name="guidedExportFormat" value="pdf" />
+            <span class="option-title">PDF</span>
+            <span class="option-meta">Relatório formatado</span>
+          </label>
+          <label class="guided-export-option">
+            <input type="radio" name="guidedExportFormat" value="excel" />
+            <span class="option-title">Excel</span>
+            <span class="option-meta">Planilha editável</span>
+          </label>
+          <label class="guided-export-option">
+            <input type="radio" name="guidedExportFormat" value="both" />
+            <span class="option-title">PDF + Excel</span>
+            <span class="option-meta">Relatório completo</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="guided-export-summary">
+        <div><strong>Origem:</strong> <span id="guidedExportSummaryDataset">Inventário</span></div>
+        <div><strong>Escopo:</strong> <span id="guidedExportSummaryScope">Filtros atuais</span></div>
+        <div><strong>Formato:</strong> <span id="guidedExportSummaryFormat">PDF + Excel</span></div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="closeGuidedExportModal()">Cancelar</button>
+      <button class="btn-salvar" id="guidedExportConfirmBtn" onclick="confirmGuidedExport()">Exportar</button>
     </div>
   </div>
 </div>
