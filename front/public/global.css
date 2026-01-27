@@ -4690,7 +4690,7 @@ body.theme-dark .btn-add-tab:hover {
   flex-direction: column;
   gap: var(--space-3);
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 6px;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
@@ -4713,11 +4713,31 @@ body.theme-dark .btn-add-tab:hover {
 .field-manager-fields {
   flex: 1;
   min-height: 0;
-  overflow: visible;
-  padding-right: 0;
+  overflow-y: auto;
+  max-height: 100%;
+  padding-right: 6px;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.field-manager-fields::-webkit-scrollbar {
+  width: 8px;
+}
+
+.field-manager-fields::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.field-manager-fields::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.55);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.field-manager-fields::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.7);
 }
 
 .field-manager-body::-webkit-scrollbar {
@@ -4762,6 +4782,7 @@ body.theme-dark #fieldsContainer:empty::before {
     "preset name type options actions"
     "required required required required actions";
   gap: 14px;
+  flex: 0 0 auto;
   align-items: start;
   padding: 12px;
   border-radius: 12px;
