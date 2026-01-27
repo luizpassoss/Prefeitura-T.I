@@ -5427,6 +5427,7 @@ let fieldDragInitialized = false;
 let fieldDragAnimationId = null;
 let fieldDragPointerY = null;
 let fieldDragScrollContainer = null;
+let fieldDragWheelHandler = null;
 
 function getInheritedFieldOptions(nome, tipo) {
   if (tipo !== 'select') return [];
@@ -5590,6 +5591,10 @@ function initFieldDragAndDrop() {
       fieldDragAnimationId = null;
     }
     fieldDragPointerY = null;
+    if (fieldDragWheelHandler) {
+      window.removeEventListener('wheel', fieldDragWheelHandler);
+      fieldDragWheelHandler = null;
+    }
   };
 
   const calculateSpeed = (distance, threshold) => {
@@ -5639,6 +5644,13 @@ function initFieldDragAndDrop() {
     if (!row) return;
     row.classList.add('dragging');
     event.dataTransfer.effectAllowed = 'move';
+    if (!fieldDragWheelHandler) {
+      fieldDragWheelHandler = (wheelEvent) => {
+        if (!fieldDragScrollContainer) return;
+        fieldDragScrollContainer.scrollTop += wheelEvent.deltaY;
+      };
+      window.addEventListener('wheel', fieldDragWheelHandler, { passive: true });
+    }
     startAutoScroll();
   });
 
