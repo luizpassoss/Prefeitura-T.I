@@ -276,6 +276,9 @@
               Filtros
               <span class="filter-count" data-filter-badge="modules" aria-label="Filtros ativos"></span>
             </button>
+            <button class="btn secondary filters-clear-btn" type="button" onclick="clearModuloFilters()">
+              Limpar tudo
+            </button>
             <button class="btn secondary import-btn" onclick="openImportModal('modulo')">
               <span class="icon excel-icon" aria-hidden="true"></span>
               Importar Planilha
@@ -353,9 +356,6 @@
 
         <div class="filters-toolbar smart-filters-toolbar">
           <div class="smart-filter-chips" id="moduleFilterChips" aria-live="polite"></div>
-          <button class="btn secondary filters-clear-btn" type="button" onclick="clearModuloFilters()">
-            Limpar tudo
-          </button>
         </div>
 
         <div class="table-wrap">

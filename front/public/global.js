@@ -5382,9 +5382,11 @@ function renderModuloFilterChips() {
     });
   });
   if (!chips.length) {
-    container.innerHTML = '<span class="smart-filter-empty">Nenhum filtro ativo.</span>';
+    container.innerHTML = '';
+    container.classList.add('hidden');
     return;
   }
+  container.classList.remove('hidden');
   container.innerHTML = chips.map((chip, index) => `
     <span class="filter-chip">
       ${escapeHtml(chip.label)}
