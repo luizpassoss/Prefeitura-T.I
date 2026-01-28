@@ -353,7 +353,6 @@
                 class="input"
                 placeholder='Filtrar rapidamente (ex.: status:ativa local:"Prefeitura")'
               />
-              <button class="btn secondary btn-compact" type="button" onclick="applyModuloSmartSearch()">Aplicar</button>
             </div>
             <div class="module-filters-secondary">
               <button class="btn secondary btn-compact" type="button" onclick="clearModuloFilters()">
@@ -421,6 +420,15 @@
               <option value="100">100</option>
               <option value="all">Todos</option>
             </select>
+          </div>
+          <div id="bulkActions" class="bulk-actions hidden">
+            <span id="bulkCounter">0 selecionados</span>
+            <button class="bulk-btn secondary" onclick="openBulkEditModal()">
+              Editar selecionados
+            </button>
+            <button class="bulk-btn danger" onclick="deleteSelected()">
+              Excluir selecionados
+            </button>
           </div>
           <div class="pagination-group pagination-group-right">
             <button class="btn secondary pagination-arrow" type="button" data-page-action="prev" data-page-scope="modules" aria-label="Página anterior">
@@ -627,17 +635,6 @@
   </div>
 </div>
 
-<!-- BOTÃO FLUTUANTE – AÇÕES EM MASSA -->
-<div id="bulkActions" class="bulk-actions hidden">
-  <span id="bulkCounter">0 selecionados</span>
-
-  <button class="bulk-btn secondary" onclick="openBulkEditModal()">
-    Editar selecionados
-  </button>
-  <button class="bulk-btn danger" onclick="deleteSelected()">
-    Excluir selecionados
-  </button>
-</div>
 <!-- MODAL EDIÇÃO EM MASSA -->
 <div id="bulkEditModal" class="modal" onclick="closeBulkEditModalIfClicked(event)">
   <div class="card" onclick="event.stopPropagation()">
@@ -1095,7 +1092,12 @@
 
       <div class="create-tab-header">
         <label>Opções de ordenação</label>
+        <label class="inline-toggle">
+          <input type="checkbox" id="sortOptionsToggle" checked onchange="toggleSortOptionsEnabled(this)" />
+          <span>Habilitar ordenar</span>
+        </label>
         <span class="small">Escolha quais campos devem aparecer no menu Ordenar.</span>
+        <span id="sortOptionsHelper" class="small sort-options-helper hidden">Ative para exibir o botão Ordenar nesta aba.</span>
       </div>
       <div id="sortOptionsContainer" class="sort-options-grid"></div>
     </div>
