@@ -76,10 +76,10 @@
   --space-4: 14px;
   --space-5: 20px;
   --font-xs: 12px;
-  --font-sm: 14px;
-  --font-md: 16px;
-  --font-lg: 20px;
-  --font-xl: 24px;
+  --font-sm: 13px;
+  --font-md: 15px;
+  --font-lg: 18px;
+  --font-xl: 22px;
   --icon-size: 16px;
 }
 
@@ -91,10 +91,10 @@
     --space-4: 12px;
     --space-5: 16px;
     --font-xs: 11px;
-    --font-sm: 13px;
-    --font-md: 15px;
-    --font-lg: 18px;
-    --font-xl: 22px;
+    --font-sm: 12px;
+    --font-md: 14px;
+    --font-lg: 17px;
+    --font-xl: 20px;
     --icon-size: 15px;
   }
 }
@@ -3816,13 +3816,13 @@ label {
 
 @media (min-width: 1200px) and (min-height: 900px) {
   :root {
-    --font-sm: 15px;
-    --font-md: 17px;
-    --font-lg: 21px;
-    --font-xl: 26px;
-    --space-3: 12px;
-    --space-4: 16px;
-    --space-5: 22px;
+    --font-sm: 13px;
+    --font-md: 15px;
+    --font-lg: 18px;
+    --font-xl: 22px;
+    --space-3: 10px;
+    --space-4: 14px;
+    --space-5: 20px;
   }
 
   .main {
