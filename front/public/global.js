@@ -30,6 +30,8 @@ let moduloRegistros = [];
 let moduloEditId = null;
 let moduloDeleteTarget = null;
 let moduloColumnFilters = {};
+let moduloSmartFilters = {};
+let moduloSmartSearchText = '';
 let moduloSortState = { key: null, dir: 'asc' };
 let manageTabContext = null;
 let manualTabContext = null;
@@ -139,43 +141,116 @@ const manualTabFieldConfig = {
   ]
 };
 
-const manualCustomFieldsKey = (tabType) => `ti-tab-custom-fields-${tabType}`;
-const manualCustomValuesKey = (tabType) => `ti-tab-custom-values-${tabType}`;
+const manualCustomFieldStore = {
+  inventario: [],
+  maquinas: []
+};
+const manualCustomValuesStore = {
+  inventario: {},
+  maquinas: {}
+};
+const manualCustomLoadState = {
+  inventario: { fields: false, values: false },
+  maquinas: { fields: false, values: false }
+};
+const manualTabConfigStore = {
+  inventario: null,
+  maquinas: null
+};
+const manualTabConfigLoadState = {
+  inventario: false,
+  maquinas: false
+};
+const modulePreferencesStore = new Map();
+const modulePreferencesLoadState = new Map();
 
 function getManualCustomFields(tabType) {
-  const stored = localStorage.getItem(manualCustomFieldsKey(tabType));
-  if (!stored) return [];
-  try {
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(field => field?.key && field?.label);
-  } catch (e) {
-    return [];
-  }
+  return manualCustomFieldStore[tabType] || [];
 }
 
-function saveManualCustomFields(tabType, fields) {
-  localStorage.setItem(manualCustomFieldsKey(tabType), JSON.stringify(fields));
+function setManualCustomFields(tabType, fields) {
+  manualCustomFieldStore[tabType] = Array.isArray(fields) ? fields : [];
 }
 
 function getManualCustomValues(tabType) {
-  const stored = localStorage.getItem(manualCustomValuesKey(tabType));
-  if (!stored) return {};
-  try {
-    const parsed = JSON.parse(stored);
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch (e) {
-    return {};
+  return manualCustomValuesStore[tabType] || {};
+}
+
+function setManualCustomValues(tabType, values) {
+  manualCustomValuesStore[tabType] = values && typeof values === 'object' ? values : {};
+}
+
+async function fetchManualCustomFields(tabType) {
+  const res = await fetch(`${API_BASE}/manual-custom-fields?tabType=${tabType}`);
+  if (!res.ok) throw new Error('Falha ao carregar campos personalizados.');
+  const fields = await res.json();
+  const sanitized = Array.isArray(fields)
+    ? fields.filter(field => field?.key && field?.label)
+    : [];
+  setManualCustomFields(tabType, sanitized);
+  manualCustomLoadState[tabType].fields = true;
+  return sanitized;
+}
+
+async function fetchManualCustomValues(tabType) {
+  const res = await fetch(`${API_BASE}/manual-custom-values?tabType=${tabType}`);
+  if (!res.ok) throw new Error('Falha ao carregar valores personalizados.');
+  const payload = await res.json();
+  const values = payload?.data && typeof payload.data === 'object' ? payload.data : {};
+  setManualCustomValues(tabType, values);
+  manualCustomLoadState[tabType].values = true;
+  return values;
+}
+
+async function ensureManualCustomDataLoaded(tabType) {
+  const state = manualCustomLoadState[tabType];
+  if (!state?.fields) {
+    await fetchManualCustomFields(tabType);
+  }
+  if (!state?.values) {
+    await fetchManualCustomValues(tabType);
   }
 }
 
-function saveManualCustomValues(tabType, values) {
-  localStorage.setItem(manualCustomValuesKey(tabType), JSON.stringify(values));
+async function createManualCustomField(tabType, field) {
+  const res = await fetch(`${API_BASE}/manual-custom-fields`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tabType, key: field.key, label: field.label })
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao salvar campo personalizado.');
+  }
+  const saved = await res.json();
+  setManualCustomFields(tabType, [...getManualCustomFields(tabType), saved]);
+  manualCustomLoadState[tabType].fields = true;
+  return saved;
 }
 
-function setManualCustomValuesForItem(tabType, itemId, values) {
+async function replaceManualCustomValues(tabType, itemId, values) {
   if (!itemId) return;
-  const allValues = getManualCustomValues(tabType);
+  const res = await fetch(`${API_BASE}/manual-custom-values?tabType=${tabType}&itemId=${itemId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values })
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao salvar valores personalizados.');
+  }
+}
+
+async function deleteManualCustomValues(tabType, itemId) {
+  if (!itemId) return;
+  const res = await fetch(`${API_BASE}/manual-custom-values?tabType=${tabType}&itemId=${itemId}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao remover valores personalizados.');
+  }
+}
+
+async function setManualCustomValuesForItem(tabType, itemId, values) {
+  if (!itemId) return;
   const sanitized = {};
   Object.entries(values || {}).forEach(([key, value]) => {
     const nextValue = String(value || '').trim();
@@ -183,21 +258,26 @@ function setManualCustomValuesForItem(tabType, itemId, values) {
       sanitized[key] = nextValue;
     }
   });
+  await replaceManualCustomValues(tabType, itemId, sanitized);
+  const allValues = { ...getManualCustomValues(tabType) };
   if (Object.keys(sanitized).length) {
     allValues[itemId] = sanitized;
   } else {
     delete allValues[itemId];
   }
-  saveManualCustomValues(tabType, allValues);
+  setManualCustomValues(tabType, allValues);
+  manualCustomLoadState[tabType].values = true;
 }
 
-function removeManualCustomValuesForItem(tabType, itemId) {
+async function removeManualCustomValuesForItem(tabType, itemId) {
   if (!itemId) return;
-  const allValues = getManualCustomValues(tabType);
+  await deleteManualCustomValues(tabType, itemId);
+  const allValues = { ...getManualCustomValues(tabType) };
   if (allValues[itemId]) {
     delete allValues[itemId];
-    saveManualCustomValues(tabType, allValues);
+    setManualCustomValues(tabType, allValues);
   }
+  manualCustomLoadState[tabType].values = true;
 }
 
 function getManualFieldDefinitions(tabType) {
@@ -222,14 +302,14 @@ function generateUniqueManualFieldKey(tabType, baseKey) {
 }
 
 function getManualTabConfig(tabType) {
-  const stored = localStorage.getItem(`ti-tab-config-${tabType}`);
   const defaults = getManualFieldDefinitions(tabType);
   const defaultOrder = defaults.map(field => field.key);
-  if (!stored) {
+  const storedConfig = manualTabConfigStore[tabType];
+  if (!storedConfig) {
     return { order: defaultOrder, labels: {}, hidden: [] };
   }
   try {
-    const parsed = JSON.parse(stored);
+    const parsed = storedConfig;
     const order = Array.isArray(parsed.order) ? parsed.order.slice() : defaultOrder.slice();
     defaultOrder.forEach((key) => {
       if (!order.includes(key)) {
@@ -246,8 +326,35 @@ function getManualTabConfig(tabType) {
   }
 }
 
-function saveManualTabConfig(tabType, config) {
-  localStorage.setItem(`ti-tab-config-${tabType}`, JSON.stringify(config));
+async function fetchManualTabConfig(tabType) {
+  const res = await fetch(`${API_BASE}/system/manual-tab-config?tabType=${tabType}`);
+  if (!res.ok) {
+    throw new Error('Falha ao carregar configurações de colunas.');
+  }
+  const payload = await res.json();
+  const config = payload?.config && typeof payload.config === 'object' ? payload.config : null;
+  manualTabConfigStore[tabType] = config;
+  manualTabConfigLoadState[tabType] = true;
+  return getManualTabConfig(tabType);
+}
+
+async function ensureManualTabConfigLoaded(tabType) {
+  if (!manualTabConfigLoadState[tabType]) {
+    await fetchManualTabConfig(tabType);
+  }
+}
+
+async function saveManualTabConfig(tabType, config) {
+  manualTabConfigStore[tabType] = config;
+  manualTabConfigLoadState[tabType] = true;
+  const res = await fetch(`${API_BASE}/system/manual-tab-config?tabType=${tabType}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ config })
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao salvar configurações de colunas.');
+  }
 }
 
 function ensureManualTabColumns(tabType) {
@@ -471,6 +578,18 @@ let recentActions = [];
   initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
   initSortQuickButtons('inventory', sortState.inventory, applyFilters);
   initSortQuickButtons('machines', sortState.machines, applyMachineFilters);
+  try {
+    await Promise.all([
+      ensureManualCustomDataLoaded('inventario'),
+      ensureManualCustomDataLoaded('maquinas')
+    ]);
+    await Promise.all([
+      ensureManualTabConfigLoaded('inventario'),
+      ensureManualTabConfigLoaded('maquinas')
+    ]);
+  } catch (err) {
+    console.error('Erro ao carregar campos personalizados:', err);
+  }
   ensureManualTabColumns('inventario');
   ensureManualTabColumns('maquinas');
   applyManualTabLabels('inventario');
@@ -685,8 +804,11 @@ function dismissNotification(id) {
 
 function openNotificationFilters(panelId) {
   const panel = document.getElementById(panelId);
+  if (panelId === 'moduleFilters') {
+    openModuleFiltersModal();
+    return;
+  }
   if (!panel) return;
-  if (panelId === 'moduleFilters') return;
   if (panel.classList.contains('hidden')) {
     toggleFilters(panelId);
   }
@@ -1349,6 +1471,7 @@ function initPaginationControls() {
     const state = paginationState.inventory;
     const isReset = state.page === 1;
     try{
+      await ensureManualCustomDataLoaded('inventario');
       state.isLoading = true;
       setTableLoading('tbody', true, getManualTableColspan('inventario'));
       const params = buildInventoryQueryParams({
@@ -1404,6 +1527,7 @@ function initPaginationControls() {
     const state = paginationState.machines;
     const isReset = state.page === 1;
     try{
+      await ensureManualCustomDataLoaded('maquinas');
       state.isLoading = true;
       setTableLoading('mtbody', true, getManualTableColspan('maquinas'));
       const params = buildMachineQueryParams({
@@ -1643,20 +1767,18 @@ function initPaginationControls() {
   }
 
 function toggleFilters(panelId, button) {
-  const panel = document.getElementById(panelId);
-  if (!panel) return;
   if (panelId === 'moduleFilters') {
-    if (button) {
-      button.setAttribute('aria-pressed', 'false');
-    }
+    openModuleFiltersModal(button);
     return;
   }
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
   panel.classList.toggle('hidden');
   if (button) {
     const isOpen = !panel.classList.contains('hidden');
     button.setAttribute('aria-pressed', String(isOpen));
   }
-  }
+}
 
 function showMessage(message, title = 'Aviso', type = 'info') {
     const titleEl = document.getElementById('systemMessageTitle');
@@ -2288,17 +2410,19 @@ function getActiveFilterCounts() {
   const mqCustomCount = countManualCustomFilters('maquinas');
   const mqCount = [mq, mqNome, mqPatrimonio, mqLocalCol, mqStatusCol, mqDescricao].filter(Boolean).length + mqCustomCount + (status !== 'All' ? 1 : 0);
 
-  const modSearch = (document.getElementById('moduloSearch')?.value || '').trim();
+  const modSearch = (document.getElementById('moduleSmartSearch')?.value || '').trim();
   const modColumnFilters = Object.values(moduloColumnFilters || {}).filter(value => value?.trim());
-  const modCount = [modSearch, ...modColumnFilters].filter(Boolean).length;
+  const modSmartFilters = Object.values(moduloSmartFilters || {}).filter(value => value?.trim());
+  const modCount = [modSearch, ...modColumnFilters, ...modSmartFilters].filter(Boolean).length;
 
   return { invCount, mqCount, modCount };
 }
 
 function hasActiveModuleFilters() {
-  const modSearch = (document.getElementById('moduloSearch')?.value || '').trim();
+  const modSearch = (document.getElementById('moduleSmartSearch')?.value || '').trim();
   const modColumnFilters = Object.values(moduloColumnFilters || {}).filter(value => value?.trim());
-  return Boolean(modSearch || modColumnFilters.length);
+  const modSmartFilters = Object.values(moduloSmartFilters || {}).filter(value => value?.trim());
+  return Boolean(modSearch || modColumnFilters.length || modSmartFilters.length);
 }
 
 function updateFilterBadges() {
@@ -2505,13 +2629,13 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
       if(isEdit){
         const id = data[editIndex].id;
         await fetch(`${API_URL}/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item) });
-        setManualCustomValuesForItem('inventario', id, customValues);
+        await setManualCustomValuesForItem('inventario', id, customValues);
         queueRowHighlight('inventario', id);
       } else {
         const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item) });
         const novo = await res.json();
         data.push(novo);
-        setManualCustomValuesForItem('inventario', novo.id, customValues);
+        await setManualCustomValuesForItem('inventario', novo.id, customValues);
         queueRowHighlight('inventario', novo.id);
       }
       await fetchData();
@@ -2541,7 +2665,7 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
         const row = tbody.querySelector(`tr[data-id="${id}"]`);
         row?.classList.add('table-row-removing');
         await fetch(`${API_URL}/${id}`, { method:'DELETE' });
-        removeManualCustomValuesForItem('inventario', id);
+        await removeManualCustomValuesForItem('inventario', id);
         await fetchData();
         if (deletedItem) {
           showUndoToast({ type: 'inventario', items: [deletedItem] });
@@ -3065,7 +3189,7 @@ if(!item.local){
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(item)
       });
-      setManualCustomValuesForItem('maquinas', id, customValues);
+      await setManualCustomValuesForItem('maquinas', id, customValues);
       queueRowHighlight('maquinas', id);
 
     } else {
@@ -3078,7 +3202,7 @@ if(!item.local){
 
       const novo = await res.json();
       machineData.push(novo);
-      setManualCustomValuesForItem('maquinas', novo.id, customValues);
+      await setManualCustomValuesForItem('maquinas', novo.id, customValues);
       queueRowHighlight('maquinas', novo.id);
     }
 
@@ -3110,7 +3234,7 @@ if(!item.local){
         const row = mtbody.querySelector(`tr[data-id="${id}"]`);
         row?.classList.add('table-row-removing');
         await fetch(`${API_MAQUINAS}/${id}`, { method:'DELETE' });
-        removeManualCustomValuesForItem('maquinas', id);
+        await removeManualCustomValuesForItem('maquinas', id);
         await fetchMachines();
         if (deletedItem) {
           showUndoToast({ type: 'maquinas', items: [deletedItem] });
@@ -5010,6 +5134,9 @@ async function abrirModulo(mod) {
   closeTabMenus();
   moduloAtual = mod;
   paginationState.modules.page = 1;
+  moduloColumnFilters = {};
+  moduloSmartFilters = {};
+  moduloSmartSearchText = '';
 
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav a, .nav .tab-dinamica').forEach(a => a.classList.remove('active'));
@@ -5019,6 +5146,7 @@ async function abrirModulo(mod) {
   document.getElementById('moduloTitulo').textContent = mod.nome;
   document.getElementById('moduloDescricao').textContent = mod.descricao || 'Tabela personalizada';
 
+  await ensureModulePreferencesLoaded(mod.id);
   await carregarCamposModulo();
   await carregarRegistrosModulo();
 
@@ -5079,7 +5207,7 @@ function renderModuloDinamico() {
   tab.classList.add('active');
 
   const { displayCampos, categoriaFieldName, categoriaAnchorFieldName } = getModuloDisplayConfig();
-  const moduleFiltersPanel = document.getElementById('moduleFilters');
+  const moduleFiltersPanel = document.getElementById('moduleFiltersPanel');
   const moduleFiltersButton = document.querySelector('#tabModuloDinamico .filter-btn');
 
   // HEADER
@@ -5093,28 +5221,7 @@ function renderModuloDinamico() {
       `).join('')}
       <th class="actions-header" style="width:110px; text-align:center">Ações</th>
     </tr>
-    <tr class="table-filters">
-      <th class="checkbox-cell"></th>
-      ${displayCampos.map(c => `
-        <th>
-          <input
-            class="table-filter-input"
-            data-field="${c.nome}"
-            placeholder="Filtrar ${c.nome}"
-          />
-        </th>
-      `).join('')}
-      <th class="actions-header"></th>
-    </tr>
   `;
-
-  thead.querySelectorAll('.table-filter-input').forEach((input) => {
-    const field = input.dataset.field;
-    input.value = moduloColumnFilters[field] || '';
-    input.addEventListener('input', (event) => {
-      updateModuloColumnFilter(field, event.target.value, 'header');
-    });
-  });
 
   renderModuloFilterControls(displayCampos);
 
@@ -5136,29 +5243,188 @@ function renderModuloDinamico() {
 }
 
 function renderModuloFilterControls(displayCampos) {
-  const panel = document.getElementById('moduleFilters');
+  const panel = document.getElementById('moduleFiltersPanel');
   if (!panel) return;
-  panel.innerHTML = '';
-  panel.classList.add('hidden');
-}
-
-function getModuloFilterSelector(field) {
-  const safeField = window.CSS && CSS.escape ? CSS.escape(field) : field.replace(/"/g, '\\"');
-  return `[data-field="${safeField}"]`;
-}
-
-function updateModuloColumnFilter(field, value, source) {
-  moduloColumnFilters[field] = value;
-  const selector = getModuloFilterSelector(field);
-  if (source !== 'header') {
-    const headerInput = document.querySelector(`#moduloThead .table-filter-input${selector}`);
-    if (headerInput) headerInput.value = value;
+  const select = document.getElementById('moduleFilterFieldSelect');
+  if (select) {
+    select.innerHTML = [
+      '<option value="">Selecione um campo</option>',
+      ...displayCampos.map(campo => `<option value="${campo.nome}">${escapeHtml(campo.nome)}</option>`)
+    ].join('');
   }
-  if (source !== 'panel') {
-    const panelInput = document.querySelector(`#moduleFilters input${selector}`);
-    if (panelInput) panelInput.value = value;
+  const presetSelect = document.getElementById('moduleFilterPresetSelect');
+  if (presetSelect) {
+    const presets = loadModuloFilterPresets();
+    presetSelect.innerHTML = [
+      '<option value="">Presets salvos</option>',
+      ...presets.map((preset, index) => `<option value="${index}">${escapeHtml(preset.name)}</option>`)
+    ].join('');
+  }
+  const searchInput = document.getElementById('moduleSmartSearch');
+  if (searchInput && searchInput.value !== moduloSmartSearchText) {
+    searchInput.value = moduloSmartSearchText;
+  }
+  if (!panel.dataset.bound) {
+    panel.dataset.bound = 'true';
+    const smartInput = document.getElementById('moduleSmartSearch');
+    if (smartInput) {
+      let smartTimeout = null;
+      smartInput.addEventListener('input', (event) => {
+        if (smartTimeout) clearTimeout(smartTimeout);
+        smartTimeout = setTimeout(() => {
+          updateModuloSmartSearch(event.target.value);
+        }, 250);
+      });
+    }
+    const valueInput = document.getElementById('moduleFilterValueInput');
+    if (valueInput) {
+      valueInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          addModuloStructuredFilter();
+        }
+      });
+    }
+  }
+  renderModuloFilterChips();
+}
+
+function parseModuloSmartFilters(query, fields) {
+  const normalizedMap = new Map(
+    fields.map((field) => [normalizeHeader(field).replace(/\s+/g, ''), field])
+  );
+  const filters = {};
+  let remaining = query;
+  const regex = /([a-zA-Z0-9_]+):(\"[^\"]+\"|'[^']+'|\\S+)/g;
+  let match;
+  while ((match = regex.exec(query)) !== null) {
+    const rawField = match[1];
+    const rawValue = match[2] || '';
+    const normalizedField = normalizeHeader(rawField).replace(/\\s+/g, '');
+    const mapped = normalizedMap.get(normalizedField);
+    if (mapped) {
+      const cleaned = rawValue.replace(/^['"]|['"]$/g, '').trim();
+      if (cleaned) {
+        filters[mapped] = cleaned;
+      }
+      remaining = remaining.replace(match[0], '');
+    }
+  }
+  return {
+    general: remaining.replace(/\\s+/g, ' ').trim(),
+    filters
+  };
+}
+
+function updateModuloSmartSearch(value) {
+  const fields = moduloCampos.map(campo => campo.nome);
+  const { general, filters } = parseModuloSmartFilters(value, fields);
+  moduloSmartSearchText = general;
+  moduloSmartFilters = filters;
+  filtrarModulo();
+}
+
+function applyModuloSmartSearch() {
+  const searchInput = document.getElementById('moduleSmartSearch');
+  if (!searchInput) return;
+  updateModuloSmartSearch(searchInput.value);
+}
+
+function addModuloStructuredFilter() {
+  const select = document.getElementById('moduleFilterFieldSelect');
+  const valueInput = document.getElementById('moduleFilterValueInput');
+  if (!select || !valueInput) return;
+  const field = select.value;
+  const value = valueInput.value.trim();
+  if (!field || !value) {
+    showErrorMessage('Selecione um campo e informe um valor.');
+    return;
+  }
+  moduloColumnFilters[field] = value;
+  valueInput.value = '';
+  select.value = '';
+  filtrarModulo();
+}
+
+function removeModuloFilter(field, scope) {
+  if (scope === 'structured') {
+    delete moduloColumnFilters[field];
+  } else if (scope === 'smart') {
+    delete moduloSmartFilters[field];
+  } else if (scope === 'search') {
+    moduloSmartSearchText = '';
+    const searchInput = document.getElementById('moduleSmartSearch');
+    if (searchInput) searchInput.value = '';
   }
   filtrarModulo();
+}
+
+function renderModuloFilterChips() {
+  const container = document.getElementById('moduleFilterChips');
+  if (!container) return;
+  const chips = [];
+  if (moduloSmartSearchText) {
+    chips.push({
+      label: `Busca: ${moduloSmartSearchText}`,
+      onRemove: () => removeModuloFilter('search', 'search')
+    });
+  }
+  Object.entries(moduloSmartFilters).forEach(([field, value]) => {
+    chips.push({
+      label: `${field}: ${value}`,
+      onRemove: () => removeModuloFilter(field, 'smart')
+    });
+  });
+  Object.entries(moduloColumnFilters).forEach(([field, value]) => {
+    chips.push({
+      label: `${field}: ${value}`,
+      onRemove: () => removeModuloFilter(field, 'structured')
+    });
+  });
+  if (!chips.length) {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    return;
+  }
+  container.classList.remove('hidden');
+  container.innerHTML = chips.map((chip, index) => `
+    <span class="filter-chip">
+      ${escapeHtml(chip.label)}
+      <button type="button" aria-label="Remover filtro" data-chip-index="${index}">×</button>
+    </span>
+  `).join('');
+  container.querySelectorAll('button[data-chip-index]').forEach((btn) => {
+    const idx = Number(btn.dataset.chipIndex);
+    if (!Number.isNaN(idx) && chips[idx]) {
+      btn.addEventListener('click', chips[idx].onRemove);
+    }
+  });
+}
+
+function openModuleFiltersModal(button) {
+  const modal = document.getElementById('moduleFiltersModal');
+  if (!modal) return;
+  renderModuloFilterControls(getModuloDisplayConfig().displayCampos || []);
+  modal.classList.add('show');
+  if (button) {
+    button.setAttribute('aria-pressed', 'true');
+  }
+}
+
+function closeModuleFiltersModal(event) {
+  const modal = document.getElementById('moduleFiltersModal');
+  if (event && event.target?.id === 'moduleFiltersModal') {
+    requestCloseModal(modal);
+    return;
+  }
+  if (modal) {
+    captureModalScrollState(modal);
+    modal.classList.remove('show');
+  }
+  const button = document.querySelector('#tabModuloDinamico .filter-btn');
+  if (button) {
+    button.setAttribute('aria-pressed', 'false');
+  }
 }
 
 function renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName) {
@@ -5355,19 +5621,13 @@ function formatDateForTable(value) {
 }
 
 function getModuloFiltrado() {
-  const q = (document.getElementById('moduloSearch')?.value || '').trim().toLowerCase();
-  const columnFilters = Object.entries(moduloColumnFilters)
+  const combinedFilters = { ...moduloSmartFilters, ...moduloColumnFilters };
+  const columnFilters = Object.entries(combinedFilters)
     .filter(([, value]) => value && value.trim())
     .map(([field, value]) => [field, value.trim().toLowerCase()]);
+  const q = (moduloSmartSearchText || '').trim().toLowerCase();
   if (!q) {
     let filtered = moduloRegistros.map((row, idx) => ({ row, idx }));
-    if (columnFilters.length) {
-      filtered = filtered.filter(({ row }) =>
-        columnFilters.every(([field, value]) =>
-          (row[field] || '').toString().toLowerCase().includes(value)
-        )
-      );
-    }
     if (columnFilters.length) {
       filtered = filtered.filter(({ row }) =>
         columnFilters.every(([field, value]) =>
@@ -5392,26 +5652,19 @@ function getModuloFiltrado() {
       )
     );
   }
-  if (columnFilters.length) {
-    filtered = filtered.filter(({ row }) =>
-      columnFilters.every(([field, value]) =>
-        (row[field] || '').toString().toLowerCase().includes(value)
-      )
-    );
-  }
   return filtered;
 }
 
 function clearModuloFilters() {
-  const searchEl = document.getElementById('moduloSearch');
+  const searchEl = document.getElementById('moduleSmartSearch');
   if (searchEl) searchEl.value = '';
   moduloColumnFilters = {};
-  document.querySelectorAll('#moduloThead .table-filter-input').forEach((input) => {
-    input.value = '';
-  });
-  document.querySelectorAll('#moduleFilters input[data-field]').forEach((input) => {
-    input.value = '';
-  });
+  moduloSmartFilters = {};
+  moduloSmartSearchText = '';
+  const fieldSelect = document.getElementById('moduleFilterFieldSelect');
+  const valueInput = document.getElementById('moduleFilterValueInput');
+  if (fieldSelect) fieldSelect.value = '';
+  if (valueInput) valueInput.value = '';
   paginationState.modules.page = 1;
   filtrarModulo();
 }
@@ -5422,7 +5675,77 @@ function filtrarModulo() {
   paginationState.modules.page = 1;
   const { displayCampos, categoriaFieldName, categoriaAnchorFieldName } = getModuloDisplayConfig();
   renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName);
+  renderModuloFilterChips();
   updateFilterBadges();
+}
+
+function getModuloPresetStorageKey() {
+  const moduleId = moduloAtual?.id || 'default';
+  return `ti-module-filter-presets-${moduleId}`;
+}
+
+function loadModuloFilterPresets() {
+  try {
+    const stored = localStorage.getItem(getModuloPresetStorageKey());
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveModuloFilterPresets(presets) {
+  localStorage.setItem(getModuloPresetStorageKey(), JSON.stringify(presets || []));
+}
+
+function saveModuloFilterPreset() {
+  const nameInput = document.getElementById('moduleFilterPresetName');
+  const name = (nameInput?.value || '').trim();
+  if (!name) {
+    showErrorMessage('Informe um nome para o preset.');
+    return;
+  }
+  const presets = loadModuloFilterPresets();
+  presets.push({
+    name,
+    smartSearch: (document.getElementById('moduleSmartSearch')?.value || '').trim(),
+    structuredFilters: { ...moduloColumnFilters }
+  });
+  saveModuloFilterPresets(presets);
+  if (nameInput) nameInput.value = '';
+  renderModuloFilterControls(getModuloDisplayConfig().displayCampos || []);
+  showActionToast('Preset salvo com sucesso.');
+}
+
+function applyModuloFilterPreset() {
+  const select = document.getElementById('moduleFilterPresetSelect');
+  const index = Number(select?.value);
+  if (!select || Number.isNaN(index)) {
+    showErrorMessage('Selecione um preset para aplicar.');
+    return;
+  }
+  const presets = loadModuloFilterPresets();
+  const preset = presets[index];
+  if (!preset) return;
+  const searchInput = document.getElementById('moduleSmartSearch');
+  if (searchInput) searchInput.value = preset.smartSearch || '';
+  moduloColumnFilters = { ...(preset.structuredFilters || {}) };
+  updateModuloSmartSearch(preset.smartSearch || '');
+  filtrarModulo();
+}
+
+function deleteModuloFilterPreset() {
+  const select = document.getElementById('moduleFilterPresetSelect');
+  const index = Number(select?.value);
+  if (!select || Number.isNaN(index)) {
+    showErrorMessage('Selecione um preset para excluir.');
+    return;
+  }
+  const presets = loadModuloFilterPresets();
+  presets.splice(index, 1);
+  saveModuloFilterPresets(presets);
+  renderModuloFilterControls(getModuloDisplayConfig().displayCampos || []);
+  showActionToast('Preset removido.');
 }
 async function excluirRegistroModulo(id) {
   const item = moduloRegistros.find(row => row.id === id);
@@ -5694,36 +6017,84 @@ function normalizeModuloSortKey(name) {
 
 function loadModuleSortOptions(moduleId) {
   if (!moduleId) return [];
-  const stored = localStorage.getItem(moduleSortOptionsKey(moduleId));
-  if (!stored) return [];
-  try {
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    return [];
-  }
+  const stored = modulePreferencesStore.get(String(moduleId));
+  const options = stored?.sortOptions;
+  return Array.isArray(options) ? options : [];
 }
 
-function saveModuleSortOptions(moduleId, options) {
+async function saveModuleSortOptions(moduleId, options) {
   if (!moduleId) return;
-  localStorage.setItem(moduleSortOptionsKey(moduleId), JSON.stringify(options || []));
+  const key = String(moduleId);
+  const current = modulePreferencesStore.get(key) || {};
+  const next = {
+    ...current,
+    sortOptions: Array.isArray(options) ? options : []
+  };
+  modulePreferencesStore.set(key, next);
+  await persistModulePreferences(key);
 }
 
 function loadModuleFieldOptions(moduleId) {
   if (!moduleId) return {};
-  const stored = localStorage.getItem(moduleFieldOptionsKey(moduleId));
-  if (!stored) return {};
-  try {
-    const parsed = JSON.parse(stored);
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch (e) {
-    return {};
+  const stored = modulePreferencesStore.get(String(moduleId));
+  const options = stored?.fieldOptions;
+  return options && typeof options === 'object' ? options : {};
+}
+
+async function saveModuleFieldOptions(moduleId, optionsMap) {
+  if (!moduleId) return;
+  const key = String(moduleId);
+  const current = modulePreferencesStore.get(key) || {};
+  const next = {
+    ...current,
+    fieldOptions: optionsMap && typeof optionsMap === 'object' ? optionsMap : {}
+  };
+  modulePreferencesStore.set(key, next);
+  await persistModulePreferences(key);
+}
+
+async function fetchModulePreferences(moduleId) {
+  const res = await fetch(`${API_BASE}/system/module-preferences?moduleId=${moduleId}`);
+  if (!res.ok) {
+    throw new Error('Falha ao carregar preferências do módulo.');
+  }
+  const payload = await res.json();
+  const sortOptions = Array.isArray(payload?.sortOptions) ? payload.sortOptions : [];
+  const fieldOptions = payload?.fieldOptions && typeof payload.fieldOptions === 'object'
+    ? payload.fieldOptions
+    : {};
+  modulePreferencesStore.set(String(moduleId), { sortOptions, fieldOptions });
+  modulePreferencesLoadState.set(String(moduleId), true);
+  return { sortOptions, fieldOptions };
+}
+
+async function ensureModulePreferencesLoaded(moduleId) {
+  if (!moduleId) return;
+  const key = String(moduleId);
+  if (!modulePreferencesLoadState.get(key)) {
+    try {
+      await fetchModulePreferences(key);
+    } catch (err) {
+      console.warn('Erro ao carregar preferências do módulo:', err);
+    }
   }
 }
 
-function saveModuleFieldOptions(moduleId, optionsMap) {
+async function persistModulePreferences(moduleId) {
   if (!moduleId) return;
-  localStorage.setItem(moduleFieldOptionsKey(moduleId), JSON.stringify(optionsMap || {}));
+  const key = String(moduleId);
+  const payload = modulePreferencesStore.get(key) || {};
+  const res = await fetch(`${API_BASE}/system/module-preferences?moduleId=${key}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sortOptions: payload.sortOptions || [],
+      fieldOptions: payload.fieldOptions || {}
+    })
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao salvar preferências do módulo.');
+  }
 }
 
 function normalizeFieldOptionsInput(value = '') {
@@ -5977,12 +6348,12 @@ async function runManualMigration() {
       }
 
       const fieldOptionsMap = buildFieldOptionsMap(fields);
-      saveModuleFieldOptions(modulo.id, fieldOptionsMap);
+      await saveModuleFieldOptions(modulo.id, fieldOptionsMap);
       const sortKeys = fields
         .map(field => normalizeModuloSortKey(field.nome))
         .filter(Boolean)
         .filter((value, index, list) => list.indexOf(value) === index);
-      saveModuleSortOptions(modulo.id, sortKeys);
+      await saveModuleSortOptions(modulo.id, sortKeys);
 
       const rows = tabType === 'inventario'
         ? await fetchAllPagedRows(API_URL, ({ page, pageSize }) =>
@@ -6479,6 +6850,7 @@ async function applyTabInheritance() {
 
   if (value.startsWith('module:')) {
     const moduleId = value.replace('module:', '');
+    await ensureModulePreferencesLoaded(moduleId);
     const res = await fetch(`${API_MODULOS}/${moduleId}/campos`);
     const campos = await res.json();
     const optionsMap = loadModuleFieldOptions(moduleId);
@@ -6514,6 +6886,7 @@ async function openManageModule(mod) {
   newTabFields = [];
   window.newTabFields = newTabFields;
   newTabSortOptions = [];
+  await ensureModulePreferencesLoaded(mod.id);
   newTabFieldOptions = loadModuleFieldOptions(mod.id);
   const container = document.getElementById('fieldsContainer');
   if (container) container.innerHTML = '';
@@ -6629,12 +7002,12 @@ async function saveManagedModule() {
 
   const sortCandidates = getSortOptionCandidates();
   const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
-  saveModuleSortOptions(moduleId, resolvedSortOptions);
+  await saveModuleSortOptions(moduleId, resolvedSortOptions);
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
   if (newTabFieldOptions.__categoriaAnchor) {
     fieldOptionsMap.__categoriaAnchor = newTabFieldOptions.__categoriaAnchor;
   }
-  saveModuleFieldOptions(moduleId, fieldOptionsMap);
+  await saveModuleFieldOptions(moduleId, fieldOptionsMap);
 
   closeCreateTabModal();
   const currentModuleId = moduleId;
@@ -6774,7 +7147,7 @@ function filterManualTabFields(query = '') {
   }
 }
 
-function addManualTabField() {
+async function addManualTabField() {
   if (!manualTabContext) return;
   const select = document.getElementById('manualTabFieldSelect');
   if (!select || !select.value) return;
@@ -6784,13 +7157,19 @@ function addManualTabField() {
   if (!config.order.includes(key)) {
     config.order.push(key);
   }
-  saveManualTabConfig(manualTabContext.tabType, config);
+  try {
+    await saveManualTabConfig(manualTabContext.tabType, config);
+  } catch (err) {
+    console.error('Erro ao salvar configuração da aba:', err);
+    showErrorMessage('Erro ao salvar configuração da aba.');
+    return;
+  }
   manualTabContext.config = config;
   renderManualTabManager();
   applyManualTabLabels(manualTabContext.tabType);
 }
 
-function addManualTabCustomField() {
+async function addManualTabCustomField() {
   if (!manualTabContext) return;
   const input = document.getElementById('manualTabNewFieldInput');
   const label = (input?.value || '').trim();
@@ -6805,9 +7184,13 @@ function addManualTabCustomField() {
   }
   const tabType = manualTabContext.tabType;
   const uniqueKey = generateUniqueManualFieldKey(tabType, baseKey);
-  const customFields = getManualCustomFields(tabType);
-  customFields.push({ key: uniqueKey, label });
-  saveManualCustomFields(tabType, customFields);
+  try {
+    await createManualCustomField(tabType, { key: uniqueKey, label });
+  } catch (err) {
+    console.error('Erro ao criar campo personalizado:', err);
+    showErrorMessage('Erro ao salvar o novo campo.');
+    return;
+  }
 
   const { config } = manualTabContext;
   if (!config.order.includes(uniqueKey)) {
@@ -6815,7 +7198,13 @@ function addManualTabCustomField() {
   }
   config.hidden = config.hidden.filter(item => item !== uniqueKey);
   config.labels = { ...config.labels, [uniqueKey]: label };
-  saveManualTabConfig(tabType, config);
+  try {
+    await saveManualTabConfig(tabType, config);
+  } catch (err) {
+    console.error('Erro ao salvar configuração da aba:', err);
+    showErrorMessage('Erro ao salvar configuração da aba.');
+    return;
+  }
   manualTabContext.config = config;
   ensureManualTabColumns(tabType);
   renderManualTabManager();
@@ -6829,19 +7218,25 @@ function addManualTabCustomField() {
   showActionToast('Nova coluna adicionada com sucesso.');
 }
 
-function hideManualTabField(key) {
+async function hideManualTabField(key) {
   if (!manualTabContext) return;
   const { config } = manualTabContext;
   if (!config.hidden.includes(key)) {
     config.hidden.push(key);
   }
-  saveManualTabConfig(manualTabContext.tabType, config);
+  try {
+    await saveManualTabConfig(manualTabContext.tabType, config);
+  } catch (err) {
+    console.error('Erro ao salvar configuração da aba:', err);
+    showErrorMessage('Erro ao salvar configuração da aba.');
+    return;
+  }
   manualTabContext.config = config;
   renderManualTabManager();
   applyManualTabLabels(manualTabContext.tabType);
 }
 
-function saveManualTabFields() {
+async function saveManualTabFields() {
   if (!manualTabContext) return;
   const container = document.getElementById('manageManualTabFields');
   if (!container) return;
@@ -6860,16 +7255,37 @@ function saveManualTabFields() {
     ...manualTabContext.config,
     labels
   };
-  saveManualTabConfig(manualTabContext.tabType, nextConfig);
+  try {
+    await saveManualTabConfig(manualTabContext.tabType, nextConfig);
+  } catch (err) {
+    console.error('Erro ao salvar configuração da aba:', err);
+    showErrorMessage('Erro ao salvar configuração da aba.');
+    return;
+  }
   applyManualTabLabels(manualTabContext.tabType);
   closeManageManualTabModal();
 }
 
-function resetManualTabFields() {
+async function resetManualTabFields() {
   if (!manualTabContext) return;
-  localStorage.removeItem(`ti-tab-config-${manualTabContext.tabType}`);
-  localStorage.removeItem(manualCustomFieldsKey(manualTabContext.tabType));
-  localStorage.removeItem(manualCustomValuesKey(manualTabContext.tabType));
+  try {
+    await saveManualTabConfig(manualTabContext.tabType, null);
+  } catch (err) {
+    console.error('Erro ao resetar configuração da aba:', err);
+    showErrorMessage('Erro ao resetar configuração da aba.');
+    return;
+  }
+  try {
+    await fetch(`${API_BASE}/manual-custom-fields?tabType=${manualTabContext.tabType}`, {
+      method: 'DELETE'
+    });
+  } catch (err) {
+    console.error('Erro ao limpar campos personalizados:', err);
+  }
+  setManualCustomFields(manualTabContext.tabType, []);
+  setManualCustomValues(manualTabContext.tabType, {});
+  manualCustomLoadState[manualTabContext.tabType].fields = true;
+  manualCustomLoadState[manualTabContext.tabType].values = true;
   manualTabContext.config = getManualTabConfig(manualTabContext.tabType);
   ensureManualTabColumns(manualTabContext.tabType);
   renderManualTabManager();
@@ -7366,7 +7782,7 @@ async function salvarNovoModulo() {
 
   const sortCandidates = getSortOptionCandidates();
   const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
-  saveModuleSortOptions(modulo.id, resolvedSortOptions);
+  await saveModuleSortOptions(modulo.id, resolvedSortOptions);
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
   const hasCategoria = camposValidos.some(field => normalizeHeader(field.nome) === 'categoria');
   if (hasCategoria) {
@@ -7375,7 +7791,7 @@ async function salvarNovoModulo() {
       fieldOptionsMap.__categoriaAnchor = categoriaAnchor;
     }
   }
-  saveModuleFieldOptions(modulo.id, fieldOptionsMap);
+  await saveModuleFieldOptions(modulo.id, fieldOptionsMap);
 
 
   closeCreateTabModal();
@@ -7573,7 +7989,7 @@ function getActiveSearchInput() {
     return document.getElementById('mq');
   }
   if (document.getElementById('tabModuloDinamico')?.classList.contains('active')) {
-    return document.getElementById('moduloSearch');
+    return document.getElementById('moduleSmartSearch');
   }
   return null;
 }
@@ -7670,6 +8086,13 @@ document.addEventListener('keydown', (e) => {
   window.clearInventoryFilters = clearInventoryFilters;
   window.clearMachineFilters = clearMachineFilters;
   window.clearModuloFilters = clearModuloFilters;
+  window.applyModuloSmartSearch = applyModuloSmartSearch;
+  window.addModuloStructuredFilter = addModuloStructuredFilter;
+  window.saveModuloFilterPreset = saveModuloFilterPreset;
+  window.applyModuloFilterPreset = applyModuloFilterPreset;
+  window.deleteModuloFilterPreset = deleteModuloFilterPreset;
+  window.openModuleFiltersModal = openModuleFiltersModal;
+  window.closeModuleFiltersModal = closeModuleFiltersModal;
   window.clearImportHistory = clearImportHistory;
   window.reprocessImport = reprocessImport;
   window.openImportModal = openImportModal;
