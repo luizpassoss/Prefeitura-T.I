@@ -6072,6 +6072,14 @@ async function ensureModulePreferencesLoaded(moduleId) {
   if (!modulePreferencesLoadState.get(key)) {
     await fetchModulePreferences(key);
   }
+  const payload = await res.json();
+  const sortOptions = Array.isArray(payload?.sortOptions) ? payload.sortOptions : [];
+  const fieldOptions = payload?.fieldOptions && typeof payload.fieldOptions === 'object'
+    ? payload.fieldOptions
+    : {};
+  modulePreferencesStore.set(String(moduleId), { sortOptions, fieldOptions });
+  modulePreferencesLoadState.set(String(moduleId), true);
+  return { sortOptions, fieldOptions };
 }
 
 async function persistModulePreferences(moduleId) {
