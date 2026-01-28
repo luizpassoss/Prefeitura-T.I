@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS system_manual_tab_config (
+  tab_type VARCHAR(20) PRIMARY KEY,
+  config_json JSON NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS system_module_preferences (
+  module_id INT PRIMARY KEY,
+  sort_options_json JSON NOT NULL,
+  field_options_json JSON NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
