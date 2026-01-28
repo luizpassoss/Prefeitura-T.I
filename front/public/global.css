@@ -3734,6 +3734,10 @@ label {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
 }
 
 .smart-filter-section label {
@@ -3808,6 +3812,31 @@ label {
 
 .filters-panel.hidden ~ .filters-clear-btn {
   display: inline-flex;
+}
+
+@media (min-width: 1200px) and (min-height: 900px) {
+  :root {
+    --font-sm: 15px;
+    --font-md: 17px;
+    --font-lg: 21px;
+    --font-xl: 26px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 22px;
+  }
+
+  .main {
+    padding: 32px 48px;
+    gap: 18px;
+  }
+
+  .summary-grid {
+    gap: 18px;
+  }
+
+  .dashboard-charts {
+    gap: 18px;
+  }
 }
 
 .filters .input,
