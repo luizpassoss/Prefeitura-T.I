@@ -27,6 +27,7 @@ app.use('/api/modulos', require('./routes/modulos/modulosRoutes'));
 app.use('/api/modulos', require('./routes/modulos/camposRoutes'));
 app.use('/api/modulos', require('./routes/modulos/registrosRoutes'));
 
+app.use('/api', require('./routes/manualCustomRoutes'));
 app.use('/api/activity', require('./routes/activityRoutes'));
 
 app.use('/api/import', importRoutes);
