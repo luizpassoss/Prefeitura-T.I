@@ -139,43 +139,116 @@ const manualTabFieldConfig = {
   ]
 };
 
-const manualCustomFieldsKey = (tabType) => `ti-tab-custom-fields-${tabType}`;
-const manualCustomValuesKey = (tabType) => `ti-tab-custom-values-${tabType}`;
+const manualCustomFieldStore = {
+  inventario: [],
+  maquinas: []
+};
+const manualCustomValuesStore = {
+  inventario: {},
+  maquinas: {}
+};
+const manualCustomLoadState = {
+  inventario: { fields: false, values: false },
+  maquinas: { fields: false, values: false }
+};
+const manualTabConfigStore = {
+  inventario: null,
+  maquinas: null
+};
+const manualTabConfigLoadState = {
+  inventario: false,
+  maquinas: false
+};
+const modulePreferencesStore = new Map();
+const modulePreferencesLoadState = new Map();
 
 function getManualCustomFields(tabType) {
-  const stored = localStorage.getItem(manualCustomFieldsKey(tabType));
-  if (!stored) return [];
-  try {
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(field => field?.key && field?.label);
-  } catch (e) {
-    return [];
-  }
+  return manualCustomFieldStore[tabType] || [];
 }
 
-function saveManualCustomFields(tabType, fields) {
-  localStorage.setItem(manualCustomFieldsKey(tabType), JSON.stringify(fields));
+function setManualCustomFields(tabType, fields) {
+  manualCustomFieldStore[tabType] = Array.isArray(fields) ? fields : [];
 }
 
 function getManualCustomValues(tabType) {
-  const stored = localStorage.getItem(manualCustomValuesKey(tabType));
-  if (!stored) return {};
-  try {
-    const parsed = JSON.parse(stored);
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch (e) {
-    return {};
+  return manualCustomValuesStore[tabType] || {};
+}
+
+function setManualCustomValues(tabType, values) {
+  manualCustomValuesStore[tabType] = values && typeof values === 'object' ? values : {};
+}
+
+async function fetchManualCustomFields(tabType) {
+  const res = await fetch(`${API_BASE}/manual-custom-fields?tabType=${tabType}`);
+  if (!res.ok) throw new Error('Falha ao carregar campos personalizados.');
+  const fields = await res.json();
+  const sanitized = Array.isArray(fields)
+    ? fields.filter(field => field?.key && field?.label)
+    : [];
+  setManualCustomFields(tabType, sanitized);
+  manualCustomLoadState[tabType].fields = true;
+  return sanitized;
+}
+
+async function fetchManualCustomValues(tabType) {
+  const res = await fetch(`${API_BASE}/manual-custom-values?tabType=${tabType}`);
+  if (!res.ok) throw new Error('Falha ao carregar valores personalizados.');
+  const payload = await res.json();
+  const values = payload?.data && typeof payload.data === 'object' ? payload.data : {};
+  setManualCustomValues(tabType, values);
+  manualCustomLoadState[tabType].values = true;
+  return values;
+}
+
+async function ensureManualCustomDataLoaded(tabType) {
+  const state = manualCustomLoadState[tabType];
+  if (!state?.fields) {
+    await fetchManualCustomFields(tabType);
+  }
+  if (!state?.values) {
+    await fetchManualCustomValues(tabType);
   }
 }
 
-function saveManualCustomValues(tabType, values) {
-  localStorage.setItem(manualCustomValuesKey(tabType), JSON.stringify(values));
+async function createManualCustomField(tabType, field) {
+  const res = await fetch(`${API_BASE}/manual-custom-fields`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tabType, key: field.key, label: field.label })
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao salvar campo personalizado.');
+  }
+  const saved = await res.json();
+  setManualCustomFields(tabType, [...getManualCustomFields(tabType), saved]);
+  manualCustomLoadState[tabType].fields = true;
+  return saved;
 }
 
-function setManualCustomValuesForItem(tabType, itemId, values) {
+async function replaceManualCustomValues(tabType, itemId, values) {
   if (!itemId) return;
-  const allValues = getManualCustomValues(tabType);
+  const res = await fetch(`${API_BASE}/manual-custom-values?tabType=${tabType}&itemId=${itemId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values })
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao salvar valores personalizados.');
+  }
+}
+
+async function deleteManualCustomValues(tabType, itemId) {
+  if (!itemId) return;
+  const res = await fetch(`${API_BASE}/manual-custom-values?tabType=${tabType}&itemId=${itemId}`, {
+    method: 'DELETE'
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao remover valores personalizados.');
+  }
+}
+
+async function setManualCustomValuesForItem(tabType, itemId, values) {
+  if (!itemId) return;
   const sanitized = {};
   Object.entries(values || {}).forEach(([key, value]) => {
     const nextValue = String(value || '').trim();
@@ -183,21 +256,26 @@ function setManualCustomValuesForItem(tabType, itemId, values) {
       sanitized[key] = nextValue;
     }
   });
+  await replaceManualCustomValues(tabType, itemId, sanitized);
+  const allValues = { ...getManualCustomValues(tabType) };
   if (Object.keys(sanitized).length) {
     allValues[itemId] = sanitized;
   } else {
     delete allValues[itemId];
   }
-  saveManualCustomValues(tabType, allValues);
+  setManualCustomValues(tabType, allValues);
+  manualCustomLoadState[tabType].values = true;
 }
 
-function removeManualCustomValuesForItem(tabType, itemId) {
+async function removeManualCustomValuesForItem(tabType, itemId) {
   if (!itemId) return;
-  const allValues = getManualCustomValues(tabType);
+  await deleteManualCustomValues(tabType, itemId);
+  const allValues = { ...getManualCustomValues(tabType) };
   if (allValues[itemId]) {
     delete allValues[itemId];
-    saveManualCustomValues(tabType, allValues);
+    setManualCustomValues(tabType, allValues);
   }
+  manualCustomLoadState[tabType].values = true;
 }
 
 function getManualFieldDefinitions(tabType) {
@@ -222,14 +300,14 @@ function generateUniqueManualFieldKey(tabType, baseKey) {
 }
 
 function getManualTabConfig(tabType) {
-  const stored = localStorage.getItem(`ti-tab-config-${tabType}`);
   const defaults = getManualFieldDefinitions(tabType);
   const defaultOrder = defaults.map(field => field.key);
-  if (!stored) {
+  const storedConfig = manualTabConfigStore[tabType];
+  if (!storedConfig) {
     return { order: defaultOrder, labels: {}, hidden: [] };
   }
   try {
-    const parsed = JSON.parse(stored);
+    const parsed = storedConfig;
     const order = Array.isArray(parsed.order) ? parsed.order.slice() : defaultOrder.slice();
     defaultOrder.forEach((key) => {
       if (!order.includes(key)) {
@@ -246,8 +324,35 @@ function getManualTabConfig(tabType) {
   }
 }
 
-function saveManualTabConfig(tabType, config) {
-  localStorage.setItem(`ti-tab-config-${tabType}`, JSON.stringify(config));
+async function fetchManualTabConfig(tabType) {
+  const res = await fetch(`${API_BASE}/system/manual-tab-config?tabType=${tabType}`);
+  if (!res.ok) {
+    throw new Error('Falha ao carregar configurações de colunas.');
+  }
+  const payload = await res.json();
+  const config = payload?.config && typeof payload.config === 'object' ? payload.config : null;
+  manualTabConfigStore[tabType] = config;
+  manualTabConfigLoadState[tabType] = true;
+  return getManualTabConfig(tabType);
+}
+
+async function ensureManualTabConfigLoaded(tabType) {
+  if (!manualTabConfigLoadState[tabType]) {
+    await fetchManualTabConfig(tabType);
+  }
+}
+
+async function saveManualTabConfig(tabType, config) {
+  manualTabConfigStore[tabType] = config;
+  manualTabConfigLoadState[tabType] = true;
+  const res = await fetch(`${API_BASE}/system/manual-tab-config?tabType=${tabType}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ config })
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao salvar configurações de colunas.');
+  }
 }
 
 function ensureManualTabColumns(tabType) {
@@ -471,6 +576,18 @@ let recentActions = [];
   initSortOrderToggle('modules', moduloSortState, renderModuloDinamico);
   initSortQuickButtons('inventory', sortState.inventory, applyFilters);
   initSortQuickButtons('machines', sortState.machines, applyMachineFilters);
+  try {
+    await Promise.all([
+      ensureManualCustomDataLoaded('inventario'),
+      ensureManualCustomDataLoaded('maquinas')
+    ]);
+    await Promise.all([
+      ensureManualTabConfigLoaded('inventario'),
+      ensureManualTabConfigLoaded('maquinas')
+    ]);
+  } catch (err) {
+    console.error('Erro ao carregar campos personalizados:', err);
+  }
   ensureManualTabColumns('inventario');
   ensureManualTabColumns('maquinas');
   applyManualTabLabels('inventario');
@@ -1349,6 +1466,7 @@ function initPaginationControls() {
     const state = paginationState.inventory;
     const isReset = state.page === 1;
     try{
+      await ensureManualCustomDataLoaded('inventario');
       state.isLoading = true;
       setTableLoading('tbody', true, getManualTableColspan('inventario'));
       const params = buildInventoryQueryParams({
@@ -1404,6 +1522,7 @@ function initPaginationControls() {
     const state = paginationState.machines;
     const isReset = state.page === 1;
     try{
+      await ensureManualCustomDataLoaded('maquinas');
       state.isLoading = true;
       setTableLoading('mtbody', true, getManualTableColspan('maquinas'));
       const params = buildMachineQueryParams({
@@ -2505,13 +2624,13 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
       if(isEdit){
         const id = data[editIndex].id;
         await fetch(`${API_URL}/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item) });
-        setManualCustomValuesForItem('inventario', id, customValues);
+        await setManualCustomValuesForItem('inventario', id, customValues);
         queueRowHighlight('inventario', id);
       } else {
         const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(item) });
         const novo = await res.json();
         data.push(novo);
-        setManualCustomValuesForItem('inventario', novo.id, customValues);
+        await setManualCustomValuesForItem('inventario', novo.id, customValues);
         queueRowHighlight('inventario', novo.id);
       }
       await fetchData();
@@ -2541,7 +2660,7 @@ telefone = telefone.replace(/\s+/g, " ").replace(/[^0-9()\- ]/g, "");
         const row = tbody.querySelector(`tr[data-id="${id}"]`);
         row?.classList.add('table-row-removing');
         await fetch(`${API_URL}/${id}`, { method:'DELETE' });
-        removeManualCustomValuesForItem('inventario', id);
+        await removeManualCustomValuesForItem('inventario', id);
         await fetchData();
         if (deletedItem) {
           showUndoToast({ type: 'inventario', items: [deletedItem] });
@@ -3065,7 +3184,7 @@ if(!item.local){
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(item)
       });
-      setManualCustomValuesForItem('maquinas', id, customValues);
+      await setManualCustomValuesForItem('maquinas', id, customValues);
       queueRowHighlight('maquinas', id);
 
     } else {
@@ -3078,7 +3197,7 @@ if(!item.local){
 
       const novo = await res.json();
       machineData.push(novo);
-      setManualCustomValuesForItem('maquinas', novo.id, customValues);
+      await setManualCustomValuesForItem('maquinas', novo.id, customValues);
       queueRowHighlight('maquinas', novo.id);
     }
 
@@ -3110,7 +3229,7 @@ if(!item.local){
         const row = mtbody.querySelector(`tr[data-id="${id}"]`);
         row?.classList.add('table-row-removing');
         await fetch(`${API_MAQUINAS}/${id}`, { method:'DELETE' });
-        removeManualCustomValuesForItem('maquinas', id);
+        await removeManualCustomValuesForItem('maquinas', id);
         await fetchMachines();
         if (deletedItem) {
           showUndoToast({ type: 'maquinas', items: [deletedItem] });
@@ -5019,6 +5138,7 @@ async function abrirModulo(mod) {
   document.getElementById('moduloTitulo').textContent = mod.nome;
   document.getElementById('moduloDescricao').textContent = mod.descricao || 'Tabela personalizada';
 
+  await ensureModulePreferencesLoaded(mod.id);
   await carregarCamposModulo();
   await carregarRegistrosModulo();
 
@@ -5694,36 +5814,80 @@ function normalizeModuloSortKey(name) {
 
 function loadModuleSortOptions(moduleId) {
   if (!moduleId) return [];
-  const stored = localStorage.getItem(moduleSortOptionsKey(moduleId));
-  if (!stored) return [];
-  try {
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    return [];
-  }
+  const stored = modulePreferencesStore.get(String(moduleId));
+  const options = stored?.sortOptions;
+  return Array.isArray(options) ? options : [];
 }
 
-function saveModuleSortOptions(moduleId, options) {
+async function saveModuleSortOptions(moduleId, options) {
   if (!moduleId) return;
-  localStorage.setItem(moduleSortOptionsKey(moduleId), JSON.stringify(options || []));
+  const key = String(moduleId);
+  const current = modulePreferencesStore.get(key) || {};
+  const next = {
+    ...current,
+    sortOptions: Array.isArray(options) ? options : []
+  };
+  modulePreferencesStore.set(key, next);
+  await persistModulePreferences(key);
 }
 
 function loadModuleFieldOptions(moduleId) {
   if (!moduleId) return {};
-  const stored = localStorage.getItem(moduleFieldOptionsKey(moduleId));
-  if (!stored) return {};
-  try {
-    const parsed = JSON.parse(stored);
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch (e) {
-    return {};
+  const stored = modulePreferencesStore.get(String(moduleId));
+  const options = stored?.fieldOptions;
+  return options && typeof options === 'object' ? options : {};
+}
+
+async function saveModuleFieldOptions(moduleId, optionsMap) {
+  if (!moduleId) return;
+  const key = String(moduleId);
+  const current = modulePreferencesStore.get(key) || {};
+  const next = {
+    ...current,
+    fieldOptions: optionsMap && typeof optionsMap === 'object' ? optionsMap : {}
+  };
+  modulePreferencesStore.set(key, next);
+  await persistModulePreferences(key);
+}
+
+async function fetchModulePreferences(moduleId) {
+  const res = await fetch(`${API_BASE}/system/module-preferences?moduleId=${moduleId}`);
+  if (!res.ok) {
+    throw new Error('Falha ao carregar preferências do módulo.');
+  }
+  const payload = await res.json();
+  const sortOptions = Array.isArray(payload?.sortOptions) ? payload.sortOptions : [];
+  const fieldOptions = payload?.fieldOptions && typeof payload.fieldOptions === 'object'
+    ? payload.fieldOptions
+    : {};
+  modulePreferencesStore.set(String(moduleId), { sortOptions, fieldOptions });
+  modulePreferencesLoadState.set(String(moduleId), true);
+  return { sortOptions, fieldOptions };
+}
+
+async function ensureModulePreferencesLoaded(moduleId) {
+  if (!moduleId) return;
+  const key = String(moduleId);
+  if (!modulePreferencesLoadState.get(key)) {
+    await fetchModulePreferences(key);
   }
 }
 
-function saveModuleFieldOptions(moduleId, optionsMap) {
+async function persistModulePreferences(moduleId) {
   if (!moduleId) return;
-  localStorage.setItem(moduleFieldOptionsKey(moduleId), JSON.stringify(optionsMap || {}));
+  const key = String(moduleId);
+  const payload = modulePreferencesStore.get(key) || {};
+  const res = await fetch(`${API_BASE}/system/module-preferences?moduleId=${key}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sortOptions: payload.sortOptions || [],
+      fieldOptions: payload.fieldOptions || {}
+    })
+  });
+  if (!res.ok) {
+    throw new Error('Falha ao salvar preferências do módulo.');
+  }
 }
 
 function normalizeFieldOptionsInput(value = '') {
@@ -5977,12 +6141,12 @@ async function runManualMigration() {
       }
 
       const fieldOptionsMap = buildFieldOptionsMap(fields);
-      saveModuleFieldOptions(modulo.id, fieldOptionsMap);
+      await saveModuleFieldOptions(modulo.id, fieldOptionsMap);
       const sortKeys = fields
         .map(field => normalizeModuloSortKey(field.nome))
         .filter(Boolean)
         .filter((value, index, list) => list.indexOf(value) === index);
-      saveModuleSortOptions(modulo.id, sortKeys);
+      await saveModuleSortOptions(modulo.id, sortKeys);
 
       const rows = tabType === 'inventario'
         ? await fetchAllPagedRows(API_URL, ({ page, pageSize }) =>
@@ -6479,6 +6643,7 @@ async function applyTabInheritance() {
 
   if (value.startsWith('module:')) {
     const moduleId = value.replace('module:', '');
+    await ensureModulePreferencesLoaded(moduleId);
     const res = await fetch(`${API_MODULOS}/${moduleId}/campos`);
     const campos = await res.json();
     const optionsMap = loadModuleFieldOptions(moduleId);
@@ -6514,6 +6679,7 @@ async function openManageModule(mod) {
   newTabFields = [];
   window.newTabFields = newTabFields;
   newTabSortOptions = [];
+  await ensureModulePreferencesLoaded(mod.id);
   newTabFieldOptions = loadModuleFieldOptions(mod.id);
   const container = document.getElementById('fieldsContainer');
   if (container) container.innerHTML = '';
@@ -6629,12 +6795,12 @@ async function saveManagedModule() {
 
   const sortCandidates = getSortOptionCandidates();
   const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
-  saveModuleSortOptions(moduleId, resolvedSortOptions);
+  await saveModuleSortOptions(moduleId, resolvedSortOptions);
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
   if (newTabFieldOptions.__categoriaAnchor) {
     fieldOptionsMap.__categoriaAnchor = newTabFieldOptions.__categoriaAnchor;
   }
-  saveModuleFieldOptions(moduleId, fieldOptionsMap);
+  await saveModuleFieldOptions(moduleId, fieldOptionsMap);
 
   closeCreateTabModal();
   const currentModuleId = moduleId;
@@ -6774,7 +6940,7 @@ function filterManualTabFields(query = '') {
   }
 }
 
-function addManualTabField() {
+async function addManualTabField() {
   if (!manualTabContext) return;
   const select = document.getElementById('manualTabFieldSelect');
   if (!select || !select.value) return;
@@ -6784,13 +6950,19 @@ function addManualTabField() {
   if (!config.order.includes(key)) {
     config.order.push(key);
   }
-  saveManualTabConfig(manualTabContext.tabType, config);
+  try {
+    await saveManualTabConfig(manualTabContext.tabType, config);
+  } catch (err) {
+    console.error('Erro ao salvar configuração da aba:', err);
+    showErrorMessage('Erro ao salvar configuração da aba.');
+    return;
+  }
   manualTabContext.config = config;
   renderManualTabManager();
   applyManualTabLabels(manualTabContext.tabType);
 }
 
-function addManualTabCustomField() {
+async function addManualTabCustomField() {
   if (!manualTabContext) return;
   const input = document.getElementById('manualTabNewFieldInput');
   const label = (input?.value || '').trim();
@@ -6805,9 +6977,13 @@ function addManualTabCustomField() {
   }
   const tabType = manualTabContext.tabType;
   const uniqueKey = generateUniqueManualFieldKey(tabType, baseKey);
-  const customFields = getManualCustomFields(tabType);
-  customFields.push({ key: uniqueKey, label });
-  saveManualCustomFields(tabType, customFields);
+  try {
+    await createManualCustomField(tabType, { key: uniqueKey, label });
+  } catch (err) {
+    console.error('Erro ao criar campo personalizado:', err);
+    showErrorMessage('Erro ao salvar o novo campo.');
+    return;
+  }
 
   const { config } = manualTabContext;
   if (!config.order.includes(uniqueKey)) {
@@ -6815,7 +6991,13 @@ function addManualTabCustomField() {
   }
   config.hidden = config.hidden.filter(item => item !== uniqueKey);
   config.labels = { ...config.labels, [uniqueKey]: label };
-  saveManualTabConfig(tabType, config);
+  try {
+    await saveManualTabConfig(tabType, config);
+  } catch (err) {
+    console.error('Erro ao salvar configuração da aba:', err);
+    showErrorMessage('Erro ao salvar configuração da aba.');
+    return;
+  }
   manualTabContext.config = config;
   ensureManualTabColumns(tabType);
   renderManualTabManager();
@@ -6829,19 +7011,25 @@ function addManualTabCustomField() {
   showActionToast('Nova coluna adicionada com sucesso.');
 }
 
-function hideManualTabField(key) {
+async function hideManualTabField(key) {
   if (!manualTabContext) return;
   const { config } = manualTabContext;
   if (!config.hidden.includes(key)) {
     config.hidden.push(key);
   }
-  saveManualTabConfig(manualTabContext.tabType, config);
+  try {
+    await saveManualTabConfig(manualTabContext.tabType, config);
+  } catch (err) {
+    console.error('Erro ao salvar configuração da aba:', err);
+    showErrorMessage('Erro ao salvar configuração da aba.');
+    return;
+  }
   manualTabContext.config = config;
   renderManualTabManager();
   applyManualTabLabels(manualTabContext.tabType);
 }
 
-function saveManualTabFields() {
+async function saveManualTabFields() {
   if (!manualTabContext) return;
   const container = document.getElementById('manageManualTabFields');
   if (!container) return;
@@ -6860,16 +7048,37 @@ function saveManualTabFields() {
     ...manualTabContext.config,
     labels
   };
-  saveManualTabConfig(manualTabContext.tabType, nextConfig);
+  try {
+    await saveManualTabConfig(manualTabContext.tabType, nextConfig);
+  } catch (err) {
+    console.error('Erro ao salvar configuração da aba:', err);
+    showErrorMessage('Erro ao salvar configuração da aba.');
+    return;
+  }
   applyManualTabLabels(manualTabContext.tabType);
   closeManageManualTabModal();
 }
 
-function resetManualTabFields() {
+async function resetManualTabFields() {
   if (!manualTabContext) return;
-  localStorage.removeItem(`ti-tab-config-${manualTabContext.tabType}`);
-  localStorage.removeItem(manualCustomFieldsKey(manualTabContext.tabType));
-  localStorage.removeItem(manualCustomValuesKey(manualTabContext.tabType));
+  try {
+    await saveManualTabConfig(manualTabContext.tabType, null);
+  } catch (err) {
+    console.error('Erro ao resetar configuração da aba:', err);
+    showErrorMessage('Erro ao resetar configuração da aba.');
+    return;
+  }
+  try {
+    await fetch(`${API_BASE}/manual-custom-fields?tabType=${manualTabContext.tabType}`, {
+      method: 'DELETE'
+    });
+  } catch (err) {
+    console.error('Erro ao limpar campos personalizados:', err);
+  }
+  setManualCustomFields(manualTabContext.tabType, []);
+  setManualCustomValues(manualTabContext.tabType, {});
+  manualCustomLoadState[manualTabContext.tabType].fields = true;
+  manualCustomLoadState[manualTabContext.tabType].values = true;
   manualTabContext.config = getManualTabConfig(manualTabContext.tabType);
   ensureManualTabColumns(manualTabContext.tabType);
   renderManualTabManager();
@@ -7366,7 +7575,7 @@ async function salvarNovoModulo() {
 
   const sortCandidates = getSortOptionCandidates();
   const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
-  saveModuleSortOptions(modulo.id, resolvedSortOptions);
+  await saveModuleSortOptions(modulo.id, resolvedSortOptions);
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
   const hasCategoria = camposValidos.some(field => normalizeHeader(field.nome) === 'categoria');
   if (hasCategoria) {
@@ -7375,7 +7584,7 @@ async function salvarNovoModulo() {
       fieldOptionsMap.__categoriaAnchor = categoriaAnchor;
     }
   }
-  saveModuleFieldOptions(modulo.id, fieldOptionsMap);
+  await saveModuleFieldOptions(modulo.id, fieldOptionsMap);
 
 
   closeCreateTabModal();
