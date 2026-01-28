@@ -3740,25 +3740,39 @@ label {
   padding: 16px;
 }
 
-#moduleFiltersModal .module-filters-card {
-  max-width: 980px;
-  width: min(960px, 92vw);
+.module-filters-panel {
+  padding: 14px;
+  gap: 12px;
 }
 
-#moduleFiltersModal .modal-title-row {
+.module-filters-panel.hidden {
+  display: none;
+}
+
+.module-filters-header {
+  display: flex;
   align-items: center;
-}
-
-#moduleFiltersModal .modal-body-scroll {
-  margin-top: 12px;
-}
-
-#moduleFiltersModal .modal-footer {
   justify-content: space-between;
+  gap: 12px;
 }
 
-#moduleFiltersModal .btn-salvar {
-  min-width: 160px;
+.module-filters-subtitle {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.module-filters-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.module-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
 }
 
 .smart-filter-section label {
