@@ -5839,6 +5839,32 @@ const tabTemplates = {
   ]
 };
 
+const manualMigrationBlueprints = {
+  inventario: {
+    nome: 'Inventário',
+    descricao: 'Dados migrados da aba Inventário.',
+    fields: [
+      { nome: 'Categoria', tipo: 'select', obrigatorio: false, sourceKey: 'categoria' },
+      { nome: 'Link de Internet', tipo: 'select', obrigatorio: true, sourceKey: 'link' },
+      { nome: 'Velocidade (DL/UL)', tipo: 'select', obrigatorio: false, sourceKey: 'velocidade' },
+      { nome: 'Telefone', tipo: 'texto', obrigatorio: false, sourceKey: 'telefone' },
+      { nome: 'Local', tipo: 'select', obrigatorio: true, sourceKey: 'local' },
+      { nome: 'Endereço', tipo: 'texto', obrigatorio: false, sourceKey: 'endereco' }
+    ]
+  },
+  maquinas: {
+    nome: 'Máquinas',
+    descricao: 'Dados migrados da aba Máquinas.',
+    fields: [
+      { nome: 'Nome Máquina', tipo: 'texto', obrigatorio: true, sourceKey: 'nome_maquina' },
+      { nome: 'Patrimônio', tipo: 'texto', obrigatorio: false, sourceKey: 'patrimonio' },
+      { nome: 'Local', tipo: 'select', obrigatorio: false, sourceKey: 'local' },
+      { nome: 'Status', tipo: 'select', obrigatorio: false, sourceKey: 'status' },
+      { nome: 'Descrição', tipo: 'texto', obrigatorio: false, sourceKey: 'descricao' }
+    ]
+  }
+};
+
 const fieldPresetMap = Object.entries(tabTemplates).reduce((acc, [group, fields]) => {
   fields.forEach(field => {
     const key = `${group}:${field.nome}`;
@@ -7516,6 +7542,9 @@ document.addEventListener('keydown', (e) => {
   window.closeFieldManagerModal = closeFieldManagerModal;
   window.filterFieldRows = filterFieldRows;
   window.filterManualTabFields = filterManualTabFields;
+  window.openManualMigrationModal = openManualMigrationModal;
+  window.closeManualMigrationModal = closeManualMigrationModal;
+  window.runManualMigration = runManualMigration;
   window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
 window.setModalLoading = setModalLoading;
