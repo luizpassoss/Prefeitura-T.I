@@ -805,7 +805,7 @@ function dismissNotification(id) {
 function openNotificationFilters(panelId) {
   const panel = document.getElementById(panelId);
   if (panelId === 'moduleFilters') {
-    openModuleFiltersModal();
+    toggleFilters('moduleFilters', document.querySelector('#tabModuloDinamico .filter-btn'));
     return;
   }
   if (!panel) return;
@@ -1766,9 +1766,29 @@ function initPaginationControls() {
     return ws;
   }
 
+function setModuleFilterButtonsPressed(isOpen) {
+  document.querySelectorAll('[data-module-filter-toggle="true"]').forEach((btn) => {
+    btn.setAttribute('aria-pressed', String(isOpen));
+  });
+}
+
 function toggleFilters(panelId, button) {
   if (panelId === 'moduleFilters') {
-    openModuleFiltersModal(button);
+    const panel = document.getElementById('moduleFiltersPanel');
+    if (!panel) return;
+    const shouldOpen = panel.classList.contains('hidden');
+    if (shouldOpen) {
+      renderModuloFilterControls(getModuloDisplayConfig().displayCampos || []);
+      panel.classList.remove('hidden');
+      panel.setAttribute('aria-hidden', 'false');
+    } else {
+      panel.classList.add('hidden');
+      panel.setAttribute('aria-hidden', 'true');
+    }
+    if (button) {
+      button.setAttribute('aria-pressed', String(shouldOpen));
+    }
+    setModuleFilterButtonsPressed(shouldOpen);
     return;
   }
   const panel = document.getElementById(panelId);
@@ -5227,6 +5247,8 @@ function renderModuloDinamico() {
 
   if (moduleFiltersPanel && !displayCampos.length) {
     moduleFiltersPanel.classList.add('hidden');
+    moduleFiltersPanel.setAttribute('aria-hidden', 'true');
+    setModuleFilterButtonsPressed(false);
     if (moduleFiltersButton) moduleFiltersButton.setAttribute('aria-pressed', 'false');
   }
 
@@ -5274,6 +5296,12 @@ function renderModuloFilterControls(displayCampos) {
         smartTimeout = setTimeout(() => {
           updateModuloSmartSearch(event.target.value);
         }, 250);
+      });
+      smartInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          applyModuloSmartSearch();
+        }
       });
     }
     const valueInput = document.getElementById('moduleFilterValueInput');
@@ -5328,6 +5356,7 @@ function applyModuloSmartSearch() {
   const searchInput = document.getElementById('moduleSmartSearch');
   if (!searchInput) return;
   updateModuloSmartSearch(searchInput.value);
+  showActionToast('Filtro aplicado.');
 }
 
 function addModuloStructuredFilter() {
@@ -5344,6 +5373,7 @@ function addModuloStructuredFilter() {
   valueInput.value = '';
   select.value = '';
   filtrarModulo();
+  showActionToast('Filtro estruturado adicionado.');
 }
 
 function removeModuloFilter(field, scope) {
@@ -5402,30 +5432,50 @@ function renderModuloFilterChips() {
 }
 
 function openModuleFiltersModal(button) {
-  const modal = document.getElementById('moduleFiltersModal');
-  if (!modal) return;
+  const panel = document.getElementById('moduleFiltersPanel');
+  if (!panel) return;
   renderModuloFilterControls(getModuloDisplayConfig().displayCampos || []);
-  modal.classList.add('show');
+  panel.classList.remove('hidden');
+  panel.setAttribute('aria-hidden', 'false');
   if (button) {
     button.setAttribute('aria-pressed', 'true');
+  }
+  setModuleFilterButtonsPressed(true);
+  const firstField = panel.querySelector('select, input, button');
+  if (firstField) {
+    firstField.focus({ preventScroll: true });
   }
 }
 
 function closeModuleFiltersModal(event) {
-  const modal = document.getElementById('moduleFiltersModal');
-  if (event && event.target?.id === 'moduleFiltersModal') {
-    requestCloseModal(modal);
+  const panel = document.getElementById('moduleFiltersPanel');
+  if (event && event.target?.id === 'moduleFiltersPanel') {
     return;
   }
-  if (modal) {
-    captureModalScrollState(modal);
-    modal.classList.remove('show');
+  if (panel) {
+    panel.classList.add('hidden');
+    panel.setAttribute('aria-hidden', 'true');
   }
-  const button = document.querySelector('#tabModuloDinamico .filter-btn');
-  if (button) {
-    button.setAttribute('aria-pressed', 'false');
-  }
+  setModuleFilterButtonsPressed(false);
 }
+
+document.addEventListener('click', (event) => {
+  const panel = document.getElementById('moduleFiltersPanel');
+  if (!panel || panel.classList.contains('hidden')) return;
+  const toggle = event.target.closest('[data-module-filter-toggle="true"]');
+  if (toggle) return;
+  if (!panel.contains(event.target)) {
+    closeModuleFiltersModal();
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  const panel = document.getElementById('moduleFiltersPanel');
+  if (panel && !panel.classList.contains('hidden')) {
+    closeModuleFiltersModal();
+  }
+});
 
 function renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName) {
   const tbody = document.getElementById('moduloTbody');
@@ -5732,6 +5782,7 @@ function applyModuloFilterPreset() {
   moduloColumnFilters = { ...(preset.structuredFilters || {}) };
   updateModuloSmartSearch(preset.smartSearch || '');
   filtrarModulo();
+  showActionToast('Preset aplicado.');
 }
 
 function deleteModuloFilterPreset() {

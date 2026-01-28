@@ -269,7 +269,7 @@
             <button class="btn" onclick="openNovoRegistroModulo()">
               + Novo
             </button>
-            <button class="btn secondary filter-btn" type="button" aria-label="Filtros ativos" aria-pressed="false" onclick="toggleFilters('moduleFilters', this)">
+            <button class="btn secondary filter-btn" type="button" aria-label="Filtros ativos" aria-pressed="false" data-module-filter-toggle="true" onclick="toggleFilters('moduleFilters', this)">
               <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
@@ -354,8 +354,60 @@
           </div>
         </div>
 
-        <div class="filters-toolbar smart-filters-toolbar">
+        <div class="filters-toolbar smart-filters-toolbar module-filters-toolbar">
+          <div class="module-filters-compact">
+            <div class="module-filters-primary">
+              <label class="sr-only" for="moduleSmartSearch">Filtro inteligente</label>
+              <input
+                id="moduleSmartSearch"
+                class="input"
+                placeholder='Filtrar rapidamente (ex.: status:ativa local:"Prefeitura")'
+              />
+              <button class="btn secondary" type="button" onclick="applyModuloSmartSearch()">Aplicar</button>
+            </div>
+            <div class="module-filters-secondary">
+              <button class="btn secondary" type="button" aria-pressed="false" data-module-filter-toggle="true" onclick="toggleFilters('moduleFilters', this)">
+                Mais filtros
+              </button>
+            </div>
+          </div>
           <div class="smart-filter-chips" id="moduleFilterChips" aria-live="polite"></div>
+          <div
+            id="moduleFiltersPanel"
+            class="smart-filters-panel module-filters-panel module-filters-popover hidden"
+            aria-live="polite"
+            aria-hidden="true"
+          >
+            <div class="module-filters-header">
+              <div>
+                <strong>Filtros avançados</strong>
+                <span class="module-filters-subtitle">Refine por campos e salve presets sem ocupar a tabela.</span>
+              </div>
+              <div class="module-filters-actions">
+                <button class="btn secondary" type="button" onclick="closeModuleFiltersModal()">Fechar</button>
+              </div>
+            </div>
+            <div class="module-filters-grid">
+              <div class="smart-filter-section">
+                <label>Filtros estruturados</label>
+                <div class="smart-filter-row">
+                  <select id="moduleFilterFieldSelect" class="select"></select>
+                  <input id="moduleFilterValueInput" class="input" placeholder="Valor do filtro" />
+                  <button class="btn secondary" type="button" onclick="addModuloStructuredFilter()">Adicionar</button>
+                </div>
+              </div>
+              <div class="smart-filter-section">
+                <label>Presets</label>
+                <div class="smart-filter-row">
+                  <select id="moduleFilterPresetSelect" class="select"></select>
+                  <input id="moduleFilterPresetName" class="input" placeholder="Salvar preset..." />
+                  <button class="btn secondary" type="button" onclick="saveModuloFilterPreset()">Salvar</button>
+                  <button class="btn secondary" type="button" onclick="applyModuloFilterPreset()">Aplicar</button>
+                  <button class="btn secondary" type="button" onclick="deleteModuloFilterPreset()">Excluir</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="table-wrap">
@@ -773,52 +825,6 @@
     <path d="M5 13l4 4 10-10"></path>
   </svg>
   <span class="action-toast-text"></span>
-</div>
-<div id="moduleFiltersModal" class="modal" onclick="closeModuleFiltersModal(event)">
-  <div class="card modal-card-fixed module-filters-card" onclick="event.stopPropagation()">
-    <div class="modal-title-row">
-      <h2>Filtros do módulo</h2>
-      <button type="button" class="btn secondary" onclick="closeModuleFiltersModal()">Fechar</button>
-    </div>
-    <div class="modal-body-scroll">
-      <div id="moduleFiltersPanel" class="smart-filters-panel" aria-live="polite">
-        <div class="smart-filter-section">
-          <label for="moduleSmartSearch">Filtro inteligente</label>
-          <div class="smart-filter-row">
-            <input
-              id="moduleSmartSearch"
-              class="input"
-              placeholder='Ex.: status:ativa local:"Prefeitura" patrimonio:123'
-            />
-            <button class="btn secondary" type="button" onclick="applyModuloSmartSearch()">Aplicar</button>
-          </div>
-          <span class="smart-filter-hint">Use campo:valor para filtrar rapidamente.</span>
-        </div>
-        <div class="smart-filter-section">
-          <label>Filtros estruturados</label>
-          <div class="smart-filter-row">
-            <select id="moduleFilterFieldSelect" class="select"></select>
-            <input id="moduleFilterValueInput" class="input" placeholder="Valor do filtro" />
-            <button class="btn secondary" type="button" onclick="addModuloStructuredFilter()">Adicionar</button>
-          </div>
-        </div>
-        <div class="smart-filter-section">
-          <label>Presets</label>
-          <div class="smart-filter-row">
-            <select id="moduleFilterPresetSelect" class="select"></select>
-            <input id="moduleFilterPresetName" class="input" placeholder="Salvar preset..." />
-            <button class="btn secondary" type="button" onclick="saveModuloFilterPreset()">Salvar</button>
-            <button class="btn secondary" type="button" onclick="applyModuloFilterPreset()">Aplicar</button>
-            <button class="btn secondary" type="button" onclick="deleteModuloFilterPreset()">Excluir</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancelar" onclick="closeModuleFiltersModal()">Fechar</button>
-      <button class="btn-salvar" onclick="applyModuloSmartSearch()">Aplicar filtros</button>
-    </div>
-  </div>
 </div>
 <div id="globalLoader" class="global-loader hidden" role="status" aria-live="polite" aria-label="Carregando">
   <div class="global-loader-spinner" aria-hidden="true"></div>
