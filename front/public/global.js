@@ -2306,7 +2306,7 @@ function getModuleSortMenuOptions(displayCampos) {
   if (Array.isArray(stored) && stored.length === 0) {
     return [];
   }
-  const selectedKeys = resolveSortOptionsSelection(candidates, stored);
+  const selectedKeys = resolveSortOptionsSelection(candidates, stored ?? null);
   const filtered = candidates.filter(candidate => selectedKeys.includes(candidate.key));
   return filtered.length ? filtered : candidates;
 }
@@ -5255,12 +5255,19 @@ function renderModuloDinamico() {
   }
 
   const sortMenuOptions = document.getElementById('sortMenuModOptions');
+  const sortWrapper = document.querySelector('#tabModuloDinamico .sort-wrapper');
   if (sortMenuOptions) {
     const availableOptions = getModuleSortMenuOptions(displayCampos);
     sortMenuOptions.innerHTML = availableOptions
       .map((campo) => `<button type="button" data-sort-key="${campo.label}">${campo.label}</button>`)
       .join('');
-    initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
+    if (sortWrapper) sortWrapper.classList.toggle('is-hidden', availableOptions.length === 0);
+    if (!availableOptions.length) {
+      moduloSortState.key = null;
+      document.getElementById('sortMenuMod')?.classList.add('hidden');
+    } else {
+      initSortMenu('sortMenuMod', moduloSortState, renderModuloDinamico);
+    }
   }
 
   renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName);
@@ -6059,6 +6066,7 @@ function openNovoRegistroModulo() {
 
 let newTabFields = window.newTabFields;
 let newTabSortOptions = [];
+let newTabSortEnabled = true;
 let newTabFieldOptions = {};
 
 const moduleSortOptionsKey = (moduleId) => `ti-module-sort-options-${moduleId}`;
@@ -6069,10 +6077,10 @@ function normalizeModuloSortKey(name) {
 }
 
 function loadModuleSortOptions(moduleId) {
-  if (!moduleId) return [];
+  if (!moduleId) return null;
   const stored = modulePreferencesStore.get(String(moduleId));
   const options = stored?.sortOptions;
-  return Array.isArray(options) ? options : [];
+  return Array.isArray(options) ? options : null;
 }
 
 async function saveModuleSortOptions(moduleId, options) {
@@ -6205,6 +6213,20 @@ function resolveSortOptionsSelection(candidates, selectedKeys) {
     return selectedKeys.filter(key => validKeys.has(key));
   }
   return candidates.map(item => item.key);
+}
+
+function updateSortOptionsUI() {
+  const toggle = document.getElementById('sortOptionsToggle');
+  if (toggle) toggle.checked = newTabSortEnabled;
+  const container = document.getElementById('sortOptionsContainer');
+  if (container) container.classList.toggle('is-hidden', !newTabSortEnabled);
+  const helper = document.getElementById('sortOptionsHelper');
+  if (helper) helper.classList.toggle('hidden', newTabSortEnabled);
+}
+
+function toggleSortOptionsEnabled(input) {
+  newTabSortEnabled = Boolean(input?.checked);
+  updateSortOptionsUI();
 }
 
 function renderSortOptionsPicker(selectedKeys = null) {
@@ -6821,6 +6843,7 @@ function openCreateTabModal() {
   newTabFields = [];
   window.newTabFields = newTabFields;
   newTabSortOptions = [];
+  newTabSortEnabled = true;
   newTabFieldOptions = {};
   previousModalForFieldManager = null;
   document.getElementById('fieldsContainer').innerHTML = '';
@@ -6847,6 +6870,7 @@ function openCreateTabModal() {
   if (submitBtn) submitBtn.textContent = 'Criar Aba';
   initFieldDragAndDrop();
   renderSortOptionsPicker();
+  updateSortOptionsUI();
   updateCategoriaAnchorOptions();
   openModalById('createTabModal');
 }
@@ -6921,8 +6945,11 @@ async function applyTabInheritance() {
         opcoes: optionsMap[normalizeModuloSortKey(campo.nome)] || []
       });
     });
-    newTabSortOptions = loadModuleSortOptions(moduleId);
-    renderSortOptionsPicker(newTabSortOptions);
+    const storedSortOptions = loadModuleSortOptions(moduleId);
+    newTabSortEnabled = !(Array.isArray(storedSortOptions) && storedSortOptions.length === 0);
+    newTabSortOptions = Array.isArray(storedSortOptions) ? storedSortOptions : [];
+    renderSortOptionsPicker(Array.isArray(storedSortOptions) ? storedSortOptions : null);
+    updateSortOptionsUI();
     updateCategoriaAnchorOptions();
     updateFieldCountDisplay();
   }
@@ -6970,8 +6997,11 @@ async function openManageModule(mod) {
     });
   });
 
-  newTabSortOptions = loadModuleSortOptions(mod.id);
-  renderSortOptionsPicker(newTabSortOptions);
+  const storedSortOptions = loadModuleSortOptions(mod.id);
+  newTabSortEnabled = !(Array.isArray(storedSortOptions) && storedSortOptions.length === 0);
+  newTabSortOptions = Array.isArray(storedSortOptions) ? storedSortOptions : [];
+  renderSortOptionsPicker(Array.isArray(storedSortOptions) ? storedSortOptions : null);
+  updateSortOptionsUI();
   initFieldDragAndDrop();
   updateCategoriaAnchorOptions();
   updateFieldCountDisplay();
@@ -7054,7 +7084,9 @@ async function saveManagedModule() {
   }
 
   const sortCandidates = getSortOptionCandidates();
-  const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
+  const resolvedSortOptions = newTabSortEnabled
+    ? resolveSortOptionsSelection(sortCandidates, newTabSortOptions)
+    : [];
   await saveModuleSortOptions(moduleId, resolvedSortOptions);
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
   if (newTabFieldOptions.__categoriaAnchor) {
@@ -7834,7 +7866,9 @@ async function salvarNovoModulo() {
   }
 
   const sortCandidates = getSortOptionCandidates();
-  const resolvedSortOptions = resolveSortOptionsSelection(sortCandidates, newTabSortOptions);
+  const resolvedSortOptions = newTabSortEnabled
+    ? resolveSortOptionsSelection(sortCandidates, newTabSortOptions)
+    : [];
   await saveModuleSortOptions(modulo.id, resolvedSortOptions);
   const fieldOptionsMap = buildFieldOptionsMap(camposValidos);
   const hasCategoria = camposValidos.some(field => normalizeHeader(field.nome) === 'categoria');
@@ -8193,6 +8227,7 @@ document.addEventListener('keydown', (e) => {
   window.closeManualMigrationModal = closeManualMigrationModal;
   window.runManualMigration = runManualMigration;
   window.toggleSortOption = toggleSortOption;
+  window.toggleSortOptionsEnabled = toggleSortOptionsEnabled;
   window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
 window.setModalLoading = setModalLoading;
