@@ -2853,35 +2853,40 @@ if (chkAll) {
   }
   window.applyMachineFilters = applyMachineFilters;
 
-mtbody.addEventListener('change', (e) => {
-  if (!e.target.classList.contains('chk-mq')) return;
+if (mtbody) {
+  mtbody.addEventListener('change', (e) => {
+    if (!e.target.classList.contains('chk-mq')) return;
 
-  const id = Number(e.target.dataset.id);
+    const id = Number(e.target.dataset.id);
 
-  if (e.target.checked) {
-    selectedMaqIds.add(id);
-  } else {
-    selectedMaqIds.delete(id);
-    document.getElementById('chkAllMq').checked = false;
-  }
+    if (e.target.checked) {
+      selectedMaqIds.add(id);
+    } else {
+      selectedMaqIds.delete(id);
+      const chkAll = document.getElementById('chkAllMq');
+      if (chkAll) chkAll.checked = false;
+    }
 
-  updateBulkUI();
-});
+    updateBulkUI();
+  });
 
-mtbody.addEventListener('click', (e) => {
-  if (shouldIgnoreRowToggle(e.target)) return;
-  const row = e.target.closest('tr');
-  if (row) {
-    toggleRowCheckbox(row, '.chk-mq');
-  }
-});
+  mtbody.addEventListener('click', (e) => {
+    if (shouldIgnoreRowToggle(e.target)) return;
+    const row = e.target.closest('tr');
+    if (row) {
+      toggleRowCheckbox(row, '.chk-mq');
+    }
+  });
+}
 
-mtbody.addEventListener('click', (e) => {
-  const el = e.target.closest('.desc-preview');
-  if (!el) return;
+if (mtbody) {
+  mtbody.addEventListener('click', (e) => {
+    const el = e.target.closest('.desc-preview');
+    if (!el) return;
 
-  openDescModal(el);
-});
+    openDescModal(el);
+  });
+}
 
 
   /* ===========================
