@@ -805,7 +805,7 @@ function dismissNotification(id) {
 function openNotificationFilters(panelId) {
   const panel = document.getElementById(panelId);
   if (panelId === 'moduleFilters') {
-    openModuleFiltersModal();
+    toggleFilters('moduleFilters', document.querySelector('#tabModuloDinamico .filter-btn'));
     return;
   }
   if (!panel) return;
@@ -1768,7 +1768,20 @@ function initPaginationControls() {
 
 function toggleFilters(panelId, button) {
   if (panelId === 'moduleFilters') {
-    openModuleFiltersModal(button);
+    const panel = document.getElementById('moduleFiltersPanel');
+    if (!panel) return;
+    const shouldOpen = panel.classList.contains('hidden');
+    if (shouldOpen) {
+      renderModuloFilterControls(getModuloDisplayConfig().displayCampos || []);
+      panel.classList.remove('hidden');
+      panel.setAttribute('aria-hidden', 'false');
+    } else {
+      panel.classList.add('hidden');
+      panel.setAttribute('aria-hidden', 'true');
+    }
+    if (button) {
+      button.setAttribute('aria-pressed', String(shouldOpen));
+    }
     return;
   }
   const panel = document.getElementById(panelId);
@@ -5227,6 +5240,7 @@ function renderModuloDinamico() {
 
   if (moduleFiltersPanel && !displayCampos.length) {
     moduleFiltersPanel.classList.add('hidden');
+    moduleFiltersPanel.setAttribute('aria-hidden', 'true');
     if (moduleFiltersButton) moduleFiltersButton.setAttribute('aria-pressed', 'false');
   }
 
@@ -5402,24 +5416,24 @@ function renderModuloFilterChips() {
 }
 
 function openModuleFiltersModal(button) {
-  const modal = document.getElementById('moduleFiltersModal');
-  if (!modal) return;
+  const panel = document.getElementById('moduleFiltersPanel');
+  if (!panel) return;
   renderModuloFilterControls(getModuloDisplayConfig().displayCampos || []);
-  modal.classList.add('show');
+  panel.classList.remove('hidden');
+  panel.setAttribute('aria-hidden', 'false');
   if (button) {
     button.setAttribute('aria-pressed', 'true');
   }
 }
 
 function closeModuleFiltersModal(event) {
-  const modal = document.getElementById('moduleFiltersModal');
-  if (event && event.target?.id === 'moduleFiltersModal') {
-    requestCloseModal(modal);
+  const panel = document.getElementById('moduleFiltersPanel');
+  if (event && event.target?.id === 'moduleFiltersPanel') {
     return;
   }
-  if (modal) {
-    captureModalScrollState(modal);
-    modal.classList.remove('show');
+  if (panel) {
+    panel.classList.add('hidden');
+    panel.setAttribute('aria-hidden', 'true');
   }
   const button = document.querySelector('#tabModuloDinamico .filter-btn');
   if (button) {
