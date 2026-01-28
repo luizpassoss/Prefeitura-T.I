@@ -3400,22 +3400,66 @@ async function exportMaquinasRelatorio() {
 function getGuidedExportSelectionCount(dataset) {
   if (dataset === 'inventario') return selectedInvIds.size;
   if (dataset === 'maquinas') return selectedMaqIds.size;
-  if (dataset === 'modulo') return selectedModuloIds.size;
+  const moduleId = getGuidedExportModuleId(dataset);
+  if (moduleId && Number(moduleId) === Number(moduloAtual?.id)) return selectedModuloIds.size;
   return 0;
 }
 
 function getGuidedExportFilteredCount(dataset) {
   if (dataset === 'inventario') return paginationState.inventory.total || data.length || 0;
   if (dataset === 'maquinas') return paginationState.machines.total || machineData.length || 0;
-  if (dataset === 'modulo') return getModuloFiltrado().length;
+  const moduleId = getGuidedExportModuleId(dataset);
+  if (moduleId && Number(moduleId) === Number(moduloAtual?.id)) return getModuloFiltrado().length;
   return 0;
 }
 
 function getGuidedExportDatasetLabel(dataset) {
   if (dataset === 'inventario') return 'Inventário';
   if (dataset === 'maquinas') return 'Máquinas';
-  if (dataset === 'modulo') return moduloAtual?.nome ? `Módulo: ${moduloAtual.nome}` : 'Módulo atual';
+  const moduleId = getGuidedExportModuleId(dataset);
+  if (moduleId) {
+    const moduleInfo = (modulos || []).find(mod => Number(mod.id) === Number(moduleId));
+    return moduleInfo?.nome ? `Aba: ${moduleInfo.nome}` : 'Aba personalizada';
+  }
   return 'Inventário';
+}
+
+function getGuidedExportModuleId(dataset) {
+  if (typeof dataset !== 'string') return null;
+  if (dataset.startsWith('module:')) return dataset.slice(7);
+  return null;
+}
+
+async function ensureGuidedExportModulesLoaded() {
+  if (Array.isArray(modulos) && modulos.length) return;
+  try {
+    const res = await fetch(API_MODULOS);
+    if (res.ok) {
+      modulos = await res.json();
+    }
+  } catch (err) {
+    console.warn('Não foi possível carregar abas para exportação guiada.', err);
+  }
+}
+
+function buildGuidedExportModuleOptions() {
+  const container = document.getElementById('guidedExportModuleOptions');
+  const emptyState = document.getElementById('guidedExportModuleEmpty');
+  if (!container) return;
+  container.innerHTML = '';
+  const modulesList = Array.isArray(modulos) ? modulos : [];
+  if (!modulesList.length) {
+    if (emptyState) emptyState.classList.remove('hidden');
+    return;
+  }
+  if (emptyState) emptyState.classList.add('hidden');
+  container.innerHTML = modulesList.map(mod => `
+    <label class="guided-export-option">
+      <input type="radio" name="guidedExportDataset" value="module:${mod.id}" />
+      <span class="option-title">${escapeHtml(mod.nome || 'Aba personalizada')}</span>
+      <span class="option-meta">Exporta todos os registros</span>
+    </label>
+  `).join('');
 }
 
 function getGuidedExportScopeLabel(scope) {
@@ -3431,15 +3475,9 @@ function getGuidedExportFormatLabel(format) {
 }
 
 function syncGuidedExportModal() {
-  const moduleOption = document.getElementById('guidedExportModuleOption');
-  const moduleAvailable = Boolean(moduloAtual?.id);
-  if (moduleOption) {
-    moduleOption.classList.toggle('is-disabled', !moduleAvailable);
-    const input = moduleOption.querySelector('input');
-    if (input) input.disabled = !moduleAvailable;
-  }
-
-  if (!moduleAvailable && guidedExportState.dataset === 'modulo') {
+  const moduleIds = (modulos || []).map(mod => String(mod.id));
+  const moduleId = getGuidedExportModuleId(guidedExportState.dataset);
+  if (moduleId && !moduleIds.includes(String(moduleId))) {
     guidedExportState.dataset = 'inventario';
   }
 
@@ -3455,12 +3493,17 @@ function syncGuidedExportModal() {
 
   const invMeta = document.getElementById('guidedExportInventoryMeta');
   const mqMeta = document.getElementById('guidedExportMachinesMeta');
-  const modMeta = document.getElementById('guidedExportModuleMeta');
   if (invMeta) invMeta.textContent = `${paginationState.inventory.total || data.length || 0} registros`;
   if (mqMeta) mqMeta.textContent = `${paginationState.machines.total || machineData.length || 0} registros`;
-  if (modMeta) modMeta.textContent = moduleAvailable
-    ? `${moduloRegistros.length} registros`
-    : 'Selecione uma aba personalizada';
+  document.querySelectorAll('#guidedExportModuleOptions .guided-export-option').forEach((option) => {
+    const input = option.querySelector('input');
+    const meta = option.querySelector('.option-meta');
+    if (!input || !meta) return;
+    const optionModuleId = getGuidedExportModuleId(input.value);
+    if (optionModuleId && Number(optionModuleId) === Number(moduloAtual?.id)) {
+      meta.textContent = `${moduloRegistros.length} registros`;
+    }
+  });
 
   const selectedCount = getGuidedExportSelectionCount(guidedExportState.dataset);
   const selectedOption = document.getElementById('guidedExportSelectedOption');
@@ -3497,10 +3540,15 @@ function syncGuidedExportModal() {
 
 function bindGuidedExportInputs() {
   if (guidedExportBound) return;
-  document.querySelectorAll('input[name="guidedExportDataset"]').forEach((input) => {
-    input.addEventListener('change', () => {
-      guidedExportState.dataset = input.value;
-      syncGuidedExportModal();
+  const datasetContainer = document.getElementById('guidedExportDatasetOptions');
+  const moduleContainer = document.getElementById('guidedExportModuleOptions');
+  [datasetContainer, moduleContainer].forEach((container) => {
+    container?.addEventListener('change', (event) => {
+      const input = event.target;
+      if (input?.name === 'guidedExportDataset') {
+        guidedExportState.dataset = input.value;
+        syncGuidedExportModal();
+      }
     });
   });
   document.querySelectorAll('input[name="guidedExportScope"]').forEach((input) => {
@@ -3518,8 +3566,13 @@ function bindGuidedExportInputs() {
   guidedExportBound = true;
 }
 
-function openGuidedExport(dataset = 'inventario') {
-  guidedExportState.dataset = dataset;
+async function openGuidedExport(dataset = 'inventario') {
+  await ensureGuidedExportModulesLoaded();
+  buildGuidedExportModuleOptions();
+  const resolvedDataset = dataset === 'modulo' && moduloAtual?.id
+    ? `module:${moduloAtual.id}`
+    : dataset;
+  guidedExportState.dataset = resolvedDataset;
   guidedExportState.scope = 'filtered';
   guidedExportState.format = 'both';
   bindGuidedExportInputs();
@@ -3566,23 +3619,55 @@ async function confirmGuidedExport() {
       }
       if (format === 'pdf' || format === 'both') exportMaquinasPDF(rows);
       if (format === 'excel' || format === 'both') exportMaquinasExcel(rows);
-    } else if (dataset === 'modulo') {
-      if (!moduloAtual?.id) {
-        showMessage('Selecione uma aba personalizada para exportar.');
-        return;
-      }
-      const rows = getModuloExportRows(scope);
-      if (!rows.length) {
-        showMessage('Nenhum registro do módulo para exportar.');
-        return;
-      }
-      if (format === 'pdf' || format === 'both') exportModuloPDF(rows);
-      if (format === 'excel' || format === 'both') exportModuloExcel(rows);
+    } else if (getGuidedExportModuleId(dataset)) {
+      await exportGuidedModuleById(dataset, scope, format);
     }
     showActionToast('Exportação concluída com sucesso.');
     closeGuidedExportModal();
   } finally {
     setButtonLoading(confirmBtn, false);
+  }
+}
+
+async function exportGuidedModuleById(dataset, scope, format) {
+  const moduleId = getGuidedExportModuleId(dataset);
+  if (!moduleId) return;
+  const isCurrent = Number(moduleId) === Number(moduloAtual?.id);
+  if (scope === 'selected' && !isCurrent) {
+    showMessage('Selecione a aba atual para exportar itens selecionados.');
+    return;
+  }
+  const previous = {
+    moduloAtual,
+    moduloCampos,
+    moduloRegistros
+  };
+  try {
+    let rows = [];
+    if (isCurrent) {
+      rows = getModuloExportRows(scope);
+    } else {
+      const [campos, registros] = await Promise.all([
+        fetch(`${API_MODULOS}/${moduleId}/campos`).then(r => r.json()),
+        fetch(`${API_MODULOS}/${moduleId}/registros`).then(r => r.json())
+      ]);
+      moduloCampos = campos;
+      moduloRegistros = registros;
+      const moduleInfo = (modulos || []).find(mod => Number(mod.id) === Number(moduleId));
+      moduloAtual = moduleInfo || { id: moduleId, nome: 'Aba personalizada' };
+      rows = registros;
+    }
+
+    if (!rows.length) {
+      showMessage('Nenhum registro do módulo para exportar.');
+      return;
+    }
+    if (format === 'pdf' || format === 'both') exportModuloPDF(rows);
+    if (format === 'excel' || format === 'both') exportModuloExcel(rows);
+  } finally {
+    moduloAtual = previous.moduloAtual;
+    moduloCampos = previous.moduloCampos;
+    moduloRegistros = previous.moduloRegistros;
   }
 }
 

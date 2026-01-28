@@ -645,7 +645,7 @@ body.theme-dark .brand-icon img {
   width: 4px;
   height: 16px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.8), rgba(37, 99, 235, 0.2));
+  background: linear-gradient(180deg, rgba(59, 76, 107, 0.6), rgba(59, 76, 107, 0.15));
   opacity: 0;
   transform: translateY(-50%) scaleY(0.6);
   transition: opacity 0.25s ease, transform 0.25s ease;
@@ -735,22 +735,22 @@ body.theme-dark .brand-icon img {
 /* Hover suave */
 .nav a:hover,
 .nav .tab-dinamica:hover {
-  background: linear-gradient(120deg, rgba(148, 163, 184, 0.14), rgba(148, 163, 184, 0.06));
-  color: var(--text);
+  background: rgba(148, 163, 184, 0.12);
+  color: #0f172a;
   transform: translateX(1px);
   font-weight: 500;
-  border-color: rgba(148, 163, 184, 0.25);
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
 }
 
 /* Aba ativa */
 .nav a.active,
 .nav .tab-dinamica.active {
-  background: linear-gradient(120deg, rgba(37, 99, 235, 0.14), rgba(37, 99, 235, 0.05));
-  color: var(--text);
+  background: rgba(99, 115, 129, 0.14);
+  color: #0f172a;
   font-weight: 600;
-  border-color: rgba(37, 99, 235, 0.28);
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border-color: rgba(100, 116, 139, 0.25);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   transform: translateX(0);
 }
 
@@ -2125,18 +2125,18 @@ body.theme-dark .nav .tab-dinamica {
 
 body.theme-dark .nav a:hover,
 body.theme-dark .nav .tab-dinamica:hover {
-  background: linear-gradient(120deg, rgba(148, 163, 184, 0.18), rgba(24, 24, 27, 0.2));
+  background: rgba(148, 163, 184, 0.16);
   color: #f8fafc;
-  border-color: rgba(148, 163, 184, 0.25);
-  box-shadow: 0 6px 16px rgba(8, 8, 10, 0.45);
+  border-color: rgba(148, 163, 184, 0.22);
+  box-shadow: 0 6px 14px rgba(8, 8, 10, 0.4);
 }
 
 body.theme-dark .nav a.active,
 body.theme-dark .nav .tab-dinamica.active {
-  background: linear-gradient(120deg, rgba(37, 99, 235, 0.22), rgba(15, 23, 42, 0.4));
+  background: rgba(148, 163, 184, 0.2);
   color: #f8fafc;
-  border-color: rgba(59, 130, 246, 0.35);
-  box-shadow: 0 10px 18px rgba(8, 8, 10, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: rgba(148, 163, 184, 0.3);
+  box-shadow: 0 10px 18px rgba(8, 8, 10, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 body.theme-dark .btn {
@@ -5347,6 +5347,17 @@ body.theme-dark .sort-quick-btn.is-active {
 
 .sort-wrapper.is-hidden {
   display: none;
+}
+
+.guided-export-module-block {
+  margin-top: 12px;
+}
+
+.guided-export-module-label {
+  display: block;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  margin-bottom: 6px;
 }
 
 .sort-option-item {
