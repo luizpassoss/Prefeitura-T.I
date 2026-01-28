@@ -273,11 +273,7 @@
               <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              Filtros
               <span class="filter-count" data-filter-badge="modules" aria-label="Filtros ativos"></span>
-            </button>
-            <button class="btn secondary filters-clear-btn" type="button" onclick="clearModuloFilters()">
-              Limpar tudo
             </button>
             <button class="btn secondary import-btn" onclick="openImportModal('modulo')">
               <span class="icon excel-icon" aria-hidden="true"></span>
@@ -366,6 +362,9 @@
               <button class="btn secondary" type="button" onclick="applyModuloSmartSearch()">Aplicar</button>
             </div>
             <div class="module-filters-secondary">
+              <button class="btn secondary" type="button" onclick="clearModuloFilters()">
+                Limpar tudo
+              </button>
               <button class="btn secondary" type="button" aria-pressed="false" data-module-filter-toggle="true" onclick="toggleFilters('moduleFilters', this)">
                 Mais filtros
               </button>

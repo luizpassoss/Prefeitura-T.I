@@ -3755,6 +3755,25 @@ label {
   position: relative;
 }
 
+.module-filters-toolbar .input,
+.module-filters-toolbar .select {
+  height: 32px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.module-filters-toolbar .btn {
+  height: 32px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .module-filters-compact {
   display: flex;
   align-items: center;
