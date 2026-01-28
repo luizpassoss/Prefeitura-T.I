@@ -269,12 +269,6 @@
             <button class="btn" onclick="openNovoRegistroModulo()">
               + Novo
             </button>
-            <button class="btn secondary filter-btn" type="button" aria-label="Filtros ativos" aria-pressed="false" data-module-filter-toggle="true" onclick="toggleFilters('moduleFilters', this)">
-              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              <span class="filter-count" data-filter-badge="modules" aria-label="Filtros ativos"></span>
-            </button>
             <button class="btn secondary import-btn" onclick="openImportModal('modulo')">
               <span class="icon excel-icon" aria-hidden="true"></span>
               Importar Planilha
@@ -359,14 +353,17 @@
                 class="input"
                 placeholder='Filtrar rapidamente (ex.: status:ativa local:"Prefeitura")'
               />
-              <button class="btn secondary" type="button" onclick="applyModuloSmartSearch()">Aplicar</button>
+              <button class="btn secondary btn-compact" type="button" onclick="applyModuloSmartSearch()">Aplicar</button>
             </div>
             <div class="module-filters-secondary">
-              <button class="btn secondary" type="button" onclick="clearModuloFilters()">
+              <button class="btn secondary btn-compact" type="button" onclick="clearModuloFilters()">
                 Limpar tudo
               </button>
-              <button class="btn secondary" type="button" aria-pressed="false" data-module-filter-toggle="true" onclick="toggleFilters('moduleFilters', this)">
-                Mais filtros
+              <button class="btn secondary btn-compact filter-icon-btn" type="button" aria-label="Mais filtros" aria-pressed="false" data-module-filter-toggle="true" onclick="toggleFilters('moduleFilters', this)">
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span class="filter-count" data-filter-badge="modules" aria-label="Filtros ativos"></span>
               </button>
             </div>
           </div>

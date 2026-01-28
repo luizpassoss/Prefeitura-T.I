@@ -3774,6 +3774,26 @@ label {
   justify-content: center;
 }
 
+.module-filters-toolbar .btn-compact {
+  height: 28px;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.module-filters-toolbar .filter-icon-btn {
+  gap: 6px;
+  padding: 4px 8px;
+}
+
+.module-filters-toolbar .filter-icon-btn .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.module-filters-toolbar .filter-icon-btn .filter-count {
+  margin-left: 2px;
+}
+
 .module-filters-compact {
   display: flex;
   align-items: center;
@@ -4342,6 +4362,14 @@ body.theme-dark input[type="checkbox"]:checked {
   gap: 14px;
   z-index: 9999;
   animation: slideUp .25s ease;
+}
+
+body.bulk-actions-visible .bulk-actions {
+  bottom: 86px;
+}
+
+body.bulk-actions-visible .pagination-footer {
+  margin-bottom: 70px;
 }
 
 @keyframes slideUp {

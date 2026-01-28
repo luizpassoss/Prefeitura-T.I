@@ -1073,8 +1073,10 @@ function updateBulkUI() {
   if (count > 0) {
     counter.textContent = `${count} selecionado${count > 1 ? 's' : ''}`;
     bulk.classList.remove('hidden');
+    document.body.classList.add('bulk-actions-visible');
   } else {
     bulk.classList.add('hidden');
+    document.body.classList.remove('bulk-actions-visible');
   }
 }
 
