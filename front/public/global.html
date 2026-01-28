@@ -282,7 +282,7 @@
             <button class="btn" onclick="openNovoRegistroModulo()">
               + Novo
             </button>
-            <button class="btn secondary filter-btn" onclick="toggleFilters('moduleFilters', this)">
+            <button class="btn secondary filter-btn" type="button" aria-label="Filtros ativos">
               <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
@@ -364,9 +364,11 @@
           </div>
         </div>
 
-        <div id="moduleFilters" class="filters filters-panel hidden">
-          <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar filtros</button>
-        </div>
+        <div id="moduleFilters" class="filters filters-panel hidden"></div>
+
+        <button class="btn secondary filters-clear-floating" type="button" onclick="clearModuloFilters()">
+          Limpar filtros
+        </button>
 
         <div class="table-wrap">
           <table class="styled-table">
@@ -1016,7 +1018,7 @@
           <select id="newTabInheritance" class="select" onchange="applyTabInheritance()">
             <option value="">Nenhuma</option>
           </select>
-          <span class="small">Copie todos os campos de módulos existentes ou das abas manuais.</span>
+          <span class="small">Copie todos os campos de módulos existentes.</span>
         </div>
       </div>
 

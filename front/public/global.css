@@ -3706,6 +3706,15 @@ label {
   box-shadow: var(--shadow-sm);
 }
 
+.filters-clear-floating {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+}
+
 .filters-panel.hidden {
   display: none;
 }
@@ -3733,6 +3742,15 @@ label {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .filters-clear-floating {
+    right: 16px;
+    top: auto;
+    bottom: 16px;
+    transform: none;
+  }
 }
 
 

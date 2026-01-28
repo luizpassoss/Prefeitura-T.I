@@ -686,6 +686,7 @@ function dismissNotification(id) {
 function openNotificationFilters(panelId) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
+  if (panelId === 'moduleFilters') return;
   if (panel.classList.contains('hidden')) {
     toggleFilters(panelId);
   }
@@ -1645,17 +1646,10 @@ function toggleFilters(panelId, button) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
   if (panelId === 'moduleFilters') {
-    const hasPanelControls = panel.querySelectorAll('input, select, textarea').length > 0;
-    const moduleFilterInputs = [...document.querySelectorAll('#moduloThead .table-filter-input')];
-    const hasVisibleColumnFilters = moduleFilterInputs.some(input => input.offsetParent !== null);
-    if (!hasPanelControls && !hasVisibleColumnFilters) {
-      panel.classList.add('hidden');
-      if (button) {
-        button.setAttribute('aria-pressed', 'false');
-      }
-      showMessage('Esta aba ainda não possui filtros disponíveis.');
-      return;
+    if (button) {
+      button.setAttribute('aria-pressed', 'false');
     }
+    return;
   }
   panel.classList.toggle('hidden');
   if (button) {
@@ -5144,26 +5138,8 @@ function renderModuloDinamico() {
 function renderModuloFilterControls(displayCampos) {
   const panel = document.getElementById('moduleFilters');
   if (!panel) return;
-  const filtersMarkup = displayCampos
-    .map((campo) => `
-      <input
-        class="input"
-        data-field="${escapeHtml(campo.nome)}"
-        placeholder="Filtrar ${escapeHtml(campo.nome)}"
-        value="${escapeHtml(moduloColumnFilters[campo.nome] || '')}"
-      />
-    `)
-    .join('');
-  panel.innerHTML = `
-    <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar filtros</button>
-    ${filtersMarkup}
-  `;
-  panel.querySelectorAll('input[data-field]').forEach((input) => {
-    const field = input.dataset.field;
-    input.addEventListener('input', (event) => {
-      updateModuloColumnFilter(field, event.target.value, 'panel');
-    });
-  });
+  panel.innerHTML = '';
+  panel.classList.add('hidden');
 }
 
 function getModuloFilterSelector(field) {
@@ -6317,17 +6293,12 @@ async function populateTabInheritanceOptions() {
       modulesList = [];
     }
   }
-  const manualOptions = [
-    { value: 'template:inventario', label: 'Inventário (manual)' },
-    { value: 'template:maquinas', label: 'Máquinas (manual)' }
-  ];
   const moduleOptions = (modulesList || []).map((modulo) => ({
     value: `module:${modulo.id}`,
     label: `Módulo: ${modulo.nome}`
   }));
   select.innerHTML = [
     '<option value="">Nenhuma</option>',
-    ...manualOptions.map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`),
     ...moduleOptions.map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`)
   ].join('');
 }
@@ -6337,16 +6308,6 @@ async function applyTabInheritance() {
   if (!select) return;
   const value = select.value;
   if (!value) return;
-
-  if (value.startsWith('template:')) {
-    const templateKey = value.replace('template:', '');
-    const templateSelect = document.getElementById('newTabTemplate');
-    if (templateSelect) {
-      templateSelect.value = templateKey;
-    }
-    applyTabTemplate();
-    return;
-  }
 
   if (value.startsWith('module:')) {
     const moduleId = value.replace('module:', '');
@@ -6371,190 +6332,6 @@ async function applyTabInheritance() {
     renderSortOptionsPicker(newTabSortOptions);
     updateCategoriaAnchorOptions();
     updateFieldCountDisplay();
-  }
-}
-
-function openManualMigrationModal() {
-  const status = document.getElementById('manualMigrationStatus');
-  if (status) status.textContent = 'Pronto para iniciar.';
-  openModalById('manualMigrationModal');
-}
-
-function closeManualMigrationModal(e) {
-  const modal = document.getElementById('manualMigrationModal');
-  if (e && e.target.id === 'manualMigrationModal') {
-    requestCloseModal(modal);
-    return;
-  }
-  if (modal) {
-    captureModalScrollState(modal);
-    modal.classList.remove('show');
-  }
-}
-
-function normalizeModuloName(name = '') {
-  return normalizeHeader(name).replace(/\s+/g, '');
-}
-
-async function ensureModuloExists(blueprint, modulesList) {
-  const normalizedTarget = normalizeModuloName(blueprint.nome);
-  const existing = (modulesList || []).find((modulo) => {
-    const normalizedName = normalizeModuloName(modulo.nome || '');
-    return normalizedName === normalizedTarget;
-  });
-  if (existing) return existing;
-  const res = await fetch(API_MODULOS, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome: blueprint.nome, descricao: blueprint.descricao })
-  });
-  const modulo = await res.json();
-  modulesList.push(modulo);
-  return modulo;
-}
-
-async function ensureModuloFields(moduleId, fields) {
-  const existing = await fetch(`${API_MODULOS}/${moduleId}/campos`).then(r => r.json());
-  const existingMap = new Map(
-    (existing || []).map((campo) => [normalizeHeader(campo.nome), campo])
-  );
-  let ordem = existing.length;
-  for (const field of fields) {
-    if (existingMap.has(normalizeHeader(field.nome))) continue;
-    await fetch(`${API_MODULOS}/${moduleId}/campos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nome: field.nome,
-        tipo: field.tipo,
-        obrigatorio: field.obrigatorio,
-        ordem
-      })
-    });
-    ordem += 1;
-  }
-}
-
-function buildMigrationFieldOptions(fields) {
-  return fields.reduce((acc, field) => {
-    if (field.tipo !== 'select') return acc;
-    const options = getSelectOptionsForCampo({ nome: field.nome });
-    if (!options.length) return acc;
-    const key = normalizeModuloSortKey(field.nome);
-    if (!acc[key]) {
-      acc[key] = options;
-    }
-    return acc;
-  }, {});
-}
-
-function buildMigrationValues(fields, row, customValues, customFields) {
-  const valores = {};
-  fields.forEach((field) => {
-    valores[field.nome] = row[field.sourceKey] ?? '';
-  });
-  const rowCustom = customValues?.[row.id] || {};
-  (customFields || []).forEach((field) => {
-    valores[field.label] = rowCustom[field.key] ?? '';
-  });
-  return valores;
-}
-
-async function migrateManualTab(tabType, statusUpdate, modulesList) {
-  const blueprint = manualMigrationBlueprints[tabType];
-  if (!blueprint) return { moduleId: null, created: false, skipped: true };
-  const customFields = getManualCustomFields(tabType);
-  const customValues = getManualCustomValues(tabType);
-  const module = await ensureModuloExists(blueprint, modulesList);
-  const fields = [
-    ...blueprint.fields,
-    ...customFields.map(field => ({
-      nome: field.label,
-      tipo: 'texto',
-      obrigatorio: false,
-      sourceKey: field.key
-    }))
-  ];
-  statusUpdate(`Configurando campos do módulo ${blueprint.nome}...`);
-  await ensureModuloFields(module.id, fields);
-
-  const existingOptions = loadModuleFieldOptions(module.id);
-  const nextOptions = {
-    ...existingOptions,
-    ...buildMigrationFieldOptions(fields)
-  };
-  const categoriaField = fields.find((field) => normalizeHeader(field.nome) === 'categoria');
-  if (categoriaField) {
-    const anchor = fields.find((field) => normalizeHeader(field.nome) !== 'categoria');
-    if (anchor) {
-      nextOptions.__categoriaAnchor = normalizeModuloSortKey(anchor.nome);
-    }
-  }
-  saveModuleFieldOptions(module.id, nextOptions);
-
-  const sortOptions = loadModuleSortOptions(module.id);
-  if (!sortOptions.length) {
-    saveModuleSortOptions(
-      module.id,
-      fields.map(field => normalizeModuloSortKey(field.nome))
-    );
-  }
-
-  const registrosExistentes = await fetch(`${API_MODULOS}/${module.id}/registros`).then(r => r.json());
-  if (Array.isArray(registrosExistentes) && registrosExistentes.length) {
-    statusUpdate(`Módulo ${blueprint.nome} já possui registros, migração de dados ignorada.`);
-    return { moduleId: module.id, created: true, skipped: true };
-  }
-
-  const rows = tabType === 'inventario'
-    ? await fetchAllPagedRows(API_URL, ({ page, pageSize }) =>
-      buildInventoryQueryParams({ page, pageSize, includeFilters: false })
-    )
-    : await fetchAllPagedRows(API_MAQUINAS, ({ page, pageSize }) =>
-      buildMachineQueryParams({ page, pageSize, includeFilters: false })
-    );
-
-  let successCount = 0;
-  let errorCount = 0;
-  for (const row of rows) {
-    try {
-      const valores = buildMigrationValues(blueprint.fields, row, customValues, customFields);
-      await fetch(`${API_MODULOS}/${module.id}/registros`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ valores })
-      });
-      successCount += 1;
-    } catch (err) {
-      console.error('Erro ao migrar registro', err);
-      errorCount += 1;
-    }
-  }
-
-  statusUpdate(`Migração ${blueprint.nome}: ${successCount} registro(s) migrados${errorCount ? `, ${errorCount} erro(s).` : '.'}`);
-  return { moduleId: module.id, created: true, skipped: false };
-}
-
-async function runManualMigration() {
-  const statusEl = document.getElementById('manualMigrationStatus');
-  const runBtn = document.getElementById('manualMigrationRunBtn');
-  const updateStatus = (message) => {
-    if (statusEl) statusEl.textContent = message;
-  };
-  if (runBtn) runBtn.disabled = true;
-  updateStatus('Iniciando migração...');
-  try {
-    const res = await fetch(API_MODULOS);
-    const modulesList = await res.json();
-    await migrateManualTab('inventario', updateStatus, modulesList);
-    await migrateManualTab('maquinas', updateStatus, modulesList);
-    await carregarModulos();
-    updateStatus('Migração concluída. Verifique as novas abas de módulo.');
-  } catch (err) {
-    console.error('Erro na migração', err);
-    updateStatus('Erro durante a migração. Verifique o console para detalhes.');
-  } finally {
-    if (runBtn) runBtn.disabled = false;
   }
 }
 
@@ -6695,7 +6472,7 @@ async function saveManagedModule() {
   const currentModuleId = moduleId;
   manageTabContext = null;
   await carregarModulos();
-  if (moduloAtual?.id === currentModuleId) {
+  if (Number(moduloAtual?.id) === Number(currentModuleId)) {
     await carregarCamposModulo();
     await carregarRegistrosModulo();
     renderModuloDinamico();
