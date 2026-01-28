@@ -3740,25 +3740,129 @@ label {
   padding: 16px;
 }
 
-#moduleFiltersModal .module-filters-card {
-  max-width: 980px;
-  width: min(960px, 92vw);
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
-#moduleFiltersModal .modal-title-row {
+.module-filters-toolbar {
+  position: relative;
+}
+
+.module-filters-toolbar .input,
+.module-filters-toolbar .select {
+  height: 32px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.module-filters-toolbar .btn {
+  height: 32px;
+  padding: 6px 12px;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
 }
 
-#moduleFiltersModal .modal-body-scroll {
-  margin-top: 12px;
+.module-filters-toolbar .btn-compact {
+  height: 28px;
+  padding: 4px 10px;
+  font-size: 11px;
 }
 
-#moduleFiltersModal .modal-footer {
+.module-filters-toolbar .filter-icon-btn {
+  gap: 6px;
+  padding: 4px 8px;
+}
+
+.module-filters-toolbar .filter-icon-btn .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.module-filters-toolbar .filter-icon-btn .filter-count {
+  margin-left: 2px;
+}
+
+.module-filters-compact {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
-#moduleFiltersModal .btn-salvar {
-  min-width: 160px;
+.module-filters-primary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 420px;
+}
+
+.module-filters-primary .input {
+  min-width: 260px;
+  flex: 1 1 320px;
+}
+
+.module-filters-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.module-filters-panel {
+  padding: 14px;
+  gap: 12px;
+}
+
+.module-filters-panel.hidden {
+  display: none;
+}
+
+.module-filters-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: min(760px, 92vw);
+  z-index: 6;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+}
+
+.module-filters-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.module-filters-subtitle {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.module-filters-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.module-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
 }
 
 .smart-filter-section label {
