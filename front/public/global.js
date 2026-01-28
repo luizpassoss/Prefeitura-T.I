@@ -686,6 +686,7 @@ function dismissNotification(id) {
 function openNotificationFilters(panelId) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
+  if (panelId === 'moduleFilters') return;
   if (panel.classList.contains('hidden')) {
     toggleFilters(panelId);
   }
@@ -1344,6 +1345,7 @@ function initPaginationControls() {
      FETCH / INIT
      =========================== */
   async function fetchData(){
+    if (!document.getElementById('tabInventario')) return;
     const state = paginationState.inventory;
     const isReset = state.page === 1;
     try{
@@ -1398,6 +1400,7 @@ function initPaginationControls() {
   }
 
   async function fetchMachines(){
+    if (!document.getElementById('tabMaquinas')) return;
     const state = paginationState.machines;
     const isReset = state.page === 1;
     try{
@@ -1643,17 +1646,10 @@ function toggleFilters(panelId, button) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
   if (panelId === 'moduleFilters') {
-    const hasPanelControls = panel.querySelectorAll('input, select, textarea').length > 0;
-    const moduleFilterInputs = [...document.querySelectorAll('#moduloThead .table-filter-input')];
-    const hasVisibleColumnFilters = moduleFilterInputs.some(input => input.offsetParent !== null);
-    if (!hasPanelControls && !hasVisibleColumnFilters) {
-      panel.classList.add('hidden');
-      if (button) {
-        button.setAttribute('aria-pressed', 'false');
-      }
-      showMessage('Esta aba ainda não possui filtros disponíveis.');
-      return;
+    if (button) {
+      button.setAttribute('aria-pressed', 'false');
     }
+    return;
   }
   panel.classList.toggle('hidden');
   if (button) {
@@ -1875,30 +1871,32 @@ if (chkAll) {
 
 }
 
-tbody.addEventListener('change', (e) => {
-  if (!e.target.classList.contains('chk-inv')) return;
+if (tbody) {
+  tbody.addEventListener('change', (e) => {
+    if (!e.target.classList.contains('chk-inv')) return;
 
-  const id = Number(e.target.dataset.id);
+    const id = Number(e.target.dataset.id);
 
-  if (e.target.checked) {
-    selectedInvIds.add(id);
-  } else {
-    selectedInvIds.delete(id);
+    if (e.target.checked) {
+      selectedInvIds.add(id);
+    } else {
+      selectedInvIds.delete(id);
 
-    // desmarca o "Selecionar todos"
-    const chkAll = document.getElementById('chkAllInv');
-    if (chkAll) chkAll.checked = false;
-  }
+      // desmarca o "Selecionar todos"
+      const chkAll = document.getElementById('chkAllInv');
+      if (chkAll) chkAll.checked = false;
+    }
 
-  updateBulkUI();
-});
+    updateBulkUI();
+  });
 
-tbody.addEventListener('click', (e) => {
-  if (shouldIgnoreRowToggle(e.target)) return;
-  const row = e.target.closest('tr');
-  if (!row) return;
-  toggleRowCheckbox(row, '.chk-inv');
-});
+  tbody.addEventListener('click', (e) => {
+    if (shouldIgnoreRowToggle(e.target)) return;
+    const row = e.target.closest('tr');
+    if (!row) return;
+    toggleRowCheckbox(row, '.chk-inv');
+  });
+}
 
 function normalize(s){
   return (s || "")
@@ -2849,35 +2847,40 @@ if (chkAll) {
   }
   window.applyMachineFilters = applyMachineFilters;
 
-mtbody.addEventListener('change', (e) => {
-  if (!e.target.classList.contains('chk-mq')) return;
+if (mtbody) {
+  mtbody.addEventListener('change', (e) => {
+    if (!e.target.classList.contains('chk-mq')) return;
 
-  const id = Number(e.target.dataset.id);
+    const id = Number(e.target.dataset.id);
 
-  if (e.target.checked) {
-    selectedMaqIds.add(id);
-  } else {
-    selectedMaqIds.delete(id);
-    document.getElementById('chkAllMq').checked = false;
-  }
+    if (e.target.checked) {
+      selectedMaqIds.add(id);
+    } else {
+      selectedMaqIds.delete(id);
+      const chkAll = document.getElementById('chkAllMq');
+      if (chkAll) chkAll.checked = false;
+    }
 
-  updateBulkUI();
-});
+    updateBulkUI();
+  });
 
-mtbody.addEventListener('click', (e) => {
-  if (shouldIgnoreRowToggle(e.target)) return;
-  const row = e.target.closest('tr');
-  if (row) {
-    toggleRowCheckbox(row, '.chk-mq');
-  }
-});
+  mtbody.addEventListener('click', (e) => {
+    if (shouldIgnoreRowToggle(e.target)) return;
+    const row = e.target.closest('tr');
+    if (row) {
+      toggleRowCheckbox(row, '.chk-mq');
+    }
+  });
+}
 
-mtbody.addEventListener('click', (e) => {
-  const el = e.target.closest('.desc-preview');
-  if (!el) return;
+if (mtbody) {
+  mtbody.addEventListener('click', (e) => {
+    const el = e.target.closest('.desc-preview');
+    if (!el) return;
 
-  openDescModal(el);
-});
+    openDescModal(el);
+  });
+}
 
 
   /* ===========================
@@ -4992,7 +4995,7 @@ async function confirmDeleteModulo() {
     await carregarModulos();
 
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    switchTab('inventario');
+    switchTab('dashboard');
     showActionToastLeft(`Aba "${moduloDeleteTarget.nome}" excluída.`);
   } catch (e) {
     console.error('Erro ao excluir módulo:', e);
@@ -5135,26 +5138,8 @@ function renderModuloDinamico() {
 function renderModuloFilterControls(displayCampos) {
   const panel = document.getElementById('moduleFilters');
   if (!panel) return;
-  const filtersMarkup = displayCampos
-    .map((campo) => `
-      <input
-        class="input"
-        data-field="${escapeHtml(campo.nome)}"
-        placeholder="Filtrar ${escapeHtml(campo.nome)}"
-        value="${escapeHtml(moduloColumnFilters[campo.nome] || '')}"
-      />
-    `)
-    .join('');
-  panel.innerHTML = `
-    <button class="btn cancel" type="button" onclick="clearModuloFilters()">Limpar filtros</button>
-    ${filtersMarkup}
-  `;
-  panel.querySelectorAll('input[data-field]').forEach((input) => {
-    const field = input.dataset.field;
-    input.addEventListener('input', (event) => {
-      updateModuloColumnFilter(field, event.target.value, 'panel');
-    });
-  });
+  panel.innerHTML = '';
+  panel.classList.add('hidden');
 }
 
 function getModuloFilterSelector(field) {
@@ -6233,6 +6218,11 @@ function openCreateTabModal() {
     templateSelect.value = 'custom';
     templateSelect.disabled = false;
   }
+  const inheritanceSelect = document.getElementById('newTabInheritance');
+  if (inheritanceSelect) {
+    inheritanceSelect.value = '';
+  }
+  populateTabInheritanceOptions();
   const titleEl = document.querySelector('#createTabModal h2');
   if (titleEl) titleEl.textContent = 'Criar nova aba';
   const submitBtn = document.getElementById('createTabSubmitBtn');
@@ -6263,6 +6253,60 @@ function submitTabModal() {
     return;
   }
   salvarNovoModulo();
+}
+
+async function populateTabInheritanceOptions() {
+  const select = document.getElementById('newTabInheritance');
+  if (!select) return;
+  let modulesList = modulos;
+  if (!Array.isArray(modulesList) || !modulesList.length) {
+    try {
+      const res = await fetch(API_MODULOS);
+      modulesList = await res.json();
+    } catch (err) {
+      modulesList = [];
+    }
+  }
+  const moduleOptions = (modulesList || []).map((modulo) => ({
+    value: `module:${modulo.id}`,
+    label: `Módulo: ${modulo.nome}`
+  }));
+  select.innerHTML = [
+    '<option value="">Nenhuma</option>',
+    ...moduleOptions.map(opt => `<option value="${opt.value}">${escapeHtml(opt.label)}</option>`)
+  ].join('');
+}
+
+async function applyTabInheritance() {
+  const select = document.getElementById('newTabInheritance');
+  if (!select) return;
+  const value = select.value;
+  if (!value) return;
+
+  if (value.startsWith('module:')) {
+    const moduleId = value.replace('module:', '');
+    const res = await fetch(`${API_MODULOS}/${moduleId}/campos`);
+    const campos = await res.json();
+    const optionsMap = loadModuleFieldOptions(moduleId);
+
+    newTabFields = [];
+    window.newTabFields = newTabFields;
+    newTabFieldOptions = { ...optionsMap };
+    const container = document.getElementById('fieldsContainer');
+    if (container) container.innerHTML = '';
+    campos.forEach((campo) => {
+      addFieldWithValues({
+        nome: campo.nome,
+        tipo: campo.tipo || 'texto',
+        obrigatorio: !!campo.obrigatorio,
+        opcoes: optionsMap[normalizeModuloSortKey(campo.nome)] || []
+      });
+    });
+    newTabSortOptions = loadModuleSortOptions(moduleId);
+    renderSortOptionsPicker(newTabSortOptions);
+    updateCategoriaAnchorOptions();
+    updateFieldCountDisplay();
+  }
 }
 
 async function openManageModule(mod) {
@@ -6402,7 +6446,7 @@ async function saveManagedModule() {
   const currentModuleId = moduleId;
   manageTabContext = null;
   await carregarModulos();
-  if (moduloAtual?.id === currentModuleId) {
+  if (Number(moduloAtual?.id) === Number(currentModuleId)) {
     await carregarCamposModulo();
     await carregarRegistrosModulo();
     renderModuloDinamico();
@@ -7466,6 +7510,7 @@ document.addEventListener('keydown', (e) => {
   window.updateFieldType = updateFieldType;
   window.closeCreateTabModal = closeCreateTabModal;
   window.applyTabTemplate = applyTabTemplate;
+  window.applyTabInheritance = applyTabInheritance;
   window.addField = addField;
   window.openFieldManagerModal = openFieldManagerModal;
   window.closeFieldManagerModal = closeFieldManagerModal;
