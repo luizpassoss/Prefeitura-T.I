@@ -118,6 +118,10 @@
     animation: fade .25s ease;
 }
 
+.tab.active .main {
+  overflow-y: auto;
+}
+
 @keyframes fade {
     from { opacity: 0; }
     to   { opacity: 1; }
@@ -3715,9 +3719,80 @@ label {
   margin-bottom: 8px;
 }
 
+.smart-filters-toolbar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
 .filters-toolbar .filters-panel {
   flex: 1 1 360px;
   margin-bottom: 0;
+}
+
+.smart-filters-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.smart-filter-section label {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.smart-filter-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.smart-filter-row .input,
+.smart-filter-row .select {
+  min-width: 220px;
+  flex: 1 1 220px;
+}
+
+.smart-filter-hint {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.smart-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 2px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1e3a8a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.filter-chip button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.smart-filter-empty {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .filters-clear-btn {
@@ -3732,7 +3807,7 @@ label {
 }
 
 .filters-panel.hidden ~ .filters-clear-btn {
-  display: none;
+  display: inline-flex;
 }
 
 .filters .input,

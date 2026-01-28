@@ -30,6 +30,8 @@ let moduloRegistros = [];
 let moduloEditId = null;
 let moduloDeleteTarget = null;
 let moduloColumnFilters = {};
+let moduloSmartFilters = {};
+let moduloSmartSearchText = '';
 let moduloSortState = { key: null, dir: 'asc' };
 let manageTabContext = null;
 let manualTabContext = null;
@@ -803,7 +805,6 @@ function dismissNotification(id) {
 function openNotificationFilters(panelId) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
-  if (panelId === 'moduleFilters') return;
   if (panel.classList.contains('hidden')) {
     toggleFilters(panelId);
   }
@@ -1764,18 +1765,12 @@ function initPaginationControls() {
 function toggleFilters(panelId, button) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
-  if (panelId === 'moduleFilters') {
-    if (button) {
-      button.setAttribute('aria-pressed', 'false');
-    }
-    return;
-  }
   panel.classList.toggle('hidden');
   if (button) {
     const isOpen = !panel.classList.contains('hidden');
     button.setAttribute('aria-pressed', String(isOpen));
   }
-  }
+}
 
 function showMessage(message, title = 'Aviso', type = 'info') {
     const titleEl = document.getElementById('systemMessageTitle');
@@ -2407,17 +2402,19 @@ function getActiveFilterCounts() {
   const mqCustomCount = countManualCustomFilters('maquinas');
   const mqCount = [mq, mqNome, mqPatrimonio, mqLocalCol, mqStatusCol, mqDescricao].filter(Boolean).length + mqCustomCount + (status !== 'All' ? 1 : 0);
 
-  const modSearch = (document.getElementById('moduloSearch')?.value || '').trim();
+  const modSearch = (document.getElementById('moduleSmartSearch')?.value || '').trim();
   const modColumnFilters = Object.values(moduloColumnFilters || {}).filter(value => value?.trim());
-  const modCount = [modSearch, ...modColumnFilters].filter(Boolean).length;
+  const modSmartFilters = Object.values(moduloSmartFilters || {}).filter(value => value?.trim());
+  const modCount = [modSearch, ...modColumnFilters, ...modSmartFilters].filter(Boolean).length;
 
   return { invCount, mqCount, modCount };
 }
 
 function hasActiveModuleFilters() {
-  const modSearch = (document.getElementById('moduloSearch')?.value || '').trim();
+  const modSearch = (document.getElementById('moduleSmartSearch')?.value || '').trim();
   const modColumnFilters = Object.values(moduloColumnFilters || {}).filter(value => value?.trim());
-  return Boolean(modSearch || modColumnFilters.length);
+  const modSmartFilters = Object.values(moduloSmartFilters || {}).filter(value => value?.trim());
+  return Boolean(modSearch || modColumnFilters.length || modSmartFilters.length);
 }
 
 function updateFilterBadges() {
@@ -5129,6 +5126,9 @@ async function abrirModulo(mod) {
   closeTabMenus();
   moduloAtual = mod;
   paginationState.modules.page = 1;
+  moduloColumnFilters = {};
+  moduloSmartFilters = {};
+  moduloSmartSearchText = '';
 
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav a, .nav .tab-dinamica').forEach(a => a.classList.remove('active'));
@@ -5213,28 +5213,7 @@ function renderModuloDinamico() {
       `).join('')}
       <th class="actions-header" style="width:110px; text-align:center">Ações</th>
     </tr>
-    <tr class="table-filters">
-      <th class="checkbox-cell"></th>
-      ${displayCampos.map(c => `
-        <th>
-          <input
-            class="table-filter-input"
-            data-field="${c.nome}"
-            placeholder="Filtrar ${c.nome}"
-          />
-        </th>
-      `).join('')}
-      <th class="actions-header"></th>
-    </tr>
   `;
-
-  thead.querySelectorAll('.table-filter-input').forEach((input) => {
-    const field = input.dataset.field;
-    input.value = moduloColumnFilters[field] || '';
-    input.addEventListener('input', (event) => {
-      updateModuloColumnFilter(field, event.target.value, 'header');
-    });
-  });
 
   renderModuloFilterControls(displayCampos);
 
@@ -5258,27 +5237,158 @@ function renderModuloDinamico() {
 function renderModuloFilterControls(displayCampos) {
   const panel = document.getElementById('moduleFilters');
   if (!panel) return;
-  panel.innerHTML = '';
-  panel.classList.add('hidden');
-}
-
-function getModuloFilterSelector(field) {
-  const safeField = window.CSS && CSS.escape ? CSS.escape(field) : field.replace(/"/g, '\\"');
-  return `[data-field="${safeField}"]`;
-}
-
-function updateModuloColumnFilter(field, value, source) {
-  moduloColumnFilters[field] = value;
-  const selector = getModuloFilterSelector(field);
-  if (source !== 'header') {
-    const headerInput = document.querySelector(`#moduloThead .table-filter-input${selector}`);
-    if (headerInput) headerInput.value = value;
+  const select = document.getElementById('moduleFilterFieldSelect');
+  if (select) {
+    select.innerHTML = [
+      '<option value="">Selecione um campo</option>',
+      ...displayCampos.map(campo => `<option value="${campo.nome}">${escapeHtml(campo.nome)}</option>`)
+    ].join('');
   }
-  if (source !== 'panel') {
-    const panelInput = document.querySelector(`#moduleFilters input${selector}`);
-    if (panelInput) panelInput.value = value;
+  const presetSelect = document.getElementById('moduleFilterPresetSelect');
+  if (presetSelect) {
+    const presets = loadModuloFilterPresets();
+    presetSelect.innerHTML = [
+      '<option value="">Presets salvos</option>',
+      ...presets.map((preset, index) => `<option value="${index}">${escapeHtml(preset.name)}</option>`)
+    ].join('');
+  }
+  const searchInput = document.getElementById('moduleSmartSearch');
+  if (searchInput && searchInput.value !== moduloSmartSearchText) {
+    searchInput.value = moduloSmartSearchText;
+  }
+  if (!panel.dataset.bound) {
+    panel.dataset.bound = 'true';
+    const smartInput = document.getElementById('moduleSmartSearch');
+    if (smartInput) {
+      let smartTimeout = null;
+      smartInput.addEventListener('input', (event) => {
+        if (smartTimeout) clearTimeout(smartTimeout);
+        smartTimeout = setTimeout(() => {
+          updateModuloSmartSearch(event.target.value);
+        }, 250);
+      });
+    }
+    const valueInput = document.getElementById('moduleFilterValueInput');
+    if (valueInput) {
+      valueInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          addModuloStructuredFilter();
+        }
+      });
+    }
+  }
+  renderModuloFilterChips();
+}
+
+function parseModuloSmartFilters(query, fields) {
+  const normalizedMap = new Map(
+    fields.map((field) => [normalizeHeader(field).replace(/\s+/g, ''), field])
+  );
+  const filters = {};
+  let remaining = query;
+  const regex = /([a-zA-Z0-9_]+):(\"[^\"]+\"|'[^']+'|\\S+)/g;
+  let match;
+  while ((match = regex.exec(query)) !== null) {
+    const rawField = match[1];
+    const rawValue = match[2] || '';
+    const normalizedField = normalizeHeader(rawField).replace(/\\s+/g, '');
+    const mapped = normalizedMap.get(normalizedField);
+    if (mapped) {
+      const cleaned = rawValue.replace(/^['"]|['"]$/g, '').trim();
+      if (cleaned) {
+        filters[mapped] = cleaned;
+      }
+      remaining = remaining.replace(match[0], '');
+    }
+  }
+  return {
+    general: remaining.replace(/\\s+/g, ' ').trim(),
+    filters
+  };
+}
+
+function updateModuloSmartSearch(value) {
+  const fields = moduloCampos.map(campo => campo.nome);
+  const { general, filters } = parseModuloSmartFilters(value, fields);
+  moduloSmartSearchText = general;
+  moduloSmartFilters = filters;
+  filtrarModulo();
+}
+
+function applyModuloSmartSearch() {
+  const searchInput = document.getElementById('moduleSmartSearch');
+  if (!searchInput) return;
+  updateModuloSmartSearch(searchInput.value);
+}
+
+function addModuloStructuredFilter() {
+  const select = document.getElementById('moduleFilterFieldSelect');
+  const valueInput = document.getElementById('moduleFilterValueInput');
+  if (!select || !valueInput) return;
+  const field = select.value;
+  const value = valueInput.value.trim();
+  if (!field || !value) {
+    showErrorMessage('Selecione um campo e informe um valor.');
+    return;
+  }
+  moduloColumnFilters[field] = value;
+  valueInput.value = '';
+  select.value = '';
+  filtrarModulo();
+}
+
+function removeModuloFilter(field, scope) {
+  if (scope === 'structured') {
+    delete moduloColumnFilters[field];
+  } else if (scope === 'smart') {
+    delete moduloSmartFilters[field];
+  } else if (scope === 'search') {
+    moduloSmartSearchText = '';
+    const searchInput = document.getElementById('moduleSmartSearch');
+    if (searchInput) searchInput.value = '';
   }
   filtrarModulo();
+}
+
+function renderModuloFilterChips() {
+  const container = document.getElementById('moduleFilterChips');
+  if (!container) return;
+  const chips = [];
+  if (moduloSmartSearchText) {
+    chips.push({
+      label: `Busca: ${moduloSmartSearchText}`,
+      onRemove: () => removeModuloFilter('search', 'search')
+    });
+  }
+  Object.entries(moduloSmartFilters).forEach(([field, value]) => {
+    chips.push({
+      label: `${field}: ${value}`,
+      onRemove: () => removeModuloFilter(field, 'smart')
+    });
+  });
+  Object.entries(moduloColumnFilters).forEach(([field, value]) => {
+    chips.push({
+      label: `${field}: ${value}`,
+      onRemove: () => removeModuloFilter(field, 'structured')
+    });
+  });
+  if (!chips.length) {
+    container.innerHTML = '<span class="smart-filter-empty">Nenhum filtro ativo.</span>';
+    return;
+  }
+  container.innerHTML = chips.map((chip, index) => `
+    <span class="filter-chip">
+      ${escapeHtml(chip.label)}
+      <button type="button" aria-label="Remover filtro" data-chip-index="${index}">×</button>
+    </span>
+  `).join('');
+  container.querySelectorAll('button[data-chip-index]').forEach((btn) => {
+    const idx = Number(btn.dataset.chipIndex);
+    if (!Number.isNaN(idx) && chips[idx]) {
+      btn.addEventListener('click', chips[idx].onRemove);
+    }
+  });
 }
 
 function renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName) {
@@ -5475,19 +5585,13 @@ function formatDateForTable(value) {
 }
 
 function getModuloFiltrado() {
-  const q = (document.getElementById('moduloSearch')?.value || '').trim().toLowerCase();
-  const columnFilters = Object.entries(moduloColumnFilters)
+  const combinedFilters = { ...moduloSmartFilters, ...moduloColumnFilters };
+  const columnFilters = Object.entries(combinedFilters)
     .filter(([, value]) => value && value.trim())
     .map(([field, value]) => [field, value.trim().toLowerCase()]);
+  const q = (moduloSmartSearchText || '').trim().toLowerCase();
   if (!q) {
     let filtered = moduloRegistros.map((row, idx) => ({ row, idx }));
-    if (columnFilters.length) {
-      filtered = filtered.filter(({ row }) =>
-        columnFilters.every(([field, value]) =>
-          (row[field] || '').toString().toLowerCase().includes(value)
-        )
-      );
-    }
     if (columnFilters.length) {
       filtered = filtered.filter(({ row }) =>
         columnFilters.every(([field, value]) =>
@@ -5512,26 +5616,19 @@ function getModuloFiltrado() {
       )
     );
   }
-  if (columnFilters.length) {
-    filtered = filtered.filter(({ row }) =>
-      columnFilters.every(([field, value]) =>
-        (row[field] || '').toString().toLowerCase().includes(value)
-      )
-    );
-  }
   return filtered;
 }
 
 function clearModuloFilters() {
-  const searchEl = document.getElementById('moduloSearch');
+  const searchEl = document.getElementById('moduleSmartSearch');
   if (searchEl) searchEl.value = '';
   moduloColumnFilters = {};
-  document.querySelectorAll('#moduloThead .table-filter-input').forEach((input) => {
-    input.value = '';
-  });
-  document.querySelectorAll('#moduleFilters input[data-field]').forEach((input) => {
-    input.value = '';
-  });
+  moduloSmartFilters = {};
+  moduloSmartSearchText = '';
+  const fieldSelect = document.getElementById('moduleFilterFieldSelect');
+  const valueInput = document.getElementById('moduleFilterValueInput');
+  if (fieldSelect) fieldSelect.value = '';
+  if (valueInput) valueInput.value = '';
   paginationState.modules.page = 1;
   filtrarModulo();
 }
@@ -5542,7 +5639,77 @@ function filtrarModulo() {
   paginationState.modules.page = 1;
   const { displayCampos, categoriaFieldName, categoriaAnchorFieldName } = getModuloDisplayConfig();
   renderModuloBody(displayCampos, categoriaFieldName, categoriaAnchorFieldName);
+  renderModuloFilterChips();
   updateFilterBadges();
+}
+
+function getModuloPresetStorageKey() {
+  const moduleId = moduloAtual?.id || 'default';
+  return `ti-module-filter-presets-${moduleId}`;
+}
+
+function loadModuloFilterPresets() {
+  try {
+    const stored = localStorage.getItem(getModuloPresetStorageKey());
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveModuloFilterPresets(presets) {
+  localStorage.setItem(getModuloPresetStorageKey(), JSON.stringify(presets || []));
+}
+
+function saveModuloFilterPreset() {
+  const nameInput = document.getElementById('moduleFilterPresetName');
+  const name = (nameInput?.value || '').trim();
+  if (!name) {
+    showErrorMessage('Informe um nome para o preset.');
+    return;
+  }
+  const presets = loadModuloFilterPresets();
+  presets.push({
+    name,
+    smartSearch: (document.getElementById('moduleSmartSearch')?.value || '').trim(),
+    structuredFilters: { ...moduloColumnFilters }
+  });
+  saveModuloFilterPresets(presets);
+  if (nameInput) nameInput.value = '';
+  renderModuloFilterControls(getModuloDisplayConfig().displayCampos || []);
+  showActionToast('Preset salvo com sucesso.');
+}
+
+function applyModuloFilterPreset() {
+  const select = document.getElementById('moduleFilterPresetSelect');
+  const index = Number(select?.value);
+  if (!select || Number.isNaN(index)) {
+    showErrorMessage('Selecione um preset para aplicar.');
+    return;
+  }
+  const presets = loadModuloFilterPresets();
+  const preset = presets[index];
+  if (!preset) return;
+  const searchInput = document.getElementById('moduleSmartSearch');
+  if (searchInput) searchInput.value = preset.smartSearch || '';
+  moduloColumnFilters = { ...(preset.structuredFilters || {}) };
+  updateModuloSmartSearch(preset.smartSearch || '');
+  filtrarModulo();
+}
+
+function deleteModuloFilterPreset() {
+  const select = document.getElementById('moduleFilterPresetSelect');
+  const index = Number(select?.value);
+  if (!select || Number.isNaN(index)) {
+    showErrorMessage('Selecione um preset para excluir.');
+    return;
+  }
+  const presets = loadModuloFilterPresets();
+  presets.splice(index, 1);
+  saveModuloFilterPresets(presets);
+  renderModuloFilterControls(getModuloDisplayConfig().displayCampos || []);
+  showActionToast('Preset removido.');
 }
 async function excluirRegistroModulo(id) {
   const item = moduloRegistros.find(row => row.id === id);
@@ -7782,7 +7949,7 @@ function getActiveSearchInput() {
     return document.getElementById('mq');
   }
   if (document.getElementById('tabModuloDinamico')?.classList.contains('active')) {
-    return document.getElementById('moduloSearch');
+    return document.getElementById('moduleSmartSearch');
   }
   return null;
 }
@@ -7879,6 +8046,11 @@ document.addEventListener('keydown', (e) => {
   window.clearInventoryFilters = clearInventoryFilters;
   window.clearMachineFilters = clearMachineFilters;
   window.clearModuloFilters = clearModuloFilters;
+  window.applyModuloSmartSearch = applyModuloSmartSearch;
+  window.addModuloStructuredFilter = addModuloStructuredFilter;
+  window.saveModuloFilterPreset = saveModuloFilterPreset;
+  window.applyModuloFilterPreset = applyModuloFilterPreset;
+  window.deleteModuloFilterPreset = deleteModuloFilterPreset;
   window.clearImportHistory = clearImportHistory;
   window.reprocessImport = reprocessImport;
   window.openImportModal = openImportModal;
