@@ -3721,7 +3721,7 @@ label {
 
 .smart-filters-toolbar {
   flex-direction: column;
-  align-items: stretch;
+  align-items: flex-end;
   gap: 12px;
 }
 
@@ -3738,6 +3738,27 @@ label {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
+}
+
+#moduleFiltersModal .module-filters-card {
+  max-width: 980px;
+  width: min(960px, 92vw);
+}
+
+#moduleFiltersModal .modal-title-row {
+  align-items: center;
+}
+
+#moduleFiltersModal .modal-body-scroll {
+  margin-top: 12px;
+}
+
+#moduleFiltersModal .modal-footer {
+  justify-content: space-between;
+}
+
+#moduleFiltersModal .btn-salvar {
+  min-width: 160px;
 }
 
 .smart-filter-section label {
@@ -3771,6 +3792,7 @@ label {
   flex-wrap: wrap;
   gap: 8px;
   padding: 4px 2px;
+  width: 100%;
 }
 
 .filter-chip {
@@ -3800,10 +3822,11 @@ label {
 }
 
 .filters-clear-btn {
-  align-self: stretch;
-  height: 40px;
-  padding: 6px 14px;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+  align-self: flex-end;
+  height: 30px;
+  padding: 4px 10px;
+  font-size: 12px;
+  box-shadow: none;
 }
 
 .filters-panel.hidden {
