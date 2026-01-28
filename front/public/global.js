@@ -7716,6 +7716,7 @@ document.addEventListener('keydown', (e) => {
   window.openManualMigrationModal = openManualMigrationModal;
   window.closeManualMigrationModal = closeManualMigrationModal;
   window.runManualMigration = runManualMigration;
+  window.toggleSortOption = toggleSortOption;
   window.salvarNovoModulo = salvarNovoModulo;
 window.openModalById = openModalById;
 window.setModalLoading = setModalLoading;
