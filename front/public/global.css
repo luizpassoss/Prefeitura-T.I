@@ -4364,6 +4364,14 @@ body.theme-dark input[type="checkbox"]:checked {
   animation: slideUp .25s ease;
 }
 
+body.bulk-actions-visible .bulk-actions {
+  bottom: 86px;
+}
+
+body.bulk-actions-visible .pagination-footer {
+  margin-bottom: 70px;
+}
+
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
